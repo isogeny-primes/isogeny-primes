@@ -34,9 +34,21 @@ You'll see that you have the following optional arguments:
 
  - this;
 
- - this;
+ ```
+sage quadratic_isogeny_primes.py --help
+```
 
  - this;
+
+ ```
+sage quadratic_isogeny_primes.py --help
+```
+
+ - this;
+
+```
+sage quadratic_isogeny_primes.py --help
+```
 
 ### Wasn't there also some Magma and PARI/GP code?
 
