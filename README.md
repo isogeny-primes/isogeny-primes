@@ -4,18 +4,39 @@ This is the repository for the program **Quadratic Isogeny Primes**, whose algor
 
 ### What does it do?
 
-You can use one `#` all the way up to `######` six for different heading sizes.
+You give it a quadratic field, not imaginary quadratic of class number one.
 
-If you'd like to quote someone, use the > character before the line:
+It will give you a set of primes containing the **isogeny primes** for your chosen quadratic field.
 
-> Coffee. The finest organic suspension ever devised... I beat the Borg with it.
-> - Captain Janeway
+It will then be up to you to determine which of those are actually isogeny primes.
 
 ### How do I use it?
 
-You can use one `#` all the way up to `######` six for different heading sizes.
+Clone this repo to your computer. It is assumed you have [sage](https://sagemath.org/) installed.
 
-If you'd like to quote someone, use the > character before the line
+#### Typical use
+
+The main file is `quadratic_isogeny_primes.py`. It takes one positional argument - D - which corresponds to your quadratic field. So if you're interested to see the isogeny primes over Q(root-5), you'd enter the following at the command line:
+
+```
+sage quadratic_isogeny_primes.py 5
+```
+
+#### Optional arguments
+
+To see the various options, run
+
+```
+sage quadratic_isogeny_primes.py --help
+```
+
+You'll see that you have the following optional arguments:
+
+ - this;
+
+ - this;
+
+ - this;
 
 ### Wasn't there also some Magma and PARI/GP code?
 
