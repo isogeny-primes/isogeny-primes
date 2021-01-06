@@ -52,15 +52,17 @@ sage quadratic_isogeny_primes.py --help
 
 ### Wasn't there also some Magma and PARI/GP code?
 
-You can use one `#` all the way up to `######` six for different heading sizes.
+You'll find these in their respective folders.
 
-If you'd like to quote someone, use the > character before the line
+The [PARI/GP](https://pari-gp.org) code is used to rule out the "type two primes". The file `type2primes.gp` will explain how to do this.
+
+The [Magma](magma.com) code is there so that others can verify the stuff being done in Section 11 of the paper. Note that you'll need a Magma licence for this.
 
 ### I found a bug, what do I do now?
 
-You can use one `#` all the way up to `######` six for different heading sizes.
+Please report any bugs in the [issues](https://github.com/BarinderBanwait/quadratic_isogeny_primes/issues) section.
 
-If you'd like to quote someone, use the > character before the line
+Alternatively, feel free to send me an email.
 
 ### Why only quadratic fields? I want isogeny primes over number fields of degree 29.
 
@@ -69,7 +71,6 @@ Well I'm afraid you're gonna have to wait dear visitor! Even extending the algor
 ### Where can I learn more about elliptic curves and other cool stuff?
 
 You can head over to the [L-functions and Modular Forms Database](https://lmfdb.org/), there you'll find loads of resources, data, and proper cool images.
-
 
 ####  Copyright (C) 2021 Barinder Singh Banwait
 
