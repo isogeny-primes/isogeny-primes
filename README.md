@@ -32,22 +32,36 @@ sage quadratic_isogeny_primes.py --help
 
 You'll see that you have the following optional arguments:
 
- - this;
+ - `--aux_prime_count`; this tells the program how many auxiliary primes to take. So you could for example do this:
 
  ```
-sage quadratic_isogeny_primes.py --help
+sage quadratic_isogeny_primes.py 5 --aux_prime_count 6
 ```
 
- - this;
+    which will take 6 auxiliary primes.
+
+ - `--loop_all`; this will loop over all elliptic curves, not just one for each j-invariant. This is more for sanity checking, since the numbers being computed are twist invariant.
 
  ```
-sage quadratic_isogeny_primes.py --help
+sage quadratic_isogeny_primes.py 5 --aux_prime_count 6 --loop_all
 ```
 
- - this;
+ - `--dlmv`; this will return the dlmv bound:
 
 ```
-sage quadratic_isogeny_primes.py --help
+sage quadratic_isogeny_primes.py 17 --dlmv
+```
+
+ - `--bound`; this specifies the bound on Type 2 primes that the sage code will check up to. Sage can go up to about 10 million, but beyond that you'll start seeing pari memory overflows.
+
+```
+sage quadratic_isogeny_primes.py 17 --bound 10000000
+```
+
+ - `--rigorous`; this will attempt to check all primes up to the Type 2 bound. This is a legacy feature which will be phased out in the next release; for checking up to the tens of billions, use the PARI/GP script.
+
+```
+sage quadratic_isogeny_primes.py 17 --rigorous
 ```
 
 #### Running the tests
