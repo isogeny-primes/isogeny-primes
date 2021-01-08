@@ -1,6 +1,6 @@
 # Quadratic Isogeny Primes
 
-This is the repository for the program **Quadratic Isogeny Primes**, whose algorithms are explained in the paper [Explicit Isogenies of prime degree over Quadratic fields](https://arxiv.org/).
+This is the repository for the program **Quadratic Isogeny Primes**, whose algorithms are explained in the paper [Explicit Isogenies of prime degree over Quadratic fields](https://arxiv.org/abs/2101.02673).
 
 ### What does it do?
 
@@ -32,13 +32,11 @@ sage quadratic_isogeny_primes.py --help
 
 You'll see that you have the following optional arguments:
 
- - `--aux_prime_count`; this tells the program how many auxiliary primes to take. So you could for example do this:
+ - `--aux_prime_count`; this tells the program how many auxiliary primes to take. So you could for example do the following to take 6 auxiliary primes:
 
  ```
 sage quadratic_isogeny_primes.py 5 --aux_prime_count 6
 ```
-
-    which will take 6 auxiliary primes.
 
  - `--loop_all`; this will loop over all elliptic curves, not just one for each j-invariant. This is more for sanity checking, since the numbers being computed are twist invariant.
 
