@@ -81,8 +81,10 @@ We have code that automatically generates the latex for the tables any day!
 The following generates the LaTeX for the DLMV table
 
 ```
-sage latex_helper.py --table dlmv
+sage latex_helper.py 10 --table dlmv
 ```
+
+The `10` refers to how many quadratic fields you want in the table. Change that according to how many you want to see.
 
 Change `dlmv` to `lpp` to get the **Large Putative isogeny Primes** table.
 
