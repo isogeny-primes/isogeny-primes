@@ -38,10 +38,10 @@ You'll see that you have the following optional arguments:
 sage quadratic_isogeny_primes.py 5 --aux_prime_count 6
 ```
 
- - `--loop_all`; this will loop over all elliptic curves, not just one for each j-invariant. This is more for sanity checking, since the numbers being computed are twist invariant.
+ - `--loop_curves`; this will loop over all elliptic curves and compute the characteristic polynomials of Frobenius, not just return all possible Weil polynomials. This returns a possibly smaller set of primes at the expense of possibly longer runtime.
 
  ```
-sage quadratic_isogeny_primes.py 5 --aux_prime_count 6 --loop_all
+sage quadratic_isogeny_primes.py 5 --aux_prime_count 6 --loop_curves
 ```
 
  - `--dlmv`; this will return the dlmv bound:

@@ -43,7 +43,7 @@ class TestQuadraticIsogenyPrimes(unittest.TestCase):
 
     def test_73(self):
         K = QuadraticField(-127)
-        superset = get_isogeny_primes(K, AUX_PRIME_COUNT)
+        superset = get_isogeny_primes(K, AUX_PRIME_COUNT, loop_curves=True)
         self.assertTrue(set(superset).issuperset(EC_Q_ISOGENY_PRIMES))
         self.assertIn(73, superset)
 
@@ -100,4 +100,4 @@ class TestQuadraticIsogenyPrimes(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    unittest.main(buffer=True)
+    unittest.main()

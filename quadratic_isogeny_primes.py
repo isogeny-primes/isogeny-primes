@@ -8,8 +8,8 @@
 
     Copyright (C) 2021 Barinder Singh Banwait
 
-    Quadratic Isogeny Primes is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
+    Quadratic Isogeny Primes is free software: you can redistribute it and/or
+    modify it under the terms of the GNU General Public License as published by
     the Free Software Foundation, either version 3 of the License, or
     any later version.
 
@@ -31,10 +31,10 @@
 
 import argparse
 from itertools import product
-from sage.all import (QQ, next_prime, EllipticCurve, EllipticCurve_from_j,
-        IntegerRing, prime_range, ZZ, pari, PolynomialRing, Integer,
-        Rationals, legendre_symbol, QuadraticField, log, exp, find_root,
-        ceil, NumberField, hilbert_class_polynomial, RR)
+from sage.all import (QQ, next_prime, IntegerRing, prime_range, ZZ, pari,
+        PolynomialRing, Integer, Rationals, legendre_symbol, QuadraticField,
+        log, exp, find_root, ceil, NumberField, hilbert_class_polynomial,
+        RR, EllipticCurve, EllipticCurve_from_j)
 
 # Global constants
 
@@ -74,30 +74,22 @@ EPSILONS_PRE_TYPE_1_2 = {
 
 # Global methods
 
-USER_CLIP_WARNED = False
+def get_weil_polys(res_field):
+    """Used to compute all characteristic polynomial of Frobenius of
+    elliptic curves over the given residue field"""
 
-def clip_aux_primes(prov_aux_primes, rational=False):
-    """Ensure only auxiliary primes < P_2 are taken. This is a v1
-    restriction to be addressed in a future release."""
+    frob_polys = set()
 
-    if rational:
-        aux_primes = [q for q in prov_aux_primes if q < P_2]
-    else:
-        aux_primes = [q for q in prov_aux_primes if q.norm() < P_2]
-
-    requested_aux_primes = len(prov_aux_primes)
-    global USER_CLIP_WARNED
-
-    if (len(aux_primes) < requested_aux_primes) and not USER_CLIP_WARNED:
-        msg = ("Warning: You requested {} aux primes; but this will contain "
-        "primes of norm larger than 71, so the sieving will not currently "
-        "work. Implementing this feature is scheduled for the Birch release. "
-        "For now we have truncated the number of aux primes to {}. "
-        "Sorry about that. :/").format(requested_aux_primes, len(aux_primes))
-        print(msg)
-        USER_CLIP_WARNED = True  # Prevents multiple such messages
-
-    return aux_primes
+    # for A,B in list(product(res_field, res_field)):
+    #     if (4*A**3 + 27*B**2) != 0:
+    #         E = EllipticCurve([A,B])
+    #         frob_poly = E.frobenius_polynomial()
+    #         frob_polys.append(frob_poly)
+    for j in res_field:
+        E = EllipticCurve_from_j(j)
+        frob_poly = E.frobenius_polynomial()
+        frob_polys = frob_polys.union({frob_poly})
+    return list(frob_polys)
 
 
 ########################################################################
@@ -145,15 +137,14 @@ def oezman_sieve(p,N):
 ########################################################################
 
 
-def get_N(E, residue_field_card):
+def get_N(frob_poly, residue_field_card):
     """Helper method for computing Type 1 primes"""
 
-    E_frob_poly = E.frobenius_polynomial()
-    if E_frob_poly.is_irreducible():
-        E_frob_poly_root_field = E_frob_poly.root_field('a')
+    if frob_poly.is_irreducible():
+        frob_poly_root_field = frob_poly.root_field('a')
     else:
-        E_frob_poly_root_field = IntegerRing()
-    roots_of_frob = E_frob_poly.roots(E_frob_poly_root_field)
+        frob_poly_root_field = IntegerRing()
+    roots_of_frob = frob_poly.roots(frob_poly_root_field)
     if len(roots_of_frob) == 1:
         assert roots_of_frob[0][1] == 2
         beta = roots_of_frob[0][0]
@@ -163,7 +154,7 @@ def get_N(E, residue_field_card):
         return 1 + residue_field_card ** 12 - beta ** 12 - beta_bar ** 12
 
 
-def get_type_1_primes(K, aux_prime_count=3, loop_only_j=True):
+def get_type_1_primes(K, aux_prime_count=3, loop_curves=False):
     """Compute the type 1 primes"""
 
     aux_primes = [Q_2]
@@ -172,28 +163,27 @@ def get_type_1_primes(K, aux_prime_count=3, loop_only_j=True):
         prime_to_append = next_prime(prime_to_append)
         aux_primes.append(prime_to_append)
 
-    aux_primes = clip_aux_primes(aux_primes, rational=True)
-
     running_prime_dict = {}
+    R = PolynomialRing(Rationals(), 'x')
 
     for q in aux_primes:
         frak_q = K.primes_above(q)[0]
         residue_field = frak_q.residue_field(names='z')
         residue_field_card = residue_field.cardinality()
 
-        running_primes = set()
-
-        if loop_only_j:
-            for j in residue_field:
-                E = EllipticCurve_from_j(j)
-                N = get_N(E, residue_field_card)
-                running_primes = running_primes.union(set(Integer(N).prime_divisors()))
+        running_primes = {q}
+        if loop_curves:
+            weil_polys = get_weil_polys(residue_field)
         else:
-            for A,B in list(product(residue_field, residue_field)):
-                if (4*A**3 + 27*B**2) != 0:
-                    E = EllipticCurve([A,B])
-                    N = get_N(E, residue_field_card)
-                    running_primes = running_primes.union(set(Integer(N).prime_divisors()))
+            weil_polys = R.weil_polynomials(2, residue_field_card)
+
+        for wp in weil_polys:
+            N = get_N(wp, residue_field_card)
+            N = Integer(N)
+            if N != 0:
+                # else we can ignore since it doesn't arise from an elliptic curve
+                running_primes = running_primes.union(set(Integer(N).prime_divisors()))
+
         running_prime_dict[q] = running_primes
 
     output = set.intersection(*(val for val in running_prime_dict.values()))
@@ -269,8 +259,9 @@ def get_AB_primes(K,q,epsilons,h_K):
         alpha_to_eps = group_ring_exp(alpha,eps)
         A = (alpha_to_eps - 1).norm()
         B = (alpha_to_eps - (rat_q ** (12 * h_K))).norm()
-
+        print("Doin A = {}".format(A))
         possible_A_primes = ZZ(A).prime_divisors()
+        print("Doin B = {}".format(B))
         possible_B_primes = ZZ(B).prime_divisors()
 
         A_primes_filt = filter_ABC_primes(K, possible_A_primes, eps_type)
@@ -280,7 +271,7 @@ def get_AB_primes(K,q,epsilons,h_K):
     return output_dict_AB
 
 
-def get_C_primes(K, frak_q, epsilons, h_K, loop_only_j):
+def get_C_primes(K, frak_q, epsilons, h_K, loop_curves=False):
 
     # Initialise output dict to empty sets
     output_dict_C = {}
@@ -291,58 +282,63 @@ def get_C_primes(K, frak_q, epsilons, h_K, loop_only_j):
     alphas = (frak_q ** h_K).gens_reduced()
     assert len(alphas) == 1, "q^hK not principal, which is very bad"
     alpha = alphas[0]
-
-    ecs_to_loop = []
-    if loop_only_j:
-        for j in residue_field:
-            ecs_to_loop.append(EllipticCurve_from_j(j))
+    R = PolynomialRing(Rationals(), 'x')
+    if loop_curves:
+        frob_polys_to_loop = get_weil_polys(residue_field)
     else:
-        for A,B in list(product(residue_field, residue_field)):
-            if (4*A**3 + 27*B**2) != 0:
-                ecs_to_loop.append(EllipticCurve([A,B]))
+        frob_polys_to_loop = R.weil_polynomials(2, residue_field.cardinality())
 
-    for E in ecs_to_loop:
-        E_frob_poly = E.frobenius_polynomial()
-        if E_frob_poly.is_irreducible():
-            E_frob_poly_root_field = E_frob_poly.root_field('a')
-            _, K_into_KL, L_into_KL, _ = K.composite_fields(E_frob_poly_root_field, 'c', both_maps=True)[0]
+    for frob_poly in frob_polys_to_loop:
+        if frob_poly.is_irreducible():
+            frob_poly_root_field = frob_poly.root_field('a')
+            _, K_into_KL, L_into_KL, _ = K.composite_fields(frob_poly_root_field, 'c', both_maps=True)[0]
         else:
-            E_frob_poly_root_field = IntegerRing()
-        roots_of_frob = E_frob_poly.roots(E_frob_poly_root_field)
+            frob_poly_root_field = IntegerRing()
+        roots_of_frob = frob_poly.roots(frob_poly_root_field)
         betas = [r for r,e in roots_of_frob]
 
         for beta in betas:
             if beta in K:
                 for eps, eps_type in epsilons.items():
                     N = (group_ring_exp(alpha, eps) - beta ** (12*h_K)).absolute_norm()
-                    possible_C_primes = ZZ(N).prime_divisors()
-                    C_primes_filt = filter_ABC_primes(K, possible_C_primes, eps_type)
+                    N = ZZ(N)
+                    if N != 0:
+                        print("Doin C = {}".format(N))
+                        possible_C_primes = N.prime_divisors()
+                        C_primes_filt = filter_ABC_primes(K, possible_C_primes, eps_type)
+                    else:
+                        # means no elliptic curve with this weil poly
+                        C_primes_filt = []
                     output_dict_C[eps] = output_dict_C[eps].union(set(C_primes_filt))
             else:
                 for eps, eps_type in epsilons.items():
                     N = (K_into_KL(group_ring_exp(alpha, eps)) - L_into_KL(beta ** (12*h_K))).absolute_norm()
-                    possible_C_primes = ZZ(N).prime_divisors()
-                    C_primes_filt = filter_ABC_primes(K, possible_C_primes, eps_type)
+                    N = ZZ(N)
+                    if N != 0:
+                        print("Doin C = {}".format(N))
+                        possible_C_primes = ZZ(N).prime_divisors()
+                        C_primes_filt = filter_ABC_primes(K, possible_C_primes, eps_type)
+                    else:
+                        # means no elliptic curve with this weil poly
+                        C_primes_filt = []
                     output_dict_C[eps] = output_dict_C[eps].union(set(C_primes_filt))
     return output_dict_C
 
 
-def get_pre_type_one_two_primes(K, aux_prime_count=3, loop_only_j=True):
+def get_pre_type_one_two_primes(K, aux_prime_count=3, loop_curves=False):
     """Pre type 1-2 primes are the finitely many primes outside of which
     the isogeny character is necessarily of type 2 (or 3, which is not relevant
     for us)."""
 
     if K.is_totally_real():
-        prov_aux_primes = K.primes_of_degree_one_list(aux_prime_count)
+        aux_primes = K.primes_of_degree_one_list(aux_prime_count)
     else:
         it = K.primes_of_degree_one_iter()
-        prov_aux_primes = []
-        while len(prov_aux_primes) < aux_prime_count:
+        aux_primes = []
+        while len(aux_primes) < aux_prime_count:
             aux_prime_candidate = next(it)
             if not aux_prime_candidate.is_principal():
-                prov_aux_primes.append(aux_prime_candidate)
-
-    aux_primes = clip_aux_primes(prov_aux_primes)
+                aux_primes.append(aux_prime_candidate)
 
     tracking_dict = {}
     epsilons = EPSILONS_PRE_TYPE_1_2
@@ -351,11 +347,13 @@ def get_pre_type_one_two_primes(K, aux_prime_count=3, loop_only_j=True):
     for q in aux_primes:
         # these will be dicts with keys the epsilons, values sets of primes
         AB_primes_dict = get_AB_primes(K,q,epsilons, h_K)
-        C_primes_dict = get_C_primes(K, q, epsilons, h_K, loop_only_j)
+        C_primes_dict = get_C_primes(K, q, epsilons, h_K, loop_curves)
         unified_dict = {}
+        q_rat = Integer(q.norm())
+        assert q_rat.is_prime()
         for eps in epsilons:
-            unified_dict[eps] = AB_primes_dict[eps].union(C_primes_dict[eps])
-
+            unified_dict[eps] = AB_primes_dict[eps].union(C_primes_dict[eps],
+                                                          {q_rat})
         tracking_dict[q] = unified_dict
 
     tracking_dict_inv_collapsed = {}
@@ -481,7 +479,7 @@ def DLMV(K):
 ########################################################################
 
 
-def get_isogeny_primes(K, aux_prime_count, bound=1000, loop_only_j=True):
+def get_isogeny_primes(K, aux_prime_count, bound=1000, loop_curves=False):
 
     # Start with some helpful user info
 
@@ -491,14 +489,14 @@ def get_isogeny_primes(K, aux_prime_count, bound=1000, loop_only_j=True):
     # Get and show TypeOnePrimes
 
     type_1_primes = get_type_1_primes(K, aux_prime_count=aux_prime_count,
-                                         loop_only_j=loop_only_j)
+                                         loop_curves=loop_curves)
     print("type_1_primes = {}\n".format(type_1_primes))
 
     # Get and show PreTypeOneTwoPrimes
 
     pre_type_one_two_primes = get_pre_type_one_two_primes(K,
                                 aux_prime_count=aux_prime_count,
-                                loop_only_j=loop_only_j)
+                                loop_curves=loop_curves)
     print("pre_type_2_primes = {}\n".format(pre_type_one_two_primes))
 
     # Get and show TypeTwoPrimes
@@ -544,7 +542,6 @@ def cli_handler(args):
         dlmv_bound = DLMV(K)
         print("DLMV bound for {} is:\n\n{}\n\nwhich is approximately {}".format(K, dlmv_bound, RR(dlmv_bound)))
     else:
-        loop_only_j = not args.loop_all
         if args.rigorous:
             bound = None
             print("Checking all Type 2 primes up to conjectural bound")
@@ -553,7 +550,7 @@ def cli_handler(args):
             print("WARNING: Only checking Type 2 primes up to {}.\n".format(bound))
             print(("To check all, run with '--rigorous', but be advised that "
                 "this will take ages and require loads of memory"))
-        superset = get_isogeny_primes(K, args.aux_prime_count, bound, loop_only_j)
+        superset = get_isogeny_primes(K, args.aux_prime_count, bound, args.loop_curves)
         print("superset = {}".format(superset))
 
 
@@ -562,7 +559,7 @@ if __name__ == "__main__":
     parser.add_argument('D', metavar='D', type=int,
                          help='defining square root for the Quadratic field')
     parser.add_argument("--aux_prime_count", type=int, help="how many auxiliary primes to take", default=5)
-    parser.add_argument("--loop_all", action='store_true', help="loop over all elliptic curves, not just j invariants")
+    parser.add_argument("--loop_curves", action='store_true', help="loop over elliptic curves, don't just loop over all weil polys")
     parser.add_argument("--dlmv", action='store_true', help="get only DLMV bound")
     parser.add_argument("--bound", type=int, help="bound on Type 2 prime search", default=1000)
     parser.add_argument("--rigorous", action='store_true', help="search all Type 2 primes up to conjectural bound")
