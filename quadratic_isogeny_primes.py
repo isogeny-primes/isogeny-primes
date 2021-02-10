@@ -34,7 +34,7 @@ from itertools import product
 from sage.all import (QQ, next_prime, IntegerRing, prime_range, ZZ, pari,
         PolynomialRing, Integer, Rationals, legendre_symbol, QuadraticField,
         log, exp, find_root, ceil, NumberField, hilbert_class_polynomial,
-        RR, EllipticCurve, EllipticCurve_from_j)
+        RR, EllipticCurve)
 
 # Global constants
 
@@ -80,15 +80,12 @@ def get_weil_polys(res_field):
 
     frob_polys = set()
 
-    # for A,B in list(product(res_field, res_field)):
-    #     if (4*A**3 + 27*B**2) != 0:
-    #         E = EllipticCurve([A,B])
-    #         frob_poly = E.frobenius_polynomial()
-    #         frob_polys.append(frob_poly)
-    for j in res_field:
-        E = EllipticCurve_from_j(j)
-        frob_poly = E.frobenius_polynomial()
-        frob_polys = frob_polys.union({frob_poly})
+    for A,B in list(product(res_field, res_field)):
+        if (4*A**3 + 27*B**2) != 0:
+            E = EllipticCurve([A,B])
+            frob_poly = E.frobenius_polynomial()
+            frob_polys = frob_polys.union({frob_poly})
+
     return list(frob_polys)
 
 
@@ -259,9 +256,7 @@ def get_AB_primes(K,q,epsilons,h_K):
         alpha_to_eps = group_ring_exp(alpha,eps)
         A = (alpha_to_eps - 1).norm()
         B = (alpha_to_eps - (rat_q ** (12 * h_K))).norm()
-        print("Doin A = {}".format(A))
         possible_A_primes = ZZ(A).prime_divisors()
-        print("Doin B = {}".format(B))
         possible_B_primes = ZZ(B).prime_divisors()
 
         A_primes_filt = filter_ABC_primes(K, possible_A_primes, eps_type)
@@ -303,7 +298,6 @@ def get_C_primes(K, frak_q, epsilons, h_K, loop_curves=False):
                     N = (group_ring_exp(alpha, eps) - beta ** (12*h_K)).absolute_norm()
                     N = ZZ(N)
                     if N != 0:
-                        print("Doin C = {}".format(N))
                         possible_C_primes = N.prime_divisors()
                         C_primes_filt = filter_ABC_primes(K, possible_C_primes, eps_type)
                     else:
@@ -315,7 +309,6 @@ def get_C_primes(K, frak_q, epsilons, h_K, loop_curves=False):
                     N = (K_into_KL(group_ring_exp(alpha, eps)) - L_into_KL(beta ** (12*h_K))).absolute_norm()
                     N = ZZ(N)
                     if N != 0:
-                        print("Doin C = {}".format(N))
                         possible_C_primes = ZZ(N).prime_divisors()
                         C_primes_filt = filter_ABC_primes(K, possible_C_primes, eps_type)
                     else:
