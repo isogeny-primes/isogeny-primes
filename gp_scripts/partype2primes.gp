@@ -1,6 +1,6 @@
-/* type2primes.gp
+/* partype2primes.gp
 
-    This allows one to quickly check type 2 primes up to large bounds.
+    This is the parallelised version of type2primes.gp
 
     Best to initialise gp like so:
 
@@ -12,9 +12,9 @@
 
     Copyright (C) 2021 Barinder Singh Banwait
 
-    Quadratic Isogeny Primes is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
+    Quadratic Isogeny Primes is free software: you can redistribute it and/or
+    modify it under the terms of the GNU General Public License as published
+    by the Free Software Foundation, either version 3 of the License, or
     any later version.
 
     This program is distributed in the hope that it will be useful,
@@ -33,8 +33,6 @@
 
 \\ 80 billion is the bound for all |D| <= 10
 
-\\ gp --primelimit 80000000000 --stacksize 20000000
-
 \\memoize wrapper (for kronecker symbol)
 memo=Map();
 memoize(f,A[..])=
@@ -45,8 +43,10 @@ memoize(f,A[..])=
   mapput(memo,[f,A],res));
   res;
 }
+export(memoize)
 
-D=6;  \\ change this to desired value
+D=-5;  \\ change this to desired value
+export(D)
 
 \\check if condition CC is satisfied
 satisfiesCC(p) =
@@ -63,6 +63,7 @@ satisfiesCC(p) =
   );
   return(1);
 }
+export(satisfiesCC)
 
 \\print to stdout if p satisfies condition CC
 print_satisfiesCC(p) =
@@ -71,6 +72,7 @@ print_satisfiesCC(p) =
     print(p," is a type 2 prime")
   );
 }
+export(print_satisfiesCC)
 
 \\for D=3,7
 congruence_condition_37(p) =
@@ -85,6 +87,7 @@ congruence_condition_37(p) =
 congruence_condition_main(p) =
 {
     if(p%24 == 19,
+      my(x='x);
       x=p%5;
       if((x==2)||(x==3),
         return(1);
@@ -93,6 +96,7 @@ congruence_condition_main(p) =
     return(0);
     );
 }
+export(congruence_condition_main)
 
 \\ for D=5
 congruence_condition_5(p) =
@@ -142,5 +146,8 @@ custom_congruence_condition(p,D) =
         D == 10, congruence_condition_main(p),
         congruence_condition_main(p));
 }
+export(custom_congruence_condition)
 
-parforprime(p = 1000000, 80000000000, if(custom_congruence_condition(p,D),print_satisfiesCC(p)));
+\\parforprime(p = 10, 80000000000,custom_congruence_condition(p,D),cond,if(cond,print_satisfiesCC(p)));
+
+\\read("partype2primes.gp")
