@@ -82,6 +82,7 @@ congruence_condition_37(p) =
       return(0);
     );
 }
+export(congruence_condition_37)
 
 \\ for D=-6,-5,6,10
 congruence_condition_main(p) =
@@ -110,6 +111,7 @@ congruence_condition_5(p) =
     return(0);
     );
 }
+export(congruence_condition_5)
 
 \\ for D=-10
 congruence_condition_m10(p) =
@@ -123,6 +125,7 @@ congruence_condition_m10(p) =
     return(0);
     );
 }
+export(congruence_condition_m10)
 
 \\for D=2
 congruence_condition_2(p) =
@@ -132,6 +135,7 @@ congruence_condition_2(p) =
       return(0);
     );
 }
+export(congruence_condition_2)
 
 custom_congruence_condition(p,D) =
 {
