@@ -6,6 +6,10 @@
 
     gp --primelimit 56546719184 --stacksize 20000000
 
+    We gratefully acknowledge the help of Bill Allombert and
+    Vinko Petričević in creating this parallelized code. Merci beaucoup
+    Bill, and Puno hvala Vinko!
+
     ====================================================================
 
     This file is part of Quadratic Isogeny Primes.
@@ -33,18 +37,6 @@
 
 \\ 80 billion is the bound for all |D| <= 10
 
-\\memoize wrapper (for kronecker symbol)
-memo=Map();
-memoize(f,A[..])=
-{
-  my(res);
-  if(!mapisdefined(memo, [f,A], &res),
-  res = call(f,A);
-  mapput(memo,[f,A],res));
-  res;
-}
-export(memoize)
-
 D=-5;  \\ change this to desired value
 export(D)
 
@@ -53,7 +45,7 @@ satisfiesCC(p) =
 {
   forprime(q = 7,p/4,
     if((q^2 + q + 1) % p != 0,
-      if(memoize(kronecker,D,q) != -1,
+      if(kronecker(D,q) != -1,
         \\ don't memoize the next call
         if(kronecker(q,p) == 1,
           return(0)
@@ -152,6 +144,20 @@ custom_congruence_condition(p,D) =
 }
 export(custom_congruence_condition)
 
-\\parforprime(p = 10, 80000000000,custom_congruence_condition(p,D),cond,if(cond,print_satisfiesCC(p)));
+blockSize=100000;
+export(blockSize);
 
-\\read("partype2primes.gp")
+doWork(pBeg) =
+{
+    my(p,cond);
+    forprime(p = pBeg*blockSize, (pBeg+1)*blockSize-1,
+             cond=custom_congruence_condition(p,D);
+             if(cond,print_satisfiesCC(p)));
+}
+export(doWork);
+
+howMany=floor(1000000000/blockSize);
+
+\\ Takes about 27 seconds up to a billion!
+
+\\ parapply(doWork,[0..howMany]);
