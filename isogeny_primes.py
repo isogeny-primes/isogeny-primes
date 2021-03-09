@@ -132,7 +132,7 @@ def oezman_sieve(p,N):
 ########################################################################
 
 
-def get_N(frob_poly, residue_field_card):
+def get_N(frob_poly, residue_field_card, exponent):
     """Helper method for computing Type 1 primes"""
 
     if frob_poly.is_irreducible():
@@ -143,14 +143,17 @@ def get_N(frob_poly, residue_field_card):
     if len(roots_of_frob) == 1:
         assert roots_of_frob[0][1] == 2
         beta = roots_of_frob[0][0]
-        return 1 + residue_field_card ** 12 - 2 * beta ** 12
+        return 1 + residue_field_card ** exponent - 2 * beta ** exponent
     else:
         beta, beta_bar = [r for r,e in roots_of_frob]
-        return 1 + residue_field_card ** 12 - beta ** 12 - beta_bar ** 12
+        return 1 + residue_field_card ** exponent - beta ** exponent - beta_bar ** exponent
 
 
 def get_type_1_primes(K, aux_prime_count=3, loop_curves=False):
     """Compute the type 1 primes"""
+
+    C_K = K.class_group()
+    h_K = C_K.order()
 
     aux_primes = [Q_2]
     prime_to_append = Q_2
@@ -165,6 +168,8 @@ def get_type_1_primes(K, aux_prime_count=3, loop_curves=False):
         frak_q = K.primes_above(q)[0]
         residue_field = frak_q.residue_field(names='z')
         residue_field_card = residue_field.cardinality()
+        frak_q_class_group_order = C_K(frak_q).multiplicative_order()
+        exponent = 12 * frak_q_class_group_order
 
         running_primes = {q}
         if loop_curves:
@@ -173,18 +178,17 @@ def get_type_1_primes(K, aux_prime_count=3, loop_curves=False):
             weil_polys = R.weil_polynomials(2, residue_field_card)
 
         for wp in weil_polys:
-            N = get_N(wp, residue_field_card)
+            N = get_N(wp, residue_field_card, exponent)
             N = Integer(N)
             if N != 0:
                 # else we can ignore since it doesn't arise from an elliptic curve
-                running_primes = running_primes.union(set(Integer(N).prime_divisors()))
+                running_primes = running_primes.union(set(N.prime_divisors()))
 
         running_prime_dict[q] = running_primes
 
     output = set.intersection(*(val for val in running_prime_dict.values()))
     output = output.union(set(prime_range(P_2)))
     Delta_K = K.discriminant().abs()
-    h_K = K.class_number()
     output = output.union(set(Delta_K.prime_divisors()))
     third_set = [1+d for d in (12*h_K).divisors()]  # p : (p-1)|12h_K
     output = output.union(set([p for p in third_set if p.is_prime()]))
