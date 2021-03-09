@@ -1,14 +1,14 @@
-"""quadratic_isogeny_primes.py
+"""isogeny_primes.py
 
-    Return finite list of isogeny primes attached to a quadratic field.
+    Return finite list of isogeny primes attached to a number field.
 
     ====================================================================
 
-    This file is part of Quadratic Isogeny Primes.
+    This file is part of Isogeny Primes.
 
-    Copyright (C) 2021 Barinder Singh Banwait
+    Copyright (C) 2021 Barinder Singh Banwait and Maarten Derickx
 
-    Quadratic Isogeny Primes is free software: you can redistribute it and/or
+    Isogeny Primes is free software: you can redistribute it and/or
     modify it under the terms of the GNU General Public License as published by
     the Free Software Foundation, either version 3 of the License, or
     any later version.
@@ -20,8 +20,6 @@
 
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
-
-    The author can be reached at: barinder.s.banwait@gmail.com
 
     ====================================================================
 
