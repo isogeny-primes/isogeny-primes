@@ -1,8 +1,10 @@
-# Quadratic Isogeny Primes
+# Isogeny Primes
 
-This is the repository for the program **Quadratic Isogeny Primes**, whose algorithms are explained in the paper [Explicit Isogenies of prime degree over Quadratic fields](https://arxiv.org/abs/2101.02673).
+This is the repository for the program **Isogeny Primes**, and generalizes the algorithms over quadratic fields as explained in the paper [Explicit Isogenies of prime degree over Quadratic fields](https://arxiv.org/abs/2101.02673) to higher degree numberfields.
 
 ### What does it do?
+
+At the moment the generalization to higher degree number fields is pretty much work in progress. However it works for quadratic fields.
 
 You give it a quadratic field, not imaginary quadratic of class number one.
 
