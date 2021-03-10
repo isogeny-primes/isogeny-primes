@@ -149,10 +149,9 @@ def get_N(frob_poly, residue_field_card, exponent):
         return 1 + residue_field_card ** exponent - beta ** exponent - beta_bar ** exponent
 
 
-def get_type_1_primes(K, aux_prime_count=3, loop_curves=False):
+def get_type_1_primes(K, C_K, aux_prime_count=3, loop_curves=False):
     """Compute the type 1 primes"""
 
-    C_K = K.class_group()
     h_K = C_K.order()
 
     aux_primes = [Q_2]
@@ -246,18 +245,18 @@ def filter_ABC_primes(K, prime_list, eps_type):
         raise ValueError("type must be quadratic, quartic, or sextic")
 
 
-def get_AB_primes(K,q,epsilons,h_K):
+def get_AB_primes(K,q,epsilons,q_class_group_order):
 
     output_dict_AB = {}
-    alphas = (q ** h_K).gens_reduced()
-    assert len(alphas) == 1, "q^hK not principal, which is very bad"
+    alphas = (q ** q_class_group_order).gens_reduced()
+    assert len(alphas) == 1, "q^q_class_group_order not principal, which is very bad"
     alpha = alphas[0]
     rat_q = ZZ(q.norm())
     assert rat_q.is_prime(), "somehow the degree 1 prime is not prime"
     for eps, eps_type in epsilons.items():
         alpha_to_eps = group_ring_exp(alpha,eps)
         A = (alpha_to_eps - 1).norm()
-        B = (alpha_to_eps - (rat_q ** (12 * h_K))).norm()
+        B = (alpha_to_eps - (rat_q ** (12 * q_class_group_order))).norm()
         possible_A_primes = ZZ(A).prime_divisors()
         possible_B_primes = ZZ(B).prime_divisors()
 
@@ -268,7 +267,7 @@ def get_AB_primes(K,q,epsilons,h_K):
     return output_dict_AB
 
 
-def get_C_primes(K, frak_q, epsilons, h_K, loop_curves=False):
+def get_C_primes(K, frak_q, epsilons, q_class_group_order, loop_curves=False):
 
     # Initialise output dict to empty sets
     output_dict_C = {}
@@ -276,8 +275,8 @@ def get_C_primes(K, frak_q, epsilons, h_K, loop_curves=False):
         output_dict_C[eps] = set()
 
     residue_field = frak_q.residue_field(names='z')
-    alphas = (frak_q ** h_K).gens_reduced()
-    assert len(alphas) == 1, "q^hK not principal, which is very bad"
+    alphas = (frak_q ** q_class_group_order).gens_reduced()
+    assert len(alphas) == 1, "q^q_class_group_order not principal, which is very bad"
     alpha = alphas[0]
     R = PolynomialRing(Rationals(), 'x')
     if loop_curves:
@@ -297,7 +296,7 @@ def get_C_primes(K, frak_q, epsilons, h_K, loop_curves=False):
         for beta in betas:
             if beta in K:
                 for eps, eps_type in epsilons.items():
-                    N = (group_ring_exp(alpha, eps) - beta ** (12*h_K)).absolute_norm()
+                    N = (group_ring_exp(alpha, eps) - beta ** (12*q_class_group_order)).absolute_norm()
                     N = ZZ(N)
                     if N != 0:
                         possible_C_primes = N.prime_divisors()
@@ -308,7 +307,7 @@ def get_C_primes(K, frak_q, epsilons, h_K, loop_curves=False):
                     output_dict_C[eps] = output_dict_C[eps].union(set(C_primes_filt))
             else:
                 for eps, eps_type in epsilons.items():
-                    N = (K_into_KL(group_ring_exp(alpha, eps)) - L_into_KL(beta ** (12*h_K))).absolute_norm()
+                    N = (K_into_KL(group_ring_exp(alpha, eps)) - L_into_KL(beta ** (12*q_class_group_order))).absolute_norm()
                     N = ZZ(N)
                     if N != 0:
                         possible_C_primes = ZZ(N).prime_divisors()
@@ -320,7 +319,7 @@ def get_C_primes(K, frak_q, epsilons, h_K, loop_curves=False):
     return output_dict_C
 
 
-def get_pre_type_one_two_primes(K, aux_prime_count=3, loop_curves=False):
+def get_pre_type_one_two_primes(K, C_K, aux_prime_count=3, loop_curves=False):
     """Pre type 1-2 primes are the finitely many primes outside of which
     the isogeny character is necessarily of type 2 (or 3, which is not relevant
     for us)."""
@@ -337,12 +336,12 @@ def get_pre_type_one_two_primes(K, aux_prime_count=3, loop_curves=False):
 
     tracking_dict = {}
     epsilons = EPSILONS_PRE_TYPE_1_2
-    h_K = K.class_number()
 
     for q in aux_primes:
+        q_class_group_order = C_K(q).multiplicative_order()
         # these will be dicts with keys the epsilons, values sets of primes
-        AB_primes_dict = get_AB_primes(K,q,epsilons, h_K)
-        C_primes_dict = get_C_primes(K, q, epsilons, h_K, loop_curves)
+        AB_primes_dict = get_AB_primes(K,q,epsilons, q_class_group_order)
+        C_primes_dict = get_C_primes(K, q, epsilons, q_class_group_order, loop_curves)
         unified_dict = {}
         q_rat = Integer(q.norm())
         assert q_rat.is_prime()
@@ -403,6 +402,8 @@ def get_type_2_bound(K):
 def satisfies_condition_CC(K,p):
     """Determine whether K,p satisfies condition CC.
 
+    TODO: Fix bug in this code
+
     Args:
         K ([NumberField]): the number field
         p ([Prime]): the prime p
@@ -411,9 +412,10 @@ def satisfies_condition_CC(K,p):
     """
     for q in prime_range(p/4):
         if (q**2 + q + 1) % p != 0:
-            if not K.ideal(q).is_prime():
-                if legendre_symbol(q,p) == 1:  # i.e. not inert
-                    return False
+            for frak_q,_ in K.ideal(q).factor():
+                if frak_q.residue_class_degree()%2 == 1 and frak_q.norm() < p/4:
+                    if legendre_symbol(q,p) == 1:  # i.e. not inert
+                        return False
     return True
 
 
@@ -483,13 +485,15 @@ def get_isogeny_primes(K, aux_prime_count, bound=1000, loop_curves=False):
 
     # Get and show TypeOnePrimes
 
-    type_1_primes = get_type_1_primes(K, aux_prime_count=aux_prime_count,
+    C_K = K.class_group()
+
+    type_1_primes = get_type_1_primes(K, C_K, aux_prime_count=aux_prime_count,
                                          loop_curves=loop_curves)
     print("type_1_primes = {}\n".format(type_1_primes))
 
     # Get and show PreTypeOneTwoPrimes
 
-    pre_type_one_two_primes = get_pre_type_one_two_primes(K,
+    pre_type_one_two_primes = get_pre_type_one_two_primes(K,C_K,
                                 aux_prime_count=aux_prime_count,
                                 loop_curves=loop_curves)
     print("pre_type_2_primes = {}\n".format(pre_type_one_two_primes))
