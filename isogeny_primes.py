@@ -32,18 +32,19 @@ from itertools import product
 from sage.all import (QQ, next_prime, IntegerRing, prime_range, ZZ, pari,
         PolynomialRing, Integer, Rationals, legendre_symbol, QuadraticField,
         log, exp, find_root, ceil, NumberField, hilbert_class_polynomial,
-        RR, EllipticCurve)
+        RR, EllipticCurve, ModularSymbols, Gamma0, lcm, oo, parent, Matrix,
+        gcd)
 
 # Global constants
 
-# The constants which Momose calls P_2 and Q_2
-P_2 = 73
-Q_2 = 7
+# The constant which Momose calls Q_2
+Q_2 = 3
 
 # Various other Quantities
 GENERIC_UPPER_BOUND = 10**30
 EC_Q_ISOGENY_PRIMES = {2,3,5,7,11,13,17,19,37,43,67,163}
 CLASS_NUMBER_ONE_DISCS = {-1, -2, -3, -7, -11, -19, -43, -67, -163}
+R = PolynomialRing(Rationals(), 'x')
 
 # The PreTypeOneTwo epsilons, with their types
 EPSILONS_PRE_TYPE_1_2 = {
@@ -111,7 +112,6 @@ def oezman_sieve(p,N):
     if not primes_tot_split_in_hcf:
         return False
 
-    R = PolynomialRing(Rationals(), 'x')
     f = R(hilbert_class_polynomial(M.discriminant()))
     B = NumberField(f, name='t')
     assert B.degree() == h_M
@@ -130,6 +130,54 @@ def oezman_sieve(p,N):
 #                           TYPE ONE PRIMES                            #
 #                                                                      #
 ########################################################################
+
+
+def R_dp(d,p):
+    """Return the formal immersion matrix
+
+    Args:
+        d ([int]): degree of number field
+        p ([prime]): prime whose formal immersion properties we'd like to check
+
+    Returns:
+        [Matrix]: The Matrix R_{d,u} in Corollary 6.4 of Derickx-Kamienny-Stein-Stoll
+    """
+    M = ModularSymbols(Gamma0(p),2)
+    S = M.cuspidal_subspace()
+    S_int = S.integral_structure()
+    e = M([0,oo])
+    I2 = M.hecke_operator(2)-3
+    def get_row(i):
+        return S_int.coordinate_vector(S_int(M.coordinate_vector(I2(M.hecke_operator(i)(e)))))
+    return Matrix([get_row(i) for i in range(1,d+1)]).change_ring(ZZ)
+
+
+def get_bad_formal_immersion_data(d):
+    """
+    This is the Oesterlé for type 1 primes with modular symbols main routine.
+    The computation of get_bad_formal_immersion_data is actually a two step
+    rocket. First Proposition 6.8 is used to bring Parents polynomial of
+    degree 6 bound down to something reasonable, and then Corollary 6.4 is
+    used to go from something reasonable to the exact list.
+    """
+
+    p_todo = []
+    p_done = {}
+
+    for p in prime_range(11,402):
+        M = ModularSymbols(Gamma0(p),2)
+        S = M.cuspidal_subspace()
+        I2 = M.hecke_operator(2)-3
+        assert I2.matrix().rank()==S.dimension()
+        D = R_dp(d,p).smith_form()[0].diagonal()
+        if len([i for i in D if i]) < d:
+            p_todo.append(p)
+        else:
+            odd_part_diagonal = lcm(D).prime_to_m_part(2)
+            if odd_part_diagonal > 1:
+                p_done[p] = odd_part_diagonal
+
+    return p_todo, p_done
 
 
 def get_N(frob_poly, residue_field_card, exponent):
@@ -154,6 +202,7 @@ def get_type_1_primes(K, C_K, aux_prime_count=3, loop_curves=False):
 
     h_K = C_K.order()
 
+    bad_formal_immersion_list, bad_aux_prime_dict = get_bad_formal_immersion_data(K.degree())
     aux_primes = [Q_2]
     prime_to_append = Q_2
     for _ in range(1,aux_prime_count):
@@ -161,7 +210,6 @@ def get_type_1_primes(K, C_K, aux_prime_count=3, loop_curves=False):
         aux_primes.append(prime_to_append)
 
     running_prime_dict = {}
-    R = PolynomialRing(Rationals(), 'x')
 
     for q in aux_primes:
         frak_q = K.primes_above(q)[0]
@@ -170,7 +218,7 @@ def get_type_1_primes(K, C_K, aux_prime_count=3, loop_curves=False):
         frak_q_class_group_order = C_K(frak_q).multiplicative_order()
         exponent = 12 * frak_q_class_group_order
 
-        running_primes = {q}
+        running_primes = q
         if loop_curves:
             weil_polys = get_weil_polys(residue_field)
         else:
@@ -181,12 +229,16 @@ def get_type_1_primes(K, C_K, aux_prime_count=3, loop_curves=False):
             N = Integer(N)
             if N != 0:
                 # else we can ignore since it doesn't arise from an elliptic curve
-                running_primes = running_primes.union(set(N.prime_divisors()))
+                running_primes = lcm(running_primes, N)
+
+        if q in bad_aux_prime_dict:
+            running_primes = lcm(running_primes, bad_aux_prime_dict[q])
 
         running_prime_dict[q] = running_primes
 
-    output = set.intersection(*(val for val in running_prime_dict.values()))
-    output = output.union(set(prime_range(P_2)))
+    output = gcd(list(running_prime_dict.values()))
+    output = set(output.prime_divisors())
+    output = output.union(set(bad_formal_immersion_list)).union({2,3,5,7})
     Delta_K = K.discriminant().abs()
     output = output.union(set(Delta_K.prime_divisors()))
     third_set = [1+d for d in (12*h_K).divisors()]  # p : (p-1)|12h_K
@@ -278,7 +330,6 @@ def get_C_primes(K, frak_q, epsilons, q_class_group_order, loop_curves=False):
     alphas = (frak_q ** q_class_group_order).gens_reduced()
     assert len(alphas) == 1, "q^q_class_group_order not principal, which is very bad"
     alpha = alphas[0]
-    R = PolynomialRing(Rationals(), 'x')
     if loop_curves:
         frob_polys_to_loop = get_weil_polys(residue_field)
     else:
@@ -385,7 +436,6 @@ def get_type_2_bound(K):
     D = 2 * A * n_K
     E = 4 * A * log(delta_K) + 2 * A * n_K * log(12) + 4 * B * n_K + C + 1
 
-    R = PolynomialRing(Rationals(), 'x')
     x = R.gen()
     f = x - (D*log(x) + E) ** 4
 
@@ -491,26 +541,28 @@ def get_isogeny_primes(K, aux_prime_count, bound=1000, loop_curves=False):
                                          loop_curves=loop_curves)
     print("type_1_primes = {}\n".format(type_1_primes))
 
-    # Get and show PreTypeOneTwoPrimes
+    return type_1_primes
 
-    pre_type_one_two_primes = get_pre_type_one_two_primes(K,C_K,
-                                aux_prime_count=aux_prime_count,
-                                loop_curves=loop_curves)
-    print("pre_type_2_primes = {}\n".format(pre_type_one_two_primes))
+    # # Get and show PreTypeOneTwoPrimes
 
-    # Get and show TypeTwoPrimes
+    # pre_type_one_two_primes = get_pre_type_one_two_primes(K,C_K,
+    #                             aux_prime_count=aux_prime_count,
+    #                             loop_curves=loop_curves)
+    # print("pre_type_2_primes = {}\n".format(pre_type_one_two_primes))
 
-    type_2_primes = get_type_2_primes(K, bound=bound)
-    print("type_2_primes = {}\n".format(type_2_primes))
+    # # Get and show TypeTwoPrimes
 
-    # Put them all together and sort the list before returning
-    candidates = set.union(set(type_1_primes),
-                           set(pre_type_one_two_primes),
-                           set(type_2_primes))
-    candidates = list(candidates)
-    candidates.sort()
+    # type_2_primes = get_type_2_primes(K, bound=bound)
+    # print("type_2_primes = {}\n".format(type_2_primes))
 
-    return candidates
+    # # Put them all together and sort the list before returning
+    # candidates = set.union(set(type_1_primes),
+    #                        set(pre_type_one_two_primes),
+    #                        set(type_2_primes))
+    # candidates = list(candidates)
+    # candidates.sort()
+
+    # return candidates
 
 
 ########################################################################
@@ -522,20 +574,9 @@ def get_isogeny_primes(K, aux_prime_count, bound=1000, loop_curves=False):
 
 def cli_handler(args):
 
-    if not Integer(args.D).is_squarefree():
-        msg = ("Your D is not squarefree. Please choose a  "
-        "squarefree D. Exiting.")
-        print(msg)
-        return
+    f = R(args.f)
 
-    if args.D in CLASS_NUMBER_ONE_DISCS:
-        msg = ("Your D yields an imaginary quadratic field of class "
-        "number one. These fields have infinitely many isogeny primes. "
-        "Exiting.")
-        print(msg)
-        return
-
-    K = QuadraticField(args.D)
+    K = NumberField(f, name='a')
 
     if args.dlmv:
         dlmv_bound = DLMV(K)
@@ -555,8 +596,8 @@ def cli_handler(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('D', metavar='D', type=int,
-                         help='defining square root for the Quadratic field')
+    parser.add_argument('f', metavar='f', type=str,
+                         help='defining polynomial for the Number field')
     parser.add_argument("--aux_prime_count", type=int, help="how many auxiliary primes to take", default=5)
     parser.add_argument("--loop_curves", action='store_true', help="loop over elliptic curves, don't just loop over all weil polys")
     parser.add_argument("--dlmv", action='store_true', help="get only DLMV bound")
