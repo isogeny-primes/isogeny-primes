@@ -28,6 +28,8 @@
 # Imports
 
 import argparse
+import json
+from pathlib import Path
 from itertools import product
 from sage.all import (QQ, next_prime, IntegerRing, prime_range, ZZ, pari,
         PolynomialRing, Integer, Rationals, legendre_symbol, QuadraticField,
@@ -45,6 +47,7 @@ GENERIC_UPPER_BOUND = 10**30
 EC_Q_ISOGENY_PRIMES = {2,3,5,7,11,13,17,19,37,43,67,163}
 CLASS_NUMBER_ONE_DISCS = {-1, -2, -3, -7, -11, -19, -43, -67, -163}
 R = PolynomialRing(Rationals(), 'x')
+FORMAL_IMMERSION_DATA_PATH = Path('bad_formal_immersion_data.json')
 
 # The PreTypeOneTwo epsilons, with their types
 EPSILONS_PRE_TYPE_1_2 = {
@@ -171,11 +174,11 @@ def get_bad_formal_immersion_data(d):
         assert I2.matrix().rank()==S.dimension()
         D = R_dp(d,p).smith_form()[0].diagonal()
         if len([i for i in D if i]) < d:
-            p_todo.append(p)
+            p_todo.append(int(p))
         else:
             odd_part_diagonal = lcm(D).prime_to_m_part(2)
             if odd_part_diagonal > 1:
-                p_done[p] = odd_part_diagonal
+                p_done[int(p)] = int(odd_part_diagonal)
 
     return p_todo, p_done
 
@@ -202,13 +205,43 @@ def get_type_1_primes(K, C_K, aux_prime_count=3, loop_curves=False):
 
     h_K = C_K.order()
 
-    bad_formal_immersion_list, bad_aux_prime_dict = get_bad_formal_immersion_data(K.degree())
+    # Get bad formal immersion data
+
+    if not FORMAL_IMMERSION_DATA_PATH.is_file():
+        print("No bad formal immersion data found. Computing and adding ...")
+        bad_formal_immersion_list, bad_aux_prime_dict = get_bad_formal_immersion_data(K.degree())
+        data_for_json_export = {int(K.degree()) : {
+                                                "bad_formal_immersion_list" : bad_formal_immersion_list,
+                                                "bad_aux_prime_dict" : bad_aux_prime_dict
+                                             }
+        }
+        with open(FORMAL_IMMERSION_DATA_PATH, 'w') as fp:
+            json.dump(data_for_json_export, fp, indent=4)
+        print("Data added")
+    else:
+        print("Bad formal immersion data found. Reading to see if it has our data ...")
+        with open(FORMAL_IMMERSION_DATA_PATH, 'r') as bfi_dat_file:
+            bfi_dat = json.load(bfi_dat_file)
+
+        if str(K.degree()) in bfi_dat:
+            print("Reading pre-existing data ...")
+            bad_formal_immersion_list = bfi_dat[str(K.degree())]['bad_formal_immersion_list']
+            bad_aux_prime_dict = bfi_dat[str(K.degree())]['bad_aux_prime_dict']
+        else:
+            print("Data not found. Computing new record ...")
+            bad_formal_immersion_list, bad_aux_prime_dict = get_bad_formal_immersion_data(K.degree())
+            bfi_dat[str(K.degree())] = {
+                                        "bad_formal_immersion_list" : bad_formal_immersion_list,
+                                        "bad_aux_prime_dict" : bad_aux_prime_dict
+                                       }
+            with open(FORMAL_IMMERSION_DATA_PATH, 'w') as fp:
+                json.dump(bfi_dat, fp, indent=4)
+
     aux_primes = [Q_2]
     prime_to_append = Q_2
     for _ in range(1,aux_prime_count):
         prime_to_append = next_prime(prime_to_append)
         aux_primes.append(prime_to_append)
-
     running_prime_dict = {}
 
     for q in aux_primes:
@@ -231,8 +264,8 @@ def get_type_1_primes(K, C_K, aux_prime_count=3, loop_curves=False):
                 # else we can ignore since it doesn't arise from an elliptic curve
                 running_primes = lcm(running_primes, N)
 
-        if q in bad_aux_prime_dict:
-            running_primes = lcm(running_primes, bad_aux_prime_dict[q])
+        if str(q) in bad_aux_prime_dict:
+            running_primes = lcm(running_primes, bad_aux_prime_dict[str(q)])
 
         running_prime_dict[q] = running_primes
 
