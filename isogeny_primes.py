@@ -140,7 +140,7 @@ def R_dp(d,p):
         p ([prime]): prime whose formal immersion properties we'd like to check
 
     Returns:
-        [Matrix]: The Matrix R_{d,u} in proposition 6.8 of Derickx-Kamienny-Stein-Stoll
+        [Matrix]: The Matrix R_{d,u} in Corollary 6.4 of Derickx-Kamienny-Stein-Stoll
     """
     M = ModularSymbols(Gamma0(p),2)
     S = M.cuspidal_subspace()
@@ -154,7 +154,11 @@ def R_dp(d,p):
 
 def get_bad_formal_immersion_data(d):
     """
-    This is the Oesterlé for type 1 primes with modular symbols main routine
+    This is the Oesterlé for type 1 primes with modular symbols main routine.
+    The computation of get_bad_formal_immersion_data is actually a two step
+    rocket. First Proposition 6.8 is used to bring Parents polynomial of
+    degree 6 bound down to something reasonable, and then Corollary 6.4 is
+    used to go from something reasonable to the exact list.
     """
 
     p_todo = []
