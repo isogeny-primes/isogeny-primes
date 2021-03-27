@@ -485,8 +485,6 @@ def get_type_2_bound(K):
 def satisfies_condition_CC(K,p):
     """Determine whether K,p satisfies condition CC.
 
-    TODO: Fix bug in this code
-
     Args:
         K ([NumberField]): the number field
         p ([Prime]): the prime p
@@ -494,9 +492,10 @@ def satisfies_condition_CC(K,p):
     Returns: boolean
     """
     for q in prime_range(p/4):
-        if (q**2 + q + 1) % p != 0:
-            for frak_q,_ in K.ideal(q).factor():
-                if frak_q.residue_class_degree()%2 == 1 and frak_q.norm() < p/4:
+        for frak_q in K.primes_above(q):
+            f = frak_q.residue_class_degree()
+            if f%2 == 1 and q**f < p/4:
+                if (q**(2*f) + q**f + 1) % p != 0:
                     if legendre_symbol(q,p) == 1:  # i.e. not inert
                         return False
     return True
