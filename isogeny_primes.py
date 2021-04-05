@@ -509,7 +509,7 @@ def get_C_primes(K, G_K, frak_q, epsilons, q_class_group_order, loop_curves=Fals
     return output_dict_C
 
 
-def get_pre_type_one_two_primes(K, aux_prime_count=3, loop_curves=False):
+def get_pre_type_one_two_primes(K, aux_prime_count=3, loop_curves=False, verbose_output=False):
     """Pre type 1-2 primes are the finitely many primes outside of which
     the isogeny character is necessarily of type 2 (or 3, which is not relevant
     for us)."""
@@ -550,6 +550,9 @@ def get_pre_type_one_two_primes(K, aux_prime_count=3, loop_curves=False):
         q_dict_collapsed = gcd(list(q_dict.values()))
         tracking_dict_inv_collapsed[eps] = q_dict_collapsed
 
+    if verbose_output:
+        print({eps:ZZ(q_lcm).prime_divisors() for eps,q_lcm in tracking_dict_inv_collapsed.items()})
+
     final_split_dict = {}
 
     for eps_type in set(epsilons.values()):
@@ -558,6 +561,7 @@ def get_pre_type_one_two_primes(K, aux_prime_count=3, loop_curves=False):
         eps_type_output = eps_type_output.prime_divisors()
         eps_type_output = filter_ABC_primes(Kgal, eps_type_output, eps_type)
         final_split_dict[eps_type] = set(eps_type_output)
+
 
     output = set.union(*(val for val in final_split_dict.values()))
     output = list(output)
@@ -703,7 +707,7 @@ def DLMV(K):
 ########################################################################
 
 
-def get_isogeny_primes(K, aux_prime_count, bound=1000, loop_curves=False):
+def get_isogeny_primes(K, aux_prime_count, bound=1000, loop_curves=False, verbose_output=False):
 
     # Start with some helpful user info
 
@@ -722,7 +726,8 @@ def get_isogeny_primes(K, aux_prime_count, bound=1000, loop_curves=False):
 
     pre_type_one_two_primes = get_pre_type_one_two_primes(K,
                                 aux_prime_count=aux_prime_count,
-                                loop_curves=loop_curves)
+                                loop_curves=loop_curves,
+                                verbose_output=verbose_output)
     print("pre_type_2_primes = {}\n".format(pre_type_one_two_primes))
 
     # Get and show TypeTwoPrimes
@@ -765,7 +770,7 @@ def cli_handler(args):
             print("WARNING: Only checking Type 2 primes up to {}.\n".format(bound))
             print(("To check all, run with '--rigorous', but be advised that "
                 "this will take ages and require loads of memory"))
-        superset = get_isogeny_primes(K, args.aux_prime_count, bound, args.loop_curves)
+        superset = get_isogeny_primes(K, args.aux_prime_count, bound, args.loop_curves, args.verbose)
         print("superset = {}".format(superset))
 
 
@@ -778,6 +783,7 @@ if __name__ == "__main__":
     parser.add_argument("--dlmv", action='store_true', help="get only DLMV bound")
     parser.add_argument("--bound", type=int, help="bound on Type 2 prime search", default=1000)
     parser.add_argument("--rigorous", action='store_true', help="search all Type 2 primes up to conjectural bound")
+    parser.add_argument("--verbose", action='store_true', help="get more info printed")
 
     args = parser.parse_args()
     cli_handler(args)
