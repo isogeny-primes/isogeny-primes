@@ -35,7 +35,7 @@ from sage.all import (QQ, next_prime, IntegerRing, prime_range, ZZ, pari,
         PolynomialRing, Integer, Rationals, legendre_symbol, QuadraticField,
         log, exp, find_root, ceil, NumberField, hilbert_class_polynomial,
         RR, EllipticCurve, ModularSymbols, Gamma0, lcm, oo, parent, Matrix,
-        gcd)
+        gcd, prod, floor, prime_divisors)
 
 # Global constants
 
@@ -48,31 +48,6 @@ EC_Q_ISOGENY_PRIMES = {2,3,5,7,11,13,17,19,37,43,67,163}
 CLASS_NUMBER_ONE_DISCS = {-1, -2, -3, -7, -11, -19, -43, -67, -163}
 R = PolynomialRing(Rationals(), 'x')
 FORMAL_IMMERSION_DATA_PATH = Path('bad_formal_immersion_data.json')
-
-# The PreTypeOneTwo epsilons, with their types
-EPSILONS_PRE_TYPE_1_2 = {
-
-    (0,12): 'quadratic',
-    (12,0): 'quadratic',
-
-    (0,4): 'quartic',
-    (0,8): 'quartic',
-    (4,0): 'quartic',
-    (4,4): 'quartic',
-    (4,8): 'quartic',
-    (4,12): 'quartic',
-    (8,0): 'quartic',
-    (8,4): 'quartic',
-    (8,8): 'quartic',
-    (8,12): 'quartic',
-    (12,4): 'quartic',
-    (12,8): 'quartic',
-
-    (0,6) : 'sextic',
-    (6,0) : 'sextic',
-    (6,12) : 'sextic',
-    (12,6) : 'sextic'
-}
 
 # Global methods
 
@@ -135,15 +110,71 @@ def oezman_sieve(p,N):
 ########################################################################
 
 
+def R_du(d,u,M,columns=None,a_inv=False):
+    """Returns a matrix that can be used to verify formall immersions on X_0(p)
+    for all p > 2*M*d, such that p*u = 1 mod M.
+    Args:
+        d ([int]): degree of number field
+        u ([int]): a unit mod M whose formal immersion properties we'd like to check
+        M ([int]): an auxilary integer.
+    Returns:
+        [Matrix]: The Matrix of Corollary 6.8 of Derickx-Kamienny-Stein-Stoll.
+    """
+    if columns == None:
+        columns =[a for a in range(M) if gcd(a,M)==1]
+        a_inv=False
+    if not a_inv:
+        columns = [(a,int((ZZ(1)/a)%M)) for a in columns]
+    return Matrix(ZZ,
+        [
+            [((0 if 2*((r*a[0])%M) < M else 1) -
+              (0 if 2*((r*u*a[1])%M) < M else 1)) for a in columns]
+
+        for r in range(1,d+1)])
+
+
+def get_M(d, M_start=None, M_stop=None, positive_char=True):
+    """
+    Gets an integer M such that R_du is rank d for all u in (Z/MZ)^*.
+
+    If positive_char=False then R_du only has rank d in characteristic 0
+    Otherwise it has rank d in all characteristics > 2
+    """
+    if not M_start:
+        M_start = 3
+    if not M_stop:
+        #based on trial and error, should be big enough
+        #if not we just raise an error
+        M_stop=20*d
+
+    for M in range(M_start,M_stop,2):
+        columns =[(a,int((ZZ(1)/a)%M)) for a in range(M) if gcd(a,M)==1]
+        M_lcm = 1
+        for u in range(M):
+            if gcd(u,M)!=1:
+                continue
+            R = R_du(d,u,M,columns,a_inv=True)
+            if R.rank() < d:
+                break
+            assert R.nrows() == d
+            elt_divs = R.elementary_divisors()
+            if positive_char and elt_divs[-1].prime_to_m_part(2) > 1:
+                break
+            M_lcm = lcm(M_lcm,elt_divs[-1])
+        else:
+            return (M, M_lcm)
+    raise ValueError("M_stop was to small, no valid value of M < M_stop could be found")
+
+
 def R_dp(d,p):
     """Return the formal immersion matrix
-
     Args:
         d ([int]): degree of number field
         p ([prime]): prime whose formal immersion properties we'd like to check
-
     Returns:
-        [Matrix]: The Matrix R_{d,u} in Corollary 6.4 of Derickx-Kamienny-Stein-Stoll
+        [Matrix]: The Matrix whose rows are (T_2-3)*T_i e  for i <= d.
+                  This is for verifying the linear independance in
+                  Corollary 6.4 of Derickx-Kamienny-Stein-Stoll.
     """
     M = ModularSymbols(Gamma0(p),2)
     S = M.cuspidal_subspace()
@@ -155,32 +186,68 @@ def R_dp(d,p):
     return Matrix([get_row(i) for i in range(1,d+1)]).change_ring(ZZ)
 
 
+def is_formall_immersion_fast(d,p):
+    """If this function returns true then we have a formall immersion in all characteristics
+    > 2. If it returns false then this means nothing.
+    """
+    R0 = R_du(d,p,2)
+    for M in range(3,floor(p/(2*d))):
+        u = int((ZZ(1)/p)%M)
+        R_M = R_du(d,u,M)
+        R0 = R0.augment(R_M)
+
+        divs = R0.elementary_divisors()
+        if divs[-1] == 0:
+            continue
+        if divs[-1].prime_to_m_part(2) == 1:
+            #print(d,p,u,M,is_R_du_full_rank(d,u,M))
+            return True
+    return False
+
+def is_formall_immersion(d,p):
+    M = ModularSymbols(Gamma0(p),2)
+    S = M.cuspidal_subspace()
+    I2 = M.hecke_operator(2)-3
+    #assert I2.matrix().rank()==S.dimension()
+    D = R_dp(d,p).elementary_divisors()
+    if D and D[-1]:
+        return int(D[-1].prime_to_m_part(2))
+    return 0
+
+
 def get_bad_formal_immersion_data(d):
     """
     This is the Oesterlé for type 1 primes with modular symbols main routine.
     The computation of get_bad_formal_immersion_data is actually a two step
-    rocket. First Proposition 6.8 is used to bring Parents polynomial of
-    degree 6 bound down to something reasonable, and then Corollary 6.4 is
-    used to go from something reasonable to the exact list.
+    rocket. First Proposition 6.8 of Derickx-Kamienny-Stein-Stollis used to
+    replace Parents polynomial of degree 6 bound by something reasonable,
+    and then Corollary 6.4 is used to go from something reasonable to the exact list.
     """
+    assert d > 0
 
-    p_todo = []
+    p_todo = [int(p) for p in prime_range(11)]
     p_done = {}
+    q_to_bad_p = {}
 
-    for p in prime_range(11,402):
-        M = ModularSymbols(Gamma0(p),2)
-        S = M.cuspidal_subspace()
-        I2 = M.hecke_operator(2)-3
-        assert I2.matrix().rank()==S.dimension()
-        D = R_dp(d,p).smith_form()[0].diagonal()
-        if len([i for i in D if i]) < d:
-            p_todo.append(int(p))
+    M = get_M(d)[0]
+
+    for p in prime_range(11,2*M*d):
+        #first do a relatively cheap test
+        if is_formall_immersion_fast(d,p):
+            continue
+        #this is more expensive
+        is_formall = is_formall_immersion(d,p)
+        if is_formall:
+            if is_formall > 1:
+                p_done[int(p)] = is_formall
         else:
-            odd_part_diagonal = lcm(D).prime_to_m_part(2)
-            if odd_part_diagonal > 1:
-                p_done[int(p)] = int(odd_part_diagonal)
+            p_todo.append(int(p))
 
-    return p_todo, p_done
+    for p,q_prod in p_done.items():
+        for q in prime_divisors(q_prod):
+            q_to_bad_p[int(q)] = int(q_to_bad_p.get(q,1)*p)
+
+    return p_todo, q_to_bad_p
 
 
 def get_N(frob_poly, residue_field_card, exponent):
@@ -271,7 +338,7 @@ def get_type_1_primes(K, C_K, aux_prime_count=3, loop_curves=False):
 
     output = gcd(list(running_prime_dict.values()))
     output = set(output.prime_divisors())
-    output = output.union(set(bad_formal_immersion_list)).union({2,3,5,7})
+    output = output.union(set(bad_formal_immersion_list))
     Delta_K = K.discriminant().abs()
     output = output.union(set(Delta_K.prime_divisors()))
     third_set = [1+d for d in (12*h_K).divisors()]  # p : (p-1)|12h_K
@@ -288,8 +355,61 @@ def get_type_1_primes(K, C_K, aux_prime_count=3, loop_curves=False):
 ########################################################################
 
 
-def group_ring_exp(x, eps):
-    return (x ** eps[0]) * (x.galois_conjugate() ** eps[1])
+def group_ring_exp(x, eps, G_K):
+    return prod([sigma(x)**my_pow for my_pow, sigma in zip(eps, G_K)])
+
+
+def get_eps_type(eps):
+    """Returns the type of an epsilon (quadratic, quartic, sextic), where
+    an epsilon is considered as a tuple
+    """
+
+    if 6 in eps:
+        return 'sextic'
+    elif any(t in eps for t in [4,8]):
+        return 'quartic'
+    else:
+        return 'quadratic'
+
+
+def get_pre_type_one_two_epsilons(d):
+    """This method computes the epsilon group ring characters of Lemma 1 and
+    Remark 1 of Momose. The three epsilons of type 1 and 2 are excluded.
+
+    Args:
+        d (int]): Absolute degree of the Galois closure
+
+    Returns:
+        dictionary with keys a list of tuples defining the epsilon, and value
+        the type of that epsilon
+    """
+
+    epsilons_dict = {}
+
+    quartic_epsilons = list(product([0,4,8,12], repeat=d))
+    sextic_epsilons = list(product([0,6,12], repeat=d))
+
+    epsilons_keys = set(quartic_epsilons).union(set(sextic_epsilons))
+
+    epsilons_keys -= {(0,)*d, (6,)*d, (12,)*d}  # remove types 1 and 2 epsilons
+
+    epsilons_dict = {eps: get_eps_type(eps) for eps in epsilons_keys}
+
+    return epsilons_dict
+
+
+def contains_imaginary_quadratic_field(K):
+    """Choosing auxiliary primes in the PreTypeOneTwoCase requires us to
+    choose non-principal primes if K contains an imaginary quadratic field.
+    This method may not be optimal. Maarten, can you do one better?"""
+
+    quadratic_subfields = K.subfields(2)
+
+    for L,_,_ in quadratic_subfields:
+        if L.is_totally_imaginary():
+            return True
+
+    return False
 
 
 def filter_ABC_primes(K, prime_list, eps_type):
@@ -297,7 +417,7 @@ def filter_ABC_primes(K, prime_list, eps_type):
     list, depending on the type of epsilon
 
     Args:
-        K ([QuadraticField]): our quadratic field
+        K ([NumberField]): our number field, assumed Galois
         prime_list ([list]): list of primes to filter
         eps_type ([str]): one of 'quadratic', 'quartic', or 'sextic'
     """
@@ -330,7 +450,8 @@ def filter_ABC_primes(K, prime_list, eps_type):
         raise ValueError("type must be quadratic, quartic, or sextic")
 
 
-def get_AB_primes(K,q,epsilons,q_class_group_order):
+def get_AB_primes(G_K,q,epsilons,q_class_group_order):
+    """K is assumed Galois at this point"""
 
     output_dict_AB = {}
     alphas = (q ** q_class_group_order).gens_reduced()
@@ -338,26 +459,21 @@ def get_AB_primes(K,q,epsilons,q_class_group_order):
     alpha = alphas[0]
     rat_q = ZZ(q.norm())
     assert rat_q.is_prime(), "somehow the degree 1 prime is not prime"
-    for eps, eps_type in epsilons.items():
-        alpha_to_eps = group_ring_exp(alpha,eps)
+    for eps in epsilons:
+        alpha_to_eps = group_ring_exp(alpha,eps, G_K)
         A = (alpha_to_eps - 1).norm()
         B = (alpha_to_eps - (rat_q ** (12 * q_class_group_order))).norm()
-        possible_A_primes = ZZ(A).prime_divisors()
-        possible_B_primes = ZZ(B).prime_divisors()
-
-        A_primes_filt = filter_ABC_primes(K, possible_A_primes, eps_type)
-        B_primes_filt = filter_ABC_primes(K, possible_B_primes, eps_type)
-
-        output_dict_AB[eps] = set(A_primes_filt).union(B_primes_filt)
+        output_dict_AB[eps] = lcm(A,B)
     return output_dict_AB
 
 
-def get_C_primes(K, frak_q, epsilons, q_class_group_order, loop_curves=False):
+def get_C_primes(K, G_K, frak_q, epsilons, q_class_group_order, loop_curves=False):
+    """K is assumed Galois at this point, with Galois group G_K"""
 
     # Initialise output dict to empty sets
     output_dict_C = {}
     for eps in epsilons:
-        output_dict_C[eps] = set()
+        output_dict_C[eps] = 1
 
     residue_field = frak_q.residue_field(names='z')
     alphas = (frak_q ** q_class_group_order).gens_reduced()
@@ -379,59 +495,51 @@ def get_C_primes(K, frak_q, epsilons, q_class_group_order, loop_curves=False):
 
         for beta in betas:
             if beta in K:
-                for eps, eps_type in epsilons.items():
-                    N = (group_ring_exp(alpha, eps) - beta ** (12*q_class_group_order)).absolute_norm()
+                for eps in epsilons:
+                    N = (group_ring_exp(alpha, eps, G_K) - beta ** (12*q_class_group_order)).absolute_norm()
                     N = ZZ(N)
                     if N != 0:
-                        possible_C_primes = N.prime_divisors()
-                        C_primes_filt = filter_ABC_primes(K, possible_C_primes, eps_type)
-                    else:
-                        # means no elliptic curve with this weil poly
-                        C_primes_filt = []
-                    output_dict_C[eps] = output_dict_C[eps].union(set(C_primes_filt))
+                        output_dict_C[eps] = lcm(output_dict_C[eps], N)
             else:
-                for eps, eps_type in epsilons.items():
-                    N = (K_into_KL(group_ring_exp(alpha, eps)) - L_into_KL(beta ** (12*q_class_group_order))).absolute_norm()
+                for eps in epsilons:
+                    N = (K_into_KL(group_ring_exp(alpha, eps, G_K)) - L_into_KL(beta ** (12*q_class_group_order))).absolute_norm()
                     N = ZZ(N)
                     if N != 0:
-                        possible_C_primes = ZZ(N).prime_divisors()
-                        C_primes_filt = filter_ABC_primes(K, possible_C_primes, eps_type)
-                    else:
-                        # means no elliptic curve with this weil poly
-                        C_primes_filt = []
-                    output_dict_C[eps] = output_dict_C[eps].union(set(C_primes_filt))
+                        output_dict_C[eps] = lcm(output_dict_C[eps], N)
     return output_dict_C
 
 
-def get_pre_type_one_two_primes(K, C_K, aux_prime_count=3, loop_curves=False):
+def get_pre_type_one_two_primes(K, aux_prime_count=3, loop_curves=False):
     """Pre type 1-2 primes are the finitely many primes outside of which
     the isogeny character is necessarily of type 2 (or 3, which is not relevant
     for us)."""
 
-    if K.is_totally_real():
-        aux_primes = K.primes_of_degree_one_list(aux_prime_count)
-    else:
-        it = K.primes_of_degree_one_iter()
+    tracking_dict = {}
+    Kgal = K.galois_closure('b')
+    G_K = Kgal.galois_group()
+    C_Kgal = Kgal.class_group()
+    epsilons = get_pre_type_one_two_epsilons(Kgal.degree())
+
+    if contains_imaginary_quadratic_field(Kgal):
+        it = Kgal.primes_of_degree_one_iter()
         aux_primes = []
         while len(aux_primes) < aux_prime_count:
             aux_prime_candidate = next(it)
             if not aux_prime_candidate.is_principal():
                 aux_primes.append(aux_prime_candidate)
-
-    tracking_dict = {}
-    epsilons = EPSILONS_PRE_TYPE_1_2
+    else:
+        aux_primes = Kgal.primes_of_degree_one_list(aux_prime_count)
 
     for q in aux_primes:
-        q_class_group_order = C_K(q).multiplicative_order()
+        q_class_group_order = C_Kgal(q).multiplicative_order()
         # these will be dicts with keys the epsilons, values sets of primes
-        AB_primes_dict = get_AB_primes(K,q,epsilons, q_class_group_order)
-        C_primes_dict = get_C_primes(K, q, epsilons, q_class_group_order, loop_curves)
+        AB_primes_dict = get_AB_primes(G_K,q,epsilons, q_class_group_order)
+        C_primes_dict = get_C_primes(Kgal,G_K, q, epsilons, q_class_group_order, loop_curves)
         unified_dict = {}
         q_rat = Integer(q.norm())
         assert q_rat.is_prime()
         for eps in epsilons:
-            unified_dict[eps] = AB_primes_dict[eps].union(C_primes_dict[eps],
-                                                          {q_rat})
+            unified_dict[eps] = lcm([q_rat, AB_primes_dict[eps], C_primes_dict[eps]])
         tracking_dict[q] = unified_dict
 
     tracking_dict_inv_collapsed = {}
@@ -439,9 +547,19 @@ def get_pre_type_one_two_primes(K, C_K, aux_prime_count=3, loop_curves=False):
         q_dict = {}
         for q in aux_primes:
             q_dict[q] = tracking_dict[q][eps]
-        q_dict_collapsed = set.intersection(*(val for val in q_dict.values()))
+        q_dict_collapsed = gcd(list(q_dict.values()))
         tracking_dict_inv_collapsed[eps] = q_dict_collapsed
-    output = set.union(*(val for val in tracking_dict_inv_collapsed.values()))
+
+    final_split_dict = {}
+
+    for eps_type in set(epsilons.values()):
+        eps_type_tracking_dict_inv = {eps:ZZ(tracking_dict_inv_collapsed[eps]) for eps in epsilons if epsilons[eps] == eps_type}
+        eps_type_output = lcm(list(eps_type_tracking_dict_inv.values()))
+        eps_type_output = eps_type_output.prime_divisors()
+        eps_type_output = filter_ABC_primes(Kgal, eps_type_output, eps_type)
+        final_split_dict[eps_type] = set(eps_type_output)
+
+    output = set.union(*(val for val in final_split_dict.values()))
     output = list(output)
     output.sort()
     return output
@@ -452,6 +570,33 @@ def get_pre_type_one_two_primes(K, C_K, aux_prime_count=3, loop_curves=False):
 #                          TYPE TWO PRIMES                             #
 #                                                                      #
 ########################################################################
+
+
+def LLS(p):
+    return (log(p) + 9 + 2.5 * (log(log(p)))**2)**2
+
+
+def get_type_2_uniform_bound(ecdb_type):
+
+    if ecdb_type == 'LSS':
+        BOUND_TERM = (log(x) + 9 + 2.5 * (log(log(x)))**2)**2
+    elif ecdb_type == 'BS':
+        # BOUND_TERM = (4*log(x) + 10)**2
+        # BOUND_TERM = (3.29*log(x) + 2.96 + 4.9)**2
+        BOUND_TERM = (1.881*log(x) + 2*0.34 + 5.5)**2
+    else:
+        raise ValueError("argument must be LSS or BS")
+
+    f = BOUND_TERM**6 + BOUND_TERM**3 + 1 - x
+
+    try:
+        bound = find_root(f,1000,GENERIC_UPPER_BOUND)
+        return ceil(bound)
+    except RuntimeError:
+        warning_msg = ("Warning: Type 2 bound for quadratic field with "
+        "discriminant {} failed. Returning generic upper bound").format(5)
+        print(warning_msg)
+        return GENERIC_UPPER_BOUND
 
 
 def get_type_2_bound(K):
@@ -573,28 +718,26 @@ def get_isogeny_primes(K, aux_prime_count, bound=1000, loop_curves=False):
                                          loop_curves=loop_curves)
     print("type_1_primes = {}\n".format(type_1_primes))
 
-    return type_1_primes
+    # Get and show PreTypeOneTwoPrimes
 
-    # # Get and show PreTypeOneTwoPrimes
+    pre_type_one_two_primes = get_pre_type_one_two_primes(K,
+                                aux_prime_count=aux_prime_count,
+                                loop_curves=loop_curves)
+    print("pre_type_2_primes = {}\n".format(pre_type_one_two_primes))
 
-    # pre_type_one_two_primes = get_pre_type_one_two_primes(K,C_K,
-    #                             aux_prime_count=aux_prime_count,
-    #                             loop_curves=loop_curves)
-    # print("pre_type_2_primes = {}\n".format(pre_type_one_two_primes))
+    # Get and show TypeTwoPrimes
 
-    # # Get and show TypeTwoPrimes
+    type_2_primes = get_type_2_primes(K, bound=bound)
+    print("type_2_primes = {}\n".format(type_2_primes))
 
-    # type_2_primes = get_type_2_primes(K, bound=bound)
-    # print("type_2_primes = {}\n".format(type_2_primes))
+    # Put them all together and sort the list before returning
+    candidates = set.union(set(type_1_primes),
+                           set(pre_type_one_two_primes),
+                           set(type_2_primes))
+    candidates = list(candidates)
+    candidates.sort()
 
-    # # Put them all together and sort the list before returning
-    # candidates = set.union(set(type_1_primes),
-    #                        set(pre_type_one_two_primes),
-    #                        set(type_2_primes))
-    # candidates = list(candidates)
-    # candidates.sort()
-
-    # return candidates
+    return candidates
 
 
 ########################################################################
