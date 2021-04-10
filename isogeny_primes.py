@@ -450,22 +450,20 @@ def filter_ABC_primes(K, prime_list, eps_type):
         raise ValueError("type must be quadratic, quartic, or sextic")
 
 
-def get_AB_primes(G_K,q,epsilons,q_class_group_order):
+def get_AB_primes(G_K,frak_q,epsilons,q_class_group_order):
     """K is assumed Galois at this point"""
 
     output_dict_AB = {}
-    alphas = (q ** q_class_group_order).gens_reduced()
+    alphas = (frak_q ** q_class_group_order).gens_reduced()
     assert len(alphas) == 1, "q^q_class_group_order not principal, which is very bad"
     alpha = alphas[0]
-    rat_q = ZZ(q.norm())
-    assert rat_q.is_prime(), "somehow the degree 1 prime is not prime"
+    nm_q = ZZ(frak_q.norm())
     for eps in epsilons:
         alpha_to_eps = group_ring_exp(alpha,eps, G_K)
         A = (alpha_to_eps - 1).norm()
-        B = (alpha_to_eps - (rat_q ** (12 * q_class_group_order))).norm()
+        B = (alpha_to_eps - (nm_q ** (12 * q_class_group_order))).norm()
         output_dict_AB[eps] = lcm(A,B)
     return output_dict_AB
-
 
 def get_C_primes(K, G_K, frak_q, epsilons, q_class_group_order, loop_curves=False):
     """K is assumed Galois at this point, with Galois group G_K"""
@@ -498,18 +496,16 @@ def get_C_primes(K, G_K, frak_q, epsilons, q_class_group_order, loop_curves=Fals
                 for eps in epsilons:
                     N = (group_ring_exp(alpha, eps, G_K) - beta ** (12*q_class_group_order)).absolute_norm()
                     N = ZZ(N)
-                    if N != 0:
-                        output_dict_C[eps] = lcm(output_dict_C[eps], N)
+                    output_dict_C[eps] = lcm(output_dict_C[eps], N)
             else:
                 for eps in epsilons:
                     N = (K_into_KL(group_ring_exp(alpha, eps, G_K)) - L_into_KL(beta ** (12*q_class_group_order))).absolute_norm()
                     N = ZZ(N)
-                    if N != 0:
-                        output_dict_C[eps] = lcm(output_dict_C[eps], N)
+                    output_dict_C[eps] = lcm(output_dict_C[eps], N)
     return output_dict_C
 
 
-def get_pre_type_one_two_primes(K, aux_prime_count=3, loop_curves=False, verbose_output=False):
+def get_pre_type_one_two_primes(K, norm_bound=50, aux_prime_count=1, loop_curves=False, verbose_output=False):
     """Pre type 1-2 primes are the finitely many primes outside of which
     the isogeny character is necessarily of type 2 (or 3, which is not relevant
     for us)."""
@@ -520,15 +516,16 @@ def get_pre_type_one_two_primes(K, aux_prime_count=3, loop_curves=False, verbose
     C_Kgal = Kgal.class_group()
     epsilons = get_pre_type_one_two_epsilons(Kgal.degree())
 
-    if contains_imaginary_quadratic_field(Kgal):
-        it = Kgal.primes_of_degree_one_iter()
-        aux_primes = []
-        while len(aux_primes) < aux_prime_count:
-            aux_prime_candidate = next(it)
-            if not aux_prime_candidate.is_principal():
+    aux_primes = Kgal.primes_of_bounded_norm(norm_bound)
+
+    contains_quadratic = contains_imaginary_quadratic_field(Kgal)
+    it = Kgal.primes_of_degree_one_iter()
+    while aux_prime_count > 0:
+        aux_prime_candidate = next(it)
+        if (not contains_quadratic) or (not aux_prime_candidate.is_principal()):
+            if aux_prime_candidate.norm() > norm_bound:
                 aux_primes.append(aux_prime_candidate)
-    else:
-        aux_primes = Kgal.primes_of_degree_one_list(aux_prime_count)
+            aux_prime_count -=1
 
     for q in aux_primes:
         q_class_group_order = C_Kgal(q).multiplicative_order()
@@ -537,7 +534,6 @@ def get_pre_type_one_two_primes(K, aux_prime_count=3, loop_curves=False, verbose
         C_primes_dict = get_C_primes(Kgal,G_K, q, epsilons, q_class_group_order, loop_curves)
         unified_dict = {}
         q_rat = Integer(q.norm())
-        assert q_rat.is_prime()
         for eps in epsilons:
             unified_dict[eps] = lcm([q_rat, AB_primes_dict[eps], C_primes_dict[eps]])
         tracking_dict[q] = unified_dict
@@ -551,7 +547,7 @@ def get_pre_type_one_two_primes(K, aux_prime_count=3, loop_curves=False, verbose
         tracking_dict_inv_collapsed[eps] = q_dict_collapsed
 
     if verbose_output:
-        print({eps:ZZ(q_lcm).prime_divisors() for eps,q_lcm in tracking_dict_inv_collapsed.items()})
+        print({eps:(ZZ(q_lcm).prime_divisors() if q_lcm else [0]) for eps,q_lcm in tracking_dict_inv_collapsed.items()})
 
     final_split_dict = {}
 
