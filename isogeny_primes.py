@@ -51,19 +51,42 @@ FORMAL_IMMERSION_DATA_PATH = Path('bad_formal_immersion_data.json')
 
 # Global methods
 
-def get_weil_polys(res_field):
-    """Used to compute all characteristic polynomial of Frobenius of
-    elliptic curves over the given residue field"""
-
-    frob_polys = set()
-
-    for A,B in list(product(res_field, res_field)):
-        if (4*A**3 + 27*B**2) != 0:
-            E = EllipticCurve([A,B])
-            frob_poly = E.frobenius_polynomial()
-            frob_polys = frob_polys.union({frob_poly})
-
-    return list(frob_polys)
+def weil_polynomial_is_elliptic(f,q,a):
+    """
+    On input of a polynomial f that is a weil polynomial of degree 2 and has constant
+    term q^a we check if it actually comes from an elliptic curve over GF(q^a).
+    This uses theorem 4.1 of http://archive.numdam.org/article/ASENS_1969_4_2_4_521_0.pdf
+    """
+    if f[1] % q:
+        return True
+    
+    if a%2 == 0:
+        if f[1] in [-2*q**(a//2), 2*q**(a//2)]:
+            return True
+        if q%3 != 1 and f[1] in [-q**(a//2), q**(a//2)]:
+            return True
+        if q%4 != 1 and f[1] ==0:
+            return True
+    else:
+        if q in [2,3]:
+            if f[1] in [-q^((a+1)//2),q^((a+1)//2)]:
+                return
+        if f[1] == 0:
+            return True 
+        
+    return False
+    
+def get_weil_polys(F):
+    """
+    Returns als degree 2 weil polynomials over F that are actually comming from an elliptic curve.
+    This uses theorem 4.1 of http://archive.numdam.org/article/ASENS_1969_4_2_4_521_0.pdf
+    """
+    q = F.characteristic()
+    a = F.degree()
+    R = PolynomialRing(QQ,'x')
+    weil_polys = R.weil_polynomials(2,q^a)
+    return [f for f in weil_polys if is_elliptic_weil_poly(f,q,a)]
+    
 
 
 ########################################################################
