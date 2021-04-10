@@ -69,7 +69,7 @@ def weil_polynomial_is_elliptic(f,q,a):
             return True
     else:
         if q in [2,3]:
-            if f[1] in [-q^((a+1)//2),q^((a+1)//2)]:
+            if f[1] in [-q**((a+1)//2),q**((a+1)//2)]:
                 return
         if f[1] == 0:
             return True 
@@ -84,7 +84,7 @@ def get_weil_polys(F):
     q = F.characteristic()
     a = F.degree()
     R = PolynomialRing(QQ,'x')
-    weil_polys = R.weil_polynomials(2,q^a)
+    weil_polys = R.weil_polynomials(2,q**a)
     return [f for f in weil_polys if weil_polynomial_is_elliptic(f,q,a)]
     
 
