@@ -85,7 +85,7 @@ def get_weil_polys(F):
     a = F.degree()
     R = PolynomialRing(QQ,'x')
     weil_polys = R.weil_polynomials(2,q^a)
-    return [f for f in weil_polys if is_elliptic_weil_poly(f,q,a)]
+    return [f for f in weil_polys if weil_polynomial_is_elliptic(f,q,a)]
     
 
 
