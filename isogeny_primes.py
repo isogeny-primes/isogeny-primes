@@ -267,7 +267,7 @@ def get_N(frob_poly, residue_field_card, exponent):
         return 1 + residue_field_card ** exponent - beta ** exponent - beta_bar ** exponent
 
 
-def get_type_1_primes(K, C_K, aux_prime_count=3, loop_curves=False):
+def get_type_1_primes(K, C_K, norm_bound=50, loop_curves=False):
     """Compute the type 1 primes"""
 
     h_K = C_K.order()
@@ -304,11 +304,7 @@ def get_type_1_primes(K, C_K, aux_prime_count=3, loop_curves=False):
             with open(FORMAL_IMMERSION_DATA_PATH, 'w') as fp:
                 json.dump(bfi_dat, fp, indent=4)
 
-    aux_primes = [Q_2]
-    prime_to_append = Q_2
-    for _ in range(1,aux_prime_count):
-        prime_to_append = next_prime(prime_to_append)
-        aux_primes.append(prime_to_append)
+    aux_primes = prime_range(Q_2, norm_bound)
     running_prime_dict = {}
 
     for q in aux_primes:
@@ -505,7 +501,7 @@ def get_C_primes(K, G_K, frak_q, epsilons, q_class_group_order, loop_curves=Fals
     return output_dict_C
 
 
-def get_pre_type_one_two_primes(K, norm_bound=50, aux_prime_count=1, loop_curves=False, verbose_output=False):
+def get_pre_type_one_two_primes(K, norm_bound=50, loop_curves=False, verbose_output=False):
     """Pre type 1-2 primes are the finitely many primes outside of which
     the isogeny character is necessarily of type 2 (or 3, which is not relevant
     for us)."""
@@ -518,14 +514,16 @@ def get_pre_type_one_two_primes(K, norm_bound=50, aux_prime_count=1, loop_curves
 
     aux_primes = Kgal.primes_of_bounded_norm(norm_bound)
 
-    contains_quadratic = contains_imaginary_quadratic_field(Kgal)
+    contains_imaginary_quadratic = contains_imaginary_quadratic_field(Kgal)
     it = Kgal.primes_of_degree_one_iter()
+    aux_prime_count = 2
     while aux_prime_count > 0:
         aux_prime_candidate = next(it)
-        if (not contains_quadratic) or (not aux_prime_candidate.is_principal()):
+        if (not contains_imaginary_quadratic) or (not aux_prime_candidate.is_principal()):
             if aux_prime_candidate.norm() > norm_bound:
                 aux_primes.append(aux_prime_candidate)
-            aux_prime_count -=1
+                print("Emergency aux prime added") ## for prototype debugging, TODO remove on release
+            aux_prime_count -= 1
 
     for q in aux_primes:
         q_class_group_order = C_Kgal(q).multiplicative_order()
@@ -703,25 +701,25 @@ def DLMV(K):
 ########################################################################
 
 
-def get_isogeny_primes(K, aux_prime_count, bound=1000, loop_curves=False, verbose_output=False):
+def get_isogeny_primes(K, norm_bound, bound=1000, loop_curves=False, verbose_output=False):
 
     # Start with some helpful user info
 
     print("\nFinding isogeny primes for {}\n".format(K))
-    print("Number of auxiliary primes is {}\n".format(aux_prime_count))
+    print("Bound on auxiliary primes is {}\n".format(norm_bound))
 
     # Get and show TypeOnePrimes
 
     C_K = K.class_group()
 
-    type_1_primes = get_type_1_primes(K, C_K, aux_prime_count=aux_prime_count,
+    type_1_primes = get_type_1_primes(K, C_K, norm_bound=norm_bound,
                                          loop_curves=loop_curves)
     print("type_1_primes = {}\n".format(type_1_primes))
 
     # Get and show PreTypeOneTwoPrimes
 
     pre_type_one_two_primes = get_pre_type_one_two_primes(K,
-                                aux_prime_count=aux_prime_count,
+                                norm_bound=norm_bound,
                                 loop_curves=loop_curves,
                                 verbose_output=verbose_output)
     print("pre_type_2_primes = {}\n".format(pre_type_one_two_primes))
@@ -766,7 +764,7 @@ def cli_handler(args):
             print("WARNING: Only checking Type 2 primes up to {}.\n".format(bound))
             print(("To check all, run with '--rigorous', but be advised that "
                 "this will take ages and require loads of memory"))
-        superset = get_isogeny_primes(K, args.aux_prime_count, bound, args.loop_curves, args.verbose)
+        superset = get_isogeny_primes(K, args.norm_bound, bound, args.loop_curves, args.verbose)
         print("superset = {}".format(superset))
 
 
@@ -774,7 +772,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('f', metavar='f', type=str,
                          help='defining polynomial for the Number field')
-    parser.add_argument("--aux_prime_count", type=int, help="how many auxiliary primes to take", default=5)
+    parser.add_argument("--norm_bound", type=int, help="bound on norm of aux primes in PreTypeOneTwo case", default=50)
     parser.add_argument("--loop_curves", action='store_true', help="loop over elliptic curves, don't just loop over all weil polys")
     parser.add_argument("--dlmv", action='store_true', help="get only DLMV bound")
     parser.add_argument("--bound", type=int, help="bound on Type 2 prime search", default=1000)
