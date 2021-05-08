@@ -31,6 +31,7 @@ import argparse
 import json
 from pathlib import Path
 from itertools import product
+import logging
 from sage.all import (QQ, next_prime, IntegerRing, prime_range, ZZ, pari,
         PolynomialRing, Integer, Rationals, legendre_symbol, QuadraticField,
         log, exp, find_root, ceil, NumberField, hilbert_class_polynomial,
@@ -200,7 +201,6 @@ def is_formall_immersion_fast(d,p):
         if divs[-1] == 0:
             continue
         if divs[-1].prime_to_m_part(2) == 1:
-            #print(d,p,u,M,is_R_du_full_rank(d,u,M))
             return True
     return False
 
@@ -275,7 +275,7 @@ def get_type_1_primes(K, C_K, norm_bound=50, loop_curves=False):
     # Get bad formal immersion data
 
     if not FORMAL_IMMERSION_DATA_PATH.is_file():
-        print("No bad formal immersion data found. Computing and adding ...")
+        logging.debug("No bad formal immersion data found. Computing and adding ...")
         bad_formal_immersion_list, bad_aux_prime_dict = get_bad_formal_immersion_data(K.degree())
         data_for_json_export = {int(K.degree()) : {
                                                 "bad_formal_immersion_list" : bad_formal_immersion_list,
@@ -284,18 +284,18 @@ def get_type_1_primes(K, C_K, norm_bound=50, loop_curves=False):
         }
         with open(FORMAL_IMMERSION_DATA_PATH, 'w') as fp:
             json.dump(data_for_json_export, fp, indent=4)
-        print("Data added")
+        logging.debug("Data added")
     else:
-        print("Bad formal immersion data found. Reading to see if it has our data ...")
+        logging.debug("Bad formal immersion data found. Reading to see if it has our data ...")
         with open(FORMAL_IMMERSION_DATA_PATH, 'r') as bfi_dat_file:
             bfi_dat = json.load(bfi_dat_file)
 
         if str(K.degree()) in bfi_dat:
-            print("Reading pre-existing data ...")
+            logging.debug("Reading pre-existing data ...")
             bad_formal_immersion_list = bfi_dat[str(K.degree())]['bad_formal_immersion_list']
             bad_aux_prime_dict = bfi_dat[str(K.degree())]['bad_aux_prime_dict']
         else:
-            print("Data not found. Computing new record ...")
+            logging.debug("Data not found. Computing new record ...")
             bad_formal_immersion_list, bad_aux_prime_dict = get_bad_formal_immersion_data(K.degree())
             bfi_dat[str(K.degree())] = {
                                         "bad_formal_immersion_list" : bad_formal_immersion_list,
@@ -355,6 +355,10 @@ def group_ring_exp(x, eps, G_K):
     return prod([sigma(x)**my_pow for my_pow, sigma in zip(eps, G_K)])
 
 
+def gal_act_eps(eps, sigma):
+    return tuple(eps[i-1] for i in sigma)
+
+
 def get_eps_type(eps):
     """Returns the type of an epsilon (quadratic, quartic, sextic), where
     an epsilon is considered as a tuple
@@ -368,12 +372,40 @@ def get_eps_type(eps):
         return 'quadratic'
 
 
-def get_pre_type_one_two_epsilons(d):
+def get_redundant_epsilons(eps, G_action):
+    """Redundant epsilons are those in the Galois and dual orbits of a given
+    epsilon. They are redundant because they yield the same ABC integers."""
+
+    redundant_epsilons = set()
+
+    for sigma in G_action:
+        eps_to_sigma = gal_act_eps(eps, sigma)
+        redundant_epsilons.add(eps_to_sigma)
+        eps_to_sigma_dual = tuple((12 - x) for x in eps_to_sigma)
+        redundant_epsilons.add(eps_to_sigma_dual)
+
+    return redundant_epsilons
+
+
+def remove_redundant_epsilons(epsilons, G_action):
+
+    epsilons_output = set()
+
+    while epsilons:
+        an_eps = epsilons.pop()
+        eps_orbit = get_redundant_epsilons(an_eps, G_action)  # galois and dual orbit
+        epsilons_output.add(an_eps)
+        epsilons.difference_update(eps_orbit)
+
+    return epsilons_output
+
+
+def get_pre_type_one_two_epsilons(G):
     """This method computes the epsilon group ring characters of Lemma 1 and
     Remark 1 of Momose. The three epsilons of type 1 and 2 are excluded.
 
     Args:
-        d (int]): Absolute degree of the Galois closure
+        d ([int]): Absolute degree of the Galois closure
 
     Returns:
         dictionary with keys a list of tuples defining the epsilon, and value
@@ -381,6 +413,8 @@ def get_pre_type_one_two_epsilons(d):
     """
 
     epsilons_dict = {}
+    d = G.order()
+    G_action = G.as_finitely_presented_group().as_permutation_group().orbit(tuple(range(1,d+1)), action="OnTuples")
 
     quartic_epsilons = list(product([0,4,8,12], repeat=d))
     sextic_epsilons = list(product([0,6,12], repeat=d))
@@ -389,6 +423,12 @@ def get_pre_type_one_two_epsilons(d):
 
     epsilons_keys -= {(0,)*d, (6,)*d, (12,)*d}  # remove types 1 and 2 epsilons
 
+    logging.debug("epsilons before filtering: {}".format(len(epsilons_keys)))
+
+    epsilons_keys = remove_redundant_epsilons(epsilons_keys, G_action)
+
+    logging.debug("epsilons after filtering: {}".format(len(epsilons_keys)))
+
     epsilons_dict = {eps: get_eps_type(eps) for eps in epsilons_keys}
 
     return epsilons_dict
@@ -396,16 +436,23 @@ def get_pre_type_one_two_epsilons(d):
 
 def contains_imaginary_quadratic_field(K):
     """Choosing auxiliary primes in the PreTypeOneTwoCase requires us to
-    choose non-principal primes if K contains an imaginary quadratic field.
-    This method may not be optimal. Maarten, can you do one better?"""
+    choose non-principal primes if K contains an imaginary quadratic field."""
 
     quadratic_subfields = K.subfields(2)
 
-    for L,_,_ in quadratic_subfields:
-        if L.is_totally_imaginary():
-            return True
+    imag_quad_subfields = [L for L,_,_ in quadratic_subfields if L.is_totally_imaginary()]
 
-    return False
+    contains_hilbert_class_field_of_imag_quad = False
+
+    for L in imag_quad_subfields:
+        HL = L.hilbert_class_field('c')
+        if HL.absolute_degree().divides(K.absolute_degree()):
+            K_HL_composite = K.composite_fields(HL)[0]
+            if K_HL_composite.absolute_degree() == K.absolute_degree():
+                contains_hilbert_class_field_of_imag_quad = True
+                break
+
+    return (bool(imag_quad_subfields), contains_hilbert_class_field_of_imag_quad)
 
 
 def filter_ABC_primes(K, prime_list, eps_type):
@@ -461,6 +508,7 @@ def get_AB_primes(G_K,frak_q,epsilons,q_class_group_order):
         output_dict_AB[eps] = lcm(A,B)
     return output_dict_AB
 
+
 def get_C_primes(K, G_K, frak_q, epsilons, q_class_group_order, loop_curves=False):
     """K is assumed Galois at this point, with Galois group G_K"""
 
@@ -501,29 +549,52 @@ def get_C_primes(K, G_K, frak_q, epsilons, q_class_group_order, loop_curves=Fals
     return output_dict_C
 
 
-def get_pre_type_one_two_primes(K, norm_bound=50, loop_curves=False, verbose_output=False):
+def get_pre_type_one_two_primes(K, norm_bound=50, loop_curves=False):
     """Pre type 1-2 primes are the finitely many primes outside of which
     the isogeny character is necessarily of type 2 (or 3, which is not relevant
     for us)."""
 
-    tracking_dict = {}
     Kgal = K.galois_closure('b')
-    G_K = Kgal.galois_group()
-    C_Kgal = Kgal.class_group()
-    epsilons = get_pre_type_one_two_epsilons(Kgal.degree())
+
+    contains_imaginary_quadratic, contains_hilbert_class_field = contains_imaginary_quadratic_field(Kgal)
+
+    if contains_hilbert_class_field:
+        if K.absolute_degree() < Kgal.absolute_degree():
+            # It _would_ be nice to remove the Galois restriction in Momose Lemma 1 ...
+            raise NotImplementedError("The Galois closure of the number field you "
+                "entered contains the Hilbert Class field of an imaginary quadratic "
+                "field. Our algorithm currently cannot deal with this instance.")
+        else:
+            raise ValueError("The number field you entered contains the Hilbert "
+                            "Class field of an imaginary quadratic field. The set "
+                            "of isogeny primes in this case is therefore infinite.")
 
     aux_primes = Kgal.primes_of_bounded_norm(norm_bound)
 
-    contains_imaginary_quadratic = contains_imaginary_quadratic_field(Kgal)
-    it = Kgal.primes_of_degree_one_iter()
-    aux_prime_count = 2
-    while aux_prime_count > 0:
-        aux_prime_candidate = next(it)
-        if (not contains_imaginary_quadratic) or (not aux_prime_candidate.is_principal()):
-            if aux_prime_candidate.norm() > norm_bound:
-                aux_primes.append(aux_prime_candidate)
-                print("Emergency aux prime added") ## for prototype debugging, TODO remove on release
-            aux_prime_count -= 1
+    try:
+        it = Kgal.primes_of_degree_one_iter(max_iterations=1000)
+        aux_prime_count = 2
+        while aux_prime_count > 0:
+            aux_prime_candidate = next(it)
+            if (not contains_imaginary_quadratic) or (not aux_prime_candidate.is_principal()):
+                if aux_prime_candidate.norm() > norm_bound:
+                    aux_primes.append(aux_prime_candidate)
+                    logging.info("Emergency aux prime added")
+                aux_prime_count -= 1
+    except StopIteration:
+        # This should never happen, because in this case we are probably containing
+        # the Hilbert class field of an imaginary quadratic field and therefore
+        # would already have raised above, but I have been unable to prove this.
+        raise ValueError("The galois closure of your number field contains an "
+                "imaginary quadratic field, and we are unable to find a "
+                "non-principal auxiliary prime which is necessary for the algorithm "
+                "to work.")
+
+    G_K = Kgal.galois_group()
+    C_Kgal = Kgal.class_group()
+    logging.debug("C_Kgal = {}".format(C_Kgal))
+    epsilons = get_pre_type_one_two_epsilons(G_K)
+    tracking_dict = {}
 
     for q in aux_primes:
         q_class_group_order = C_Kgal(q).multiplicative_order()
@@ -544,8 +615,7 @@ def get_pre_type_one_two_primes(K, norm_bound=50, loop_curves=False, verbose_out
         q_dict_collapsed = gcd(list(q_dict.values()))
         tracking_dict_inv_collapsed[eps] = q_dict_collapsed
 
-    if verbose_output:
-        print({eps:(ZZ(q_lcm).prime_divisors() if q_lcm else [0]) for eps,q_lcm in tracking_dict_inv_collapsed.items()})
+    logging.debug({eps:(ZZ(q_lcm).prime_divisors() if q_lcm else [0]) for eps,q_lcm in tracking_dict_inv_collapsed.items()})
 
     final_split_dict = {}
 
@@ -619,9 +689,9 @@ def get_type_2_bound(K):
         bound = find_root(f,10,GENERIC_UPPER_BOUND)
         return ceil(bound)
     except RuntimeError:
-        warning_msg = ("Warning: Type 2 bound for quadratic field with "
+        warning_msg = ("Type 2 bound for quadratic field with "
         "discriminant {} failed. Returning generic upper bound").format(delta_K)
-        print(warning_msg)
+        logging.warning(warning_msg)
         return GENERIC_UPPER_BOUND
 
 
@@ -650,7 +720,7 @@ def get_type_2_primes(K, bound=None):
     # First get the bound
     if bound is None:
         bound = get_type_2_bound(K)
-        print("type_2_bound = {}".format(bound))
+        logging.info("type_2_bound = {}".format(bound))
 
     # We need to include all primes up to 25
     # see Larson/Vaintrob's proof of Theorem 6.4
@@ -661,6 +731,9 @@ def get_type_2_primes(K, bound=None):
         if p_int % 4 == 3:  # Type 2 primes necessarily congruent to 3 mod 4
             if satisfies_condition_CC(K,p_int):
                 output.add(p_int)
+
+    output = list(output)
+    output.sort()
     return output
 
 
@@ -701,12 +774,19 @@ def DLMV(K):
 ########################################################################
 
 
-def get_isogeny_primes(K, norm_bound, bound=1000, loop_curves=False, verbose_output=False):
+def get_isogeny_primes(K, norm_bound, bound=1000, loop_curves=False):
 
     # Start with some helpful user info
 
-    print("\nFinding isogeny primes for {}\n".format(K))
-    print("Bound on auxiliary primes is {}\n".format(norm_bound))
+    logging.info("Finding isogeny primes for {}.".format(K))
+    logging.info("Bound on auxiliary primes is {}.".format(norm_bound))
+
+    # Get and show PreTypeOneTwoPrimes
+
+    pre_type_one_two_primes = get_pre_type_one_two_primes(K,
+                                norm_bound=norm_bound,
+                                loop_curves=loop_curves)
+    logging.info("pre_type_1_2_primes = {}".format(pre_type_one_two_primes))
 
     # Get and show TypeOnePrimes
 
@@ -714,20 +794,12 @@ def get_isogeny_primes(K, norm_bound, bound=1000, loop_curves=False, verbose_out
 
     type_1_primes = get_type_1_primes(K, C_K, norm_bound=norm_bound,
                                          loop_curves=loop_curves)
-    print("type_1_primes = {}\n".format(type_1_primes))
-
-    # Get and show PreTypeOneTwoPrimes
-
-    pre_type_one_two_primes = get_pre_type_one_two_primes(K,
-                                norm_bound=norm_bound,
-                                loop_curves=loop_curves,
-                                verbose_output=verbose_output)
-    print("pre_type_2_primes = {}\n".format(pre_type_one_two_primes))
+    logging.info("type_1_primes = {}".format(type_1_primes))
 
     # Get and show TypeTwoPrimes
 
     type_2_primes = get_type_2_primes(K, bound=bound)
-    print("type_2_primes = {}\n".format(type_2_primes))
+    logging.info("type_2_primes = {}".format(type_2_primes))
 
     # Put them all together and sort the list before returning
     candidates = set.union(set(type_1_primes),
@@ -752,20 +824,24 @@ def cli_handler(args):
 
     K = NumberField(f, name='a')
 
+    loglevel = logging.DEBUG if args.verbose else logging.INFO
+    logging.basicConfig(format='%(asctime)s %(levelname)s: %(message)s', datefmt='%H:%M:%S',
+                        level=loglevel)
+    logging.debug("Debugging level for log messages set.")
+
     if args.dlmv:
         dlmv_bound = DLMV(K)
-        print("DLMV bound for {} is:\n\n{}\n\nwhich is approximately {}".format(K, dlmv_bound, RR(dlmv_bound)))
+        logging.info("DLMV bound for {} is:\n\n{}\n\nwhich is approximately {}".format(K, dlmv_bound, RR(dlmv_bound)))
     else:
         if args.rigorous:
             bound = None
-            print("Checking all Type 2 primes up to conjectural bound")
+            logging.info("Checking all Type 2 primes up to conjectural bound")
         else:
             bound = args.bound
-            print("WARNING: Only checking Type 2 primes up to {}.\n".format(bound))
-            print(("To check all, run with '--rigorous', but be advised that "
-                "this will take ages and require loads of memory"))
-        superset = get_isogeny_primes(K, args.norm_bound, bound, args.loop_curves, args.verbose)
-        print("superset = {}".format(superset))
+            logging.warning("Only checking Type 2 primes up to {}. "
+                            "To check all, use the PARI/GP script.".format(bound))
+        superset = get_isogeny_primes(K, args.norm_bound, bound, args.loop_curves)
+        logging.info("superset = {}".format(superset))
 
 
 if __name__ == "__main__":
