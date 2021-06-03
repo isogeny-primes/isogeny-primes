@@ -60,7 +60,7 @@ def weil_polynomial_is_elliptic(f,q,a):
     """
     if f[1] % q != 0:
         return True
-    
+
     if a%2 == 0:
         if f[1] in [-2*q**(a//2), 2*q**(a//2)]:
             return True
@@ -73,19 +73,19 @@ def weil_polynomial_is_elliptic(f,q,a):
             if f[1] in [-q**((a+1)//2),q**((a+1)//2)]:
                 return True
         if f[1] == 0:
-            return True 
-        
+            return True
+
     return False
-    
+
 def get_weil_polys(F):
     """
-    Returns als degree 2 weil polynomials over F that are actually comming from an elliptic curve.
+    Returns all degree 2 weil polynomials over F that are actually comming from an elliptic curve.
     """
     q = F.characteristic()
     a = F.degree()
     weil_polys = R.weil_polynomials(2,q**a)
     return [f for f in weil_polys if weil_polynomial_is_elliptic(f,q,a)]
-    
+
 
 
 ########################################################################
@@ -795,7 +795,7 @@ def DLMV(K):
 ########################################################################
 
 
-def get_isogeny_primes(K, norm_bound, bound=1000, loop_curves=False):
+def get_isogeny_primes(K, norm_bound, bound=1000, loop_curves=True):
 
     # Start with some helpful user info
 
