@@ -92,8 +92,8 @@ checktypetwo(pBeg) =
 }
 export(checktypetwo)
 
-\\howMany=floor(typetwobound/blockSize);
+\\ howMany=floor(typetwobound/blockSize);
 
-\\ Takes about 27 seconds up to a billion!
+\\ Takes about 5 minutes up to 50 billion! To do that, run the following code:
 
-\\ parapply(checktypetwo,[10000000000/blockSize..20000000000/blockSize]);
+\\ parapply(checktypetwo,[0/blockSize..50000000000/blockSize]);

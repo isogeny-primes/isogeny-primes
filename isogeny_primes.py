@@ -742,6 +742,8 @@ def satisfies_condition_CC_uniform(possible_odd_f,p):
         p ([Prime]): the prime p
     Returns: boolean
     """
+    if p%4 == 1:
+        return False
     for q in prime_range((p/4)^(1/max(possible_odd_f))):
         if legendre_symbol(q,p) == 1:
             if all((q**(2*f) + q**f + 1) % p != 0 for f in possible_odd_f):
