@@ -735,6 +735,19 @@ def satisfies_condition_CC(K,p):
     return True
 
 
+def satisfies_condition_CC_uniform(possible_odd_f,p):
+    """Determine whether degrees,p satisfies condition CC.
+    Args:
+        K ([NumberField]): the number field
+        p ([Prime]): the prime p
+    Returns: boolean
+    """
+    for q in prime_range((p/4)^(1/max(possible_odd_f))):
+        if legendre_symbol(q,p) == 1:
+            if all((q**(2*f) + q**f + 1) % p != 0 for f in possible_odd_f):
+                return False
+    return True
+
 def get_type_2_primes(K, bound=None):
     """Compute a list containing the type 2 primes"""
 
