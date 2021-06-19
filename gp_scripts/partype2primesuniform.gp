@@ -73,7 +73,7 @@ checktypetwo(pBeg) =
                  if(cond,print_satisfiesCCunif(p)));
 }
 */
-
+/*
 checktypetwo(pBeg) =
 {
     my(p);
@@ -89,6 +89,19 @@ checktypetwo(pBeg) =
                  print_satisfiesCCunif(p));
     forprimestep(p = pBeg*blockSize, (pBeg+1)*blockSize-1,Mod(43,840),
                  print_satisfiesCCunif(p));
+}
+*/
+
+my_res_classes = [667,67,547,163,403,43];
+export(my_res_classes)
+
+checktypetwo(pBeg) =
+{
+    my(p);
+    foreach(my_res_classes,r,
+      forprimestep(p = pBeg*blockSize, (pBeg+1)*blockSize-1,Mod(r,840),
+                  print_satisfiesCCunif(p));
+    );
 }
 export(checktypetwo)
 

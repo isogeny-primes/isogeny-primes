@@ -29,7 +29,8 @@ minimizing typos.
 import argparse
 from sage.all import(Integer, RR, QuadraticField, PolynomialRing, QQ,
                      NumberField, latex)
-from isogeny_primes import (get_isogeny_primes, EC_Q_ISOGENY_PRIMES, contains_imaginary_quadratic_field)
+from isogeny_primes import (get_isogeny_primes, EC_Q_ISOGENY_PRIMES,
+    contains_imaginary_quadratic_field, CLASS_NUMBER_ONE_DISCS)
 from time import perf_counter
 
 import requests  # for accessing LMFDB API
@@ -73,7 +74,7 @@ class Latexer(object):
     def __init__(self, degree_range):
         self.range = degree_range
 
-    def lpp_table(self):
+    def several_d(self):
         """generate the large putative primes table"""
 
         output_str = r'${d}$ & ${Delta_K}$ & ${f_K}$ & {possible_isogeny_primes} & ${time_s:.2f}$\\'
@@ -94,18 +95,50 @@ class Latexer(object):
         for one_line in latex_output:
             print(one_line)
 
+    def lpp_table(self):
+        """generate the large putative primes table"""
+
+        output_str = r'${Delta_K}$ & $\Q(\sqrt{{{D}}})$ & {new_isogeny_primes}\\'
+        latex_output = []
+        for D in range(-self.range,self.range+1):
+            if Integer(D).is_squarefree():
+                if not D in CLASS_NUMBER_ONE_DISCS:
+                    if D != 1:
+                        K = QuadraticField(D)
+                        Delta_K = K.discriminant()
+                        candidates = get_isogeny_primes(K, norm_bound=150, bound=2000, loop_curves=True)
+                        candidates = [c for c in candidates if c not in EC_Q_ISOGENY_PRIMES]
+                        # candidates = [c for c in candidates if c > 71]
+                        candidates.sort()
+                        new_isogeny_primes = ", ".join(map(str,candidates))
+                        output_here = output_str.format(Delta_K=Delta_K, D=D, new_isogeny_primes=new_isogeny_primes)
+                        latex_output.append(output_here)
+                        print(output_here)
+        print("Total number of hits: {}".format(len(latex_output)))
+        # for one_line in latex_output:
+        #     print(one_line)
 
 def cli_handler(args):
 
-    DEGREE_RANGE = args.d
+    THE_RANGE = args.d
 
-    latex_helper = Latexer(DEGREE_RANGE)
-    latex_helper.lpp_table()
+    latex_helper = Latexer(THE_RANGE)
 
+    if args.table == 'several_d':
+        latex_helper.several_d()
+    elif args.table == 'lpp':
+        latex_helper.lpp_table()
+    else:
+        print("Please specify which table you want to LaTeX, either dlmv or lpp")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('d', metavar='d', type=int,
-                         help='the d range')
+                         help='the range depending on table')
+    parser.add_argument('--table',
+                required=True,
+                nargs='?',
+                choices=['several_d', 'lpp'],
+                help='which table to generate')
     args = parser.parse_args()
     cli_handler(args)

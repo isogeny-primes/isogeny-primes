@@ -49,6 +49,7 @@ EC_Q_ISOGENY_PRIMES = {2,3,5,7,11,13,17,19,37,43,67,163}
 CLASS_NUMBER_ONE_DISCS = {-1, -2, -3, -7, -11, -19, -43, -67, -163}
 R = PolynomialRing(Rationals(), 'x')
 FORMAL_IMMERSION_DATA_PATH = Path('bad_formal_immersion_data.json')
+QUADRATIC_POINTS_DATA_PATH = Path('quadratic_points_catalogue.json')
 
 # Global methods
 
@@ -87,7 +88,6 @@ def get_weil_polys(F):
     return [f for f in weil_polys if weil_polynomial_is_elliptic(f,q,a)]
 
 
-
 ########################################################################
 #                                                                      #
 #                           ÖZMAN SIEVE                                #
@@ -123,6 +123,51 @@ def oezman_sieve(p,N):
             return True
 
     return False
+
+
+def works_method_of_appendix(p,K):
+    """This implements the method of the appendix, returns True if that
+    method is able to remove p as an isogeny prime for K. TODO"""
+
+    return False
+
+
+def apply_weeding(candidates, K):
+    """Checks whether possible isogeny prime p can be removed for K a
+    quadratic field"""
+
+    removed_primes = set()
+    Delta_K = K.discriminant()
+    D = Delta_K.squarefree_part()
+    ramified_primes = Delta_K.prime_divisors()
+
+    with open(QUADRATIC_POINTS_DATA_PATH, 'r') as qdpts_dat_file:
+        qdpts_dat = json.load(qdpts_dat_file)
+
+    for p in candidates-EC_Q_ISOGENY_PRIMES:
+        if p > 20:
+            if str(p) in qdpts_dat:
+                data_this_p = qdpts_dat[str(p)]
+                if D in data_this_p['known_D']:
+                    continue
+                if data_this_p['is_complete']:
+                    removed_primes.add(p)
+                    continue
+                removed_p = False
+                for q in ramified_primes:
+                    if not oezman_sieve(q,p):
+                        # Means we have a local obstruction at q
+                        removed_primes.add(p)
+                        removed_p = True
+                        break
+                if removed_p:
+                    continue
+                if works_method_of_appendix(p,K):
+                    removed_primes.add(p)
+            else:
+                if works_method_of_appendix(p,K):
+                    removed_primes.add(p)
+    return removed_primes
 
 
 ########################################################################
@@ -837,12 +882,23 @@ def get_isogeny_primes(K, norm_bound, bound=1000, loop_curves=True):
     type_2_primes = get_type_2_primes(K, bound=bound)
     logging.info("type_2_primes = {}".format(type_2_primes))
 
-    # Put them all together and sort the list before returning
+    # Put them all together
+
     candidates = set.union(set(type_1_primes),
                            set(pre_type_one_two_primes),
                            set(type_2_primes))
-    candidates = list(candidates)
-    candidates.sort()
+
+    # If K is quadratic, try to filter the list using Bruin-Najman and
+    # Box tables, plus Özman sieve
+
+    if K.degree() == 2:
+        removed_primes = apply_weeding(candidates, K)
+
+        if removed_primes:
+            candidates -= removed_primes
+            logging.info("Primes removed via Bruin-Najman, Box, and Özman = {}".format(removed_primes))
+        else:
+            logging.debug("No primes removed via Bruin-Najman, Box, and Özman")
 
     return candidates
 
@@ -877,7 +933,15 @@ def cli_handler(args):
             logging.warning("Only checking Type 2 primes up to {}. "
                             "To check all, use the PARI/GP script.".format(bound))
         superset = get_isogeny_primes(K, args.norm_bound, bound, args.loop_curves)
-        logging.info("superset = {}".format(superset))
+
+        superset_list = list(superset)
+        superset_list.sort()
+        logging.info("superset = {}".format(superset_list))
+
+        possible_new_isog_primes = superset - EC_Q_ISOGENY_PRIMES
+        possible_new_isog_primes_list = list(possible_new_isog_primes)
+        possible_new_isog_primes_list.sort()
+        logging.info("Possible new isogeny primes = {}".format(possible_new_isog_primes_list))
 
 
 if __name__ == "__main__":
