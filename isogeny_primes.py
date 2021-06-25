@@ -370,7 +370,7 @@ def get_type_1_primes(K, C_K, norm_bound=50, loop_curves=False):
             with open(FORMAL_IMMERSION_DATA_PATH, 'w') as fp:
                 json.dump(bfi_dat, fp, indent=4)
 
-    aux_primes = prime_range(Q_2, norm_bound)
+    aux_primes = prime_range(norm_bound)
     running_prime_dict = {}
 
     for q in aux_primes:
@@ -398,8 +398,29 @@ def get_type_1_primes(K, C_K, norm_bound=50, loop_curves=False):
 
         running_prime_dict[q] = running_primes
 
+    running_prime_dict_2 = running_prime_dict[2]
+    del running_prime_dict[2]
+
     output = gcd(list(running_prime_dict.values()))
     output = set(output.prime_divisors())
+
+    # logging.info("output = {}".format(output))
+
+    if K.degree() == 2:
+
+        hacked_output = {p for p in output if p < 43}
+
+        prime_divs_at_2 = running_prime_dict_2.prime_divisors()
+        # logging.info("prime divs at 2 = {}".format(prime_divs_at_2))
+
+        for p in output:
+            if p > 41:
+                if p in prime_divs_at_2:
+                    hacked_output.add(p)
+
+        output = hacked_output
+    # logging.info("final hacked_output = {}".format(hacked_output))
+
     output = output.union(set(bad_formal_immersion_list))
     Delta_K = K.discriminant().abs()
     output = output.union(set(Delta_K.prime_divisors()))

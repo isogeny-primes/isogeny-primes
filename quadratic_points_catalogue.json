@@ -1,0 +1,84 @@
+{
+    "23": {
+        "known_D": [
+            -5,
+            -7,
+            -11,
+            -15
+        ],
+        "is_complete": false
+    },
+    "29": {
+        "known_D": [
+            -1,
+            -7
+        ],
+        "is_complete": false
+    },
+    "31": {
+        "known_D": [
+            -3
+        ],
+        "is_complete": false
+    },
+    "41": {
+        "known_D": [
+            -1
+        ],
+        "is_complete": false
+    },
+    "43": {
+        "known_D": [
+            -131,
+            -71
+        ],
+        "is_complete": false
+    },
+    "47": {
+        "known_D": [
+        ],
+        "is_complete": false
+    },
+    "53": {
+        "known_D": [
+        ],
+        "is_complete": false
+    },
+    "59": {
+        "known_D": [
+        ],
+        "is_complete": false
+    },
+    "61": {
+        "known_D": [
+        ],
+        "is_complete": false
+    },
+    "67": {
+        "known_D": [
+            -2,
+            -3,
+            -7,
+            -11,
+            -43
+        ],
+        "is_complete": true
+    },
+    "71": {
+        "known_D": [
+        ],
+        "is_complete": false
+    },
+    "73": {
+        "known_D": [
+            -1,
+            -2,
+            -3,
+            -19,
+            -31,
+            -67,
+            -127
+        ],
+        "is_complete": true
+    }
+}
