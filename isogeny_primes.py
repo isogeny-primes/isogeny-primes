@@ -808,13 +808,14 @@ def satisfies_condition_CC_uniform(possible_odd_f,p):
         p ([Prime]): the prime p
     Returns: boolean
     """
-    if p%4 == 1:
+    if p%4 == 1 or p==2:
         return False
-    for q in prime_range((p/4)^(1/max(possible_odd_f))):
+    for q in prime_range((p/4)^(1/max(possible_odd_f)) + 1):
         if legendre_symbol(q,p) == 1:
             if all((q**(2*f) + q**f + 1) % p != 0 for f in possible_odd_f):
                 return False
     return True
+
 
 def get_type_2_primes(K, bound=None):
     """Compute a list containing the type 2 primes"""
