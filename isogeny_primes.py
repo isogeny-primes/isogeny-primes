@@ -36,7 +36,8 @@ from sage.all import (QQ, next_prime, IntegerRing, prime_range, ZZ, pari,
         PolynomialRing, Integer, Rationals, legendre_symbol, QuadraticField,
         log, exp, find_root, ceil, NumberField, hilbert_class_polynomial,
         RR, EllipticCurve, ModularSymbols, Gamma0, lcm, oo, parent, Matrix,
-        gcd, prod, floor, prime_divisors)
+        gcd, prod, floor, prime_divisors, kronecker_character,
+        J0, kronecker_symbol)
 
 # Global constants
 
@@ -47,6 +48,7 @@ Q_2 = 3
 GENERIC_UPPER_BOUND = 10**30
 EC_Q_ISOGENY_PRIMES = {2,3,5,7,11,13,17,19,37,43,67,163}
 CLASS_NUMBER_ONE_DISCS = {-1, -2, -3, -7, -11, -19, -43, -67, -163}
+SMALL_GONALITIES = {2,3,5,7,11,13,17,19,23,29,31,37,41,47,59,71}
 R = PolynomialRing(Rationals(), 'x')
 FORMAL_IMMERSION_DATA_PATH = Path('bad_formal_immersion_data.json')
 QUADRATIC_POINTS_DATA_PATH = Path('quadratic_points_catalogue.json')
@@ -90,7 +92,7 @@ def get_weil_polys(F):
 
 ########################################################################
 #                                                                      #
-#                           ÖZMAN SIEVE                                #
+#                               WEEDING                                #
 #                                                                      #
 ########################################################################
 
@@ -125,10 +127,38 @@ def oezman_sieve(p,N):
     return False
 
 
+def is_torsion_same(p, d, B=20, uniform=False):
+
+    if uniform:
+        # This ignores d
+        hecke_poly_data = [(q**2, q**2 + q + 1) for q in prime_range(B)]
+    else:
+        hecke_poly_data = [(q**2, q**2 + q + 1) if kronecker_symbol(d,q) == -1 else (q, q+1) for q in prime_range(B)]
+
+    return J0(p).rational_torsion_order() == gcd([J0(p).hecke_polynomial(a)(b) for a,b in hecke_poly_data])
+
+
+def is_rank_of_twist_zero(p,d):
+
+    M = ModularSymbols(p)
+    S = M.cuspidal_subspace()
+    T = S.atkin_lehner_operator()
+    S_min = (T + parent(T)(1)).kernel()
+    my_map = S_min.rational_period_mapping()
+    tw = M.twisted_winding_element(0,kronecker_character(d))
+    twmap = my_map(tw)
+    return twmap != parent(twmap)(0)
+
+
 def works_method_of_appendix(p,K):
     """This implements the method of the appendix, returns True if that
-    method is able to remove p as an isogeny prime for K. TODO"""
+    method is able to remove p as an isogeny prime for K."""
 
+    if QuadraticField(-p).class_number() > 2:
+        if p not in SMALL_GONALITIES:
+            if is_torsion_same(p,K.discriminant()):
+                if is_rank_of_twist_zero(p,K.discriminant()):
+                    return True
     return False
 
 
@@ -157,15 +187,20 @@ def apply_weeding(candidates, K):
                 for q in ramified_primes:
                     if not oezman_sieve(q,p):
                         # Means we have a local obstruction at q
+                        logging.debug("Prime {} removed via Oezman sieve".format(p))
                         removed_primes.add(p)
                         removed_p = True
                         break
                 if removed_p:
                     continue
+                logging.debug("Attempting method of appendix on prime {}".format(p))
                 if works_method_of_appendix(p,K):
+                    logging.debug("Prime {} removed via method of appendix".format(p))
                     removed_primes.add(p)
             else:
+                logging.debug("Attempting method of appendix on prime {}".format(p))
                 if works_method_of_appendix(p,K):
+                    logging.debug("Prime {} removed via method of appendix".format(p))
                     removed_primes.add(p)
     return removed_primes
 
@@ -210,8 +245,8 @@ def get_M(d, M_start=None, M_stop=None, positive_char=True):
     if not M_start:
         M_start = 3
     if not M_stop:
-        #based on trial and error, should be big enough
-        #if not we just raise an error
+        # based on trial and error, should be big enough
+        # if not we just raise an error
         M_stop=20*d
 
     for M in range(M_start,M_stop,2):
@@ -702,8 +737,6 @@ def get_pre_type_one_two_primes(K, norm_bound=50, loop_curves=False):
         q_dict_collapsed = gcd(list(q_dict.values()))
         tracking_dict_inv_collapsed[eps] = q_dict_collapsed
 
-    logging.debug({eps:(ZZ(q_lcm).prime_divisors() if q_lcm else [0]) for eps,q_lcm in tracking_dict_inv_collapsed.items()})
-
     final_split_dict = {}
 
     for eps_type in set(epsilons.values()):
@@ -918,9 +951,9 @@ def get_isogeny_primes(K, norm_bound, bound=1000, loop_curves=True):
 
         if removed_primes:
             candidates -= removed_primes
-            logging.info("Primes removed via Bruin-Najman, Box, and Özman = {}".format(removed_primes))
+            logging.info("Primes removed via weeding = {}".format(removed_primes))
         else:
-            logging.debug("No primes removed via Bruin-Najman, Box, and Özman")
+            logging.debug("No primes removed via weeding")
 
     return candidates
 
