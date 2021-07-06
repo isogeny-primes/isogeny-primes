@@ -39,18 +39,16 @@ from sage.all import (QQ, next_prime, IntegerRing, prime_range, ZZ, pari,
         gcd, prod, floor, prime_divisors, kronecker_character,
         J0, kronecker_symbol)
 
-# Global constants
 
-# The constant which Momose calls Q_2
-Q_2 = 3
+# Global quantitites
 
-# Various other Quantities
 GENERIC_UPPER_BOUND = 10**30
 EC_Q_ISOGENY_PRIMES = {2,3,5,7,11,13,17,19,37,43,67,163}
 CLASS_NUMBER_ONE_DISCS = {-1, -2, -3, -7, -11, -19, -43, -67, -163}
 SMALL_GONALITIES = {2,3,5,7,11,13,17,19,23,29,31,37,41,47,59,71}
 R = PolynomialRing(Rationals(), 'x')
-FORMAL_IMMERSION_DATA_PATH = Path('bad_formal_immersion_data.json')
+FORMAL_IMMERSION_DATA_AT_2_PATH = Path('formal_immersion_at_2.json')
+BAD_FORMAL_IMMERSION_DATA_PATH = Path('bad_formal_immersion_data.json')
 QUADRATIC_POINTS_DATA_PATH = Path('quadratic_points_catalogue.json')
 
 # Global methods
@@ -351,6 +349,41 @@ def get_bad_formal_immersion_data(d):
     return p_todo, q_to_bad_p
 
 
+def apply_formal_immersion_at_2(output_thus_far, running_prime_dict_2, Kdeg):
+
+    with open(FORMAL_IMMERSION_DATA_AT_2_PATH, 'r') as fi2_dat_file:
+        fi2_dat = json.load(fi2_dat_file)
+
+    largest_prime = fi2_dat.pop('largest_prime')
+
+    if not str(Kdeg) in fi2_dat.keys():
+        logging.debug("No formal immersion data at 2 with which to filter")
+        return output_thus_far
+
+    fi2_this_d = fi2_dat[str(Kdeg)]
+
+    stubborn_set = {p for p in output_thus_far if p < fi2_this_d['smallest_good_formal_immersion_prime'] or p in fi2_this_d['sporadic_bad_formal_immersion_primes'] or p > largest_prime}
+    candidate_set = output_thus_far - stubborn_set
+    if not candidate_set:
+        logging.debug("No candidate primes eligible for formal immersion at 2 filtering")
+        return output_thus_far
+
+    prime_divs_at_2 = running_prime_dict_2.prime_divisors()
+
+    output = stubborn_set
+    failed_candidates = set()
+
+    for p in candidate_set:
+        if p in prime_divs_at_2:
+            output.add(p)
+        else:
+            failed_candidates.add(p)
+
+    logging.debug("Type one primes removed via formal immersion at 2 filtering: {}".format(failed_candidates))
+
+    return output
+
+
 def get_N(frob_poly, residue_field_card, exponent):
     """Helper method for computing Type 1 primes"""
 
@@ -375,7 +408,7 @@ def get_type_1_primes(K, C_K, norm_bound=50, loop_curves=False):
 
     # Get bad formal immersion data
 
-    if not FORMAL_IMMERSION_DATA_PATH.is_file():
+    if not BAD_FORMAL_IMMERSION_DATA_PATH.is_file():
         logging.debug("No bad formal immersion data found. Computing and adding ...")
         bad_formal_immersion_list, bad_aux_prime_dict = get_bad_formal_immersion_data(K.degree())
         data_for_json_export = {int(K.degree()) : {
@@ -383,12 +416,12 @@ def get_type_1_primes(K, C_K, norm_bound=50, loop_curves=False):
                                                 "bad_aux_prime_dict" : bad_aux_prime_dict
                                              }
         }
-        with open(FORMAL_IMMERSION_DATA_PATH, 'w') as fp:
+        with open(BAD_FORMAL_IMMERSION_DATA_PATH, 'w') as fp:
             json.dump(data_for_json_export, fp, indent=4)
         logging.debug("Data added")
     else:
         logging.debug("Bad formal immersion data found. Reading to see if it has our data ...")
-        with open(FORMAL_IMMERSION_DATA_PATH, 'r') as bfi_dat_file:
+        with open(BAD_FORMAL_IMMERSION_DATA_PATH, 'r') as bfi_dat_file:
             bfi_dat = json.load(bfi_dat_file)
 
         if str(K.degree()) in bfi_dat:
@@ -402,7 +435,7 @@ def get_type_1_primes(K, C_K, norm_bound=50, loop_curves=False):
                                         "bad_formal_immersion_list" : bad_formal_immersion_list,
                                         "bad_aux_prime_dict" : bad_aux_prime_dict
                                        }
-            with open(FORMAL_IMMERSION_DATA_PATH, 'w') as fp:
+            with open(BAD_FORMAL_IMMERSION_DATA_PATH, 'w') as fp:
                 json.dump(bfi_dat, fp, indent=4)
 
     aux_primes = prime_range(norm_bound)
@@ -433,29 +466,11 @@ def get_type_1_primes(K, C_K, norm_bound=50, loop_curves=False):
 
         running_prime_dict[q] = running_primes
 
-    running_prime_dict_2 = running_prime_dict[2]
-    del running_prime_dict[2]
+    running_prime_dict_2 = running_prime_dict.pop(2)
 
     output = gcd(list(running_prime_dict.values()))
     output = set(output.prime_divisors())
-
-    # logging.info("output = {}".format(output))
-
-    if K.degree() == 2:
-
-        hacked_output = {p for p in output if p < 43}
-
-        prime_divs_at_2 = running_prime_dict_2.prime_divisors()
-        # logging.info("prime divs at 2 = {}".format(prime_divs_at_2))
-
-        for p in output:
-            if p > 41:
-                if p in prime_divs_at_2:
-                    hacked_output.add(p)
-
-        output = hacked_output
-    # logging.info("final hacked_output = {}".format(hacked_output))
-
+    output = apply_formal_immersion_at_2(output, running_prime_dict_2, K.degree())
     output = output.union(set(bad_formal_immersion_list))
     Delta_K = K.discriminant().abs()
     output = output.union(set(Delta_K.prime_divisors()))

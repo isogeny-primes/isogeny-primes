@@ -1,0 +1,64 @@
+{
+    "largest_prime": 2347,
+    "7": {
+        "smallest_good_formal_immersion_prime": 131,
+        "sporadic_bad_formal_immersion_primes": [
+            137,
+            157,
+            193
+        ]
+    },
+    "6": {
+        "smallest_good_formal_immersion_prime": 71,
+        "sporadic_bad_formal_immersion_primes": [
+            73,
+            79,
+            83,
+            89,
+            97,
+            101,
+            103,
+            109,
+            113,
+            193
+        ]
+    },
+    "5": {
+        "smallest_good_formal_immersion_prime": 59,
+        "sporadic_bad_formal_immersion_primes": [
+            61,
+            67,
+            73,
+            79,
+            89,
+            97,
+            101
+        ]
+    },
+    "4": {
+        "smallest_good_formal_immersion_prime": 47,
+        "sporadic_bad_formal_immersion_primes": [
+            53,
+            61,
+            67,
+            73,
+            79,
+            97,
+            101
+        ]
+    },
+    "3": {
+        "smallest_good_formal_immersion_prime": 47,
+        "sporadic_bad_formal_immersion_primes": [
+            73,
+            79
+        ]
+    },
+    "2": {
+        "smallest_good_formal_immersion_prime": 23,
+        "sporadic_bad_formal_immersion_primes": [
+            37,
+            41
+        ]
+    }
+}
