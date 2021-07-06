@@ -362,7 +362,10 @@ def apply_formal_immersion_at_2(output_thus_far, running_prime_dict_2, Kdeg):
 
     fi2_this_d = fi2_dat[str(Kdeg)]
 
-    stubborn_set = {p for p in output_thus_far if p < fi2_this_d['smallest_good_formal_immersion_prime'] or p in fi2_this_d['sporadic_bad_formal_immersion_primes'] or p > largest_prime}
+    stubborn_set = {p for p in output_thus_far if p < fi2_this_d['smallest_good_formal_immersion_prime']
+                                               or p in fi2_this_d['sporadic_bad_formal_immersion_primes']
+                                               or p > largest_prime}
+
     candidate_set = output_thus_far - stubborn_set
     if not candidate_set:
         logging.debug("No candidate primes eligible for formal immersion at 2 filtering")
