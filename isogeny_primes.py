@@ -37,7 +37,8 @@ from sage.all import (QQ, next_prime, IntegerRing, prime_range, ZZ, pari,
         log, exp, find_root, ceil, NumberField, hilbert_class_polynomial,
         RR, EllipticCurve, ModularSymbols, Gamma0, lcm, oo, parent, Matrix,
         gcd, prod, floor, prime_divisors, kronecker_character,
-        J0, kronecker_symbol)
+        J0, kronecker_symbol, companion_matrix, euler_phi, DirichletGroup,
+        CyclotomicField)
 
 
 # Global quantitites
@@ -125,25 +126,53 @@ def oezman_sieve(p,N):
     return False
 
 
-def is_torsion_same(p, d, B=20, uniform=False):
+def get_dirichlet_character(K):
+    """Returns a Dirichlet character whose fixed field is K"""
+
+    N = K.conductor()
+    zeta_order = euler_phi(N)  # maybe do this as in LMFDB
+    H = DirichletGroup(N, base_ring=CyclotomicField(zeta_order))
+    return [chi for chi in H if chi.conductor() == N and chi.multiplicative_order() == K.degree()][0]
+
+
+def is_torsion_same(p, K, chi, J0_min, B=30, uniform=False):
+    """Returns true if the minus part of J0(p) does not gain new torsion when
+    base changing to K"""
+
+    d = K.degree()
 
     if uniform:
-        # This ignores d
-        hecke_poly_data = [(q**2, q**2 + q + 1) for q in prime_range(B)]
+        frob_poly_data = [(q, d) for q in prime_range(d+2,B) if q != p]
     else:
-        hecke_poly_data = [(q**2, q**2 + q + 1) if kronecker_symbol(d,q) == -1 else (q, q+1) for q in prime_range(B)]
+        frob_poly_data = [(q, 1) if chi(q) == 1 else (q, d) for q in prime_range(d+2,B) if q != p]
 
-    return J0(p).rational_torsion_order() == gcd([J0(p).hecke_polynomial(a)(b) for a,b in hecke_poly_data])
+    point_counts = []
+
+    for q,i in frob_poly_data:
+        frob_pol_q = J0_min.frobenius_polynomial(q)
+        frob_mat = companion_matrix(frob_pol_q)
+        point_counts.append((frob_mat**i).charpoly()(1))
+
+    # Recall that the rational torsion on J0(p) is entirely contained in
+    # the minus part (theorem of Mazur), so checking no-growth of torsion
+    # in minus part is done simply as follows
+
+    return J0(p).rational_torsion_order() == gcd(point_counts)
 
 
-def is_rank_of_twist_zero(p,d):
+# def is_rank_of_twist_zero(d,S_min):
 
-    M = ModularSymbols(p)
-    S = M.cuspidal_subspace()
-    T = S.atkin_lehner_operator()
-    S_min = (T + parent(T)(1)).kernel()
-    my_map = S_min.rational_period_mapping()
-    tw = M.twisted_winding_element(0,kronecker_character(d))
+#     my_map = S_min.rational_period_mapping()
+#     tw = M.twisted_winding_element(0,kronecker_character(d))
+#     twmap = my_map(tw)
+#     return twmap != parent(twmap)(0)
+
+def is_rank_of_twist_zero(chi,ML,S_min_L):
+    """Returns true if the rank of the twist of the minus part by the
+    character chi is zero"""
+
+    my_map = S_min_L.rational_period_mapping()
+    tw = ML.twisted_winding_element(0,chi)
     twmap = my_map(tw)
     return twmap != parent(twmap)(0)
 
@@ -154,13 +183,26 @@ def works_method_of_appendix(p,K):
 
     if QuadraticField(-p).class_number() > 2:
         if p not in SMALL_GONALITIES:
-            if is_torsion_same(p,K.discriminant()):
-                if is_rank_of_twist_zero(p,K.discriminant()):
+            M = ModularSymbols(p)
+            S = M.cuspidal_subspace()
+            T = S.atkin_lehner_operator()
+            S_min = (T + parent(T)(1)).kernel()
+            J0_min = S_min.abelian_variety()
+
+            chi = get_dirichlet_character(K)
+
+            ML = ModularSymbols(p, base_ring=chi.base_ring())
+            SL = ML.cuspidal_subspace()
+            TL = SL.atkin_lehner_operator()
+            S_min_L = (TL + parent(TL)(1)).kernel()
+
+            if is_torsion_same(p,K,chi,J0_min):
+                if is_rank_of_twist_zero(chi,ML,S_min_L):
                     return True
     return False
 
 
-def apply_weeding(candidates, K):
+def apply_quadratic_weeding(candidates, K):
     """Checks whether possible isogeny prime p can be removed for K a
     quadratic field"""
 
@@ -201,6 +243,25 @@ def apply_weeding(candidates, K):
                     logging.debug("Prime {} removed via method of appendix".format(p))
                     removed_primes.add(p)
     return removed_primes
+
+
+def apply_weeding(candidates, K):
+    """Wrapper for the methods in this section"""
+
+    if K.degree() == 2:
+        return apply_quadratic_weeding(candidates, K)
+
+    elif K.degree().is_prime() and K.is_abelian():
+        removed_primes = set()
+        for p in candidates-EC_Q_ISOGENY_PRIMES:
+            if p > 20:
+                logging.debug("Attempting method of appendix on prime {}".format(p))
+                if works_method_of_appendix(p,K):
+                    logging.debug("Prime {} removed via method of appendix".format(p))
+                    removed_primes.add(p)
+        return removed_primes
+
+    return set()
 
 
 ########################################################################
@@ -961,17 +1022,16 @@ def get_isogeny_primes(K, norm_bound, bound=1000, loop_curves=True):
                            set(pre_type_one_two_primes),
                            set(type_2_primes))
 
-    # If K is quadratic, try to filter the list using Bruin-Najman and
-    # Box tables, plus Özman sieve
+    # Try to remove some of these primes via Bruin-Najman and Box tables,
+    # Özman sieve, and method of Appendix
 
-    if K.degree() == 2:
-        removed_primes = apply_weeding(candidates, K)
+    removed_primes = apply_weeding(candidates, K)
 
-        if removed_primes:
-            candidates -= removed_primes
-            logging.info("Primes removed via weeding = {}".format(removed_primes))
-        else:
-            logging.debug("No primes removed via weeding")
+    if removed_primes:
+        candidates -= removed_primes
+        logging.info("Primes removed via weeding = {}".format(removed_primes))
+    else:
+        logging.debug("No primes removed via weeding")
 
     return candidates
 
