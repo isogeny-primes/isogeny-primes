@@ -710,8 +710,12 @@ def get_AB_primes(G_K,frak_q,epsilons,q_class_group_order):
     return output_dict_AB
 
 
-def get_C_primes(K, G_K, frak_q, epsilons, q_class_group_order, loop_curves=False):
-    """K is assumed Galois at this point, with Galois group G_K"""
+def get_C_primes(K, KtoKgal, G_K, frak_q, epsilons, q_class_group_order, loop_curves=False):
+    """
+    K is a not neccesarily galois number field not
+    KtoKgal should be a map from K to it's galois closure and
+    G_K should be the galois group of this galois closure.
+    """
 
     # Initialise output dict to empty sets
     output_dict_C = {}
@@ -730,7 +734,7 @@ def get_C_primes(K, G_K, frak_q, epsilons, q_class_group_order, loop_curves=Fals
     for frob_poly in frob_polys_to_loop:
         if frob_poly.is_irreducible():
             frob_poly_root_field = frob_poly.root_field('a')
-            _, K_into_KL, L_into_KL, _ = K.composite_fields(frob_poly_root_field, 'c', both_maps=True)[0]
+            _, K_into_KL, L_into_KL, _ = KtoKgal.codomain().composite_fields(frob_poly_root_field, 'c', both_maps=True)[0]
         else:
             frob_poly_root_field = IntegerRing()
         roots_of_frob = frob_poly.roots(frob_poly_root_field)
@@ -739,12 +743,12 @@ def get_C_primes(K, G_K, frak_q, epsilons, q_class_group_order, loop_curves=Fals
         for beta in betas:
             if beta in K:
                 for eps in epsilons:
-                    N = (group_ring_exp(alpha, eps, G_K) - beta ** (12*q_class_group_order)).absolute_norm()
+                    N = (group_ring_exp(KtoKgal(alpha), eps, G_K) - beta ** (12*q_class_group_order)).absolute_norm()
                     N = ZZ(N)
                     output_dict_C[eps] = lcm(output_dict_C[eps], N)
             else:
                 for eps in epsilons:
-                    N = (K_into_KL(group_ring_exp(alpha, eps, G_K)) - L_into_KL(beta ** (12*q_class_group_order))).absolute_norm()
+                    N = (K_into_KL(group_ring_exp(KtoKgal(alpha), eps, G_K)) - L_into_KL(beta ** (12*q_class_group_order))).absolute_norm()
                     N = ZZ(N)
                     output_dict_C[eps] = lcm(output_dict_C[eps], N)
     return output_dict_C
