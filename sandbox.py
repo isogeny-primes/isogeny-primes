@@ -1,7 +1,7 @@
 R.<x> = QQ[]
 pol = x^4 - x^3 + 4*x^2 + x + 1
 K = NumberField(pol,name='a')
-Kgal = K.galois_closure('b')
+Kgal, KtoKgal = K.galois_closure('b', map=True)
 C_K = K.class_group()
 
 aux_primes = Kgal.primes_above(47)
@@ -14,7 +14,7 @@ tracking_dict = {}
 for q in aux_primes:
     q_class_group_order = C_Kgal(q).multiplicative_order()
     # these will be dicts with keys the epsilons, values sets of primes
-    C_primes_dict = get_C_primes(Kgal,G_K, q, epsilons, q_class_group_order, loop_curves=False)
+    C_primes_dict = get_C_primes(Kgal, KtoKgal, G_K, q, epsilons, q_class_group_order, loop_curves=False)
     unified_dict = {}
     q_rat = Integer(q.norm())
     for eps in epsilons:
@@ -29,7 +29,7 @@ tracking_dict_2 = {}
 for q in aux_primes_2:
     q_class_group_order = C_Kgal(q).multiplicative_order()
     # these will be dicts with keys the epsilons, values sets of primes
-    C_primes_dict = get_C_primes(Kgal,G_K, q, epsilons_2, q_class_group_order, loop_curves=False)
+    C_primes_dict = get_C_primes(Kgal, KtoKgal, G_K, q, epsilons_2, q_class_group_order, loop_curves=False)
     unified_dict = {}
     q_rat = Integer(q.norm())
     for eps in epsilons_2:
