@@ -58,7 +58,7 @@ print_satisfiesCCunif(p) =
 {
   if(satisfiesCCunif(p),
     listput(my_list,p);
-    print(p," is a type 2 prime")
+    print(p," is a possible type 2 prime")
   );
 }
 

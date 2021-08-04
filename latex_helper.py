@@ -69,6 +69,37 @@ def get_smallest_good_number_field(d):
             return (Delta_K, poly, K)
     raise NotImplementedError("need more hits")
 
+
+# from isogeny_primes import (get_isogeny_primes, EC_Q_ISOGENY_PRIMES,
+#     contains_imaginary_quadratic_field, CLASS_NUMBER_ONE_DISCS)
+# URL_TRUNK = ('https://www.lmfdb.org/api/nf_fields/?_format=json&degree={}&'
+#              'is_galois=false&_fields=label,disc_abs,disc_sign,coeffs')
+# norm_bound = 50
+# R = PolynomialRing(QQ, 'x')
+# def find_stop_iteration(d):
+#     the_url = URL_TRUNK.format(str(d))
+#     data_this_degree = requests.get(url=the_url).json()['data']
+#     for dat in data_this_degree:
+#         poly = R(dat['coeffs'])
+#         K = NumberField(poly, name='a')
+
+#         Kgal = K.galois_closure('b')
+#         aux_primes =[]
+#         contains_imaginary_quadratic, contains_hilbert_class_field = contains_imaginary_quadratic_field(Kgal)
+
+#         try:
+#             it = Kgal.primes_of_degree_one_iter(max_iterations=1000)
+#             aux_prime_count = 2
+#             while aux_prime_count > 0:
+#                 aux_prime_candidate = next(it)
+#                 if (not contains_imaginary_quadratic) or (not aux_prime_candidate.is_principal()):
+#                     if aux_prime_candidate.norm() > norm_bound:
+#                         aux_primes.append(aux_prime_candidate)
+#                     aux_prime_count -= 1
+#         except StopIteration:
+#             print(K, dat['label'])
+
+
 class Latexer(object):
 
     def __init__(self, degree_range):

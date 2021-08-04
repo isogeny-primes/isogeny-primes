@@ -144,7 +144,7 @@ def is_torsion_same(p, K, chi, J0_min, B=30, uniform=False):
     if uniform:
         frob_poly_data = [(q, d) for q in prime_range(d+2,B) if q != p]
     else:
-        frob_poly_data = [(q, 1) if chi(q) == 1 else (q, d) for q in prime_range(d+2,B) if q != p]
+        frob_poly_data = [(q, 1) if chi(q) == 1 else (q, d) for q in prime_range(d+2,B) if gcd(q,p) == 1]
 
     point_counts = []
 
@@ -739,11 +739,13 @@ def get_C_primes(K, G_K, frak_q, epsilons, q_class_group_order, loop_curves=Fals
         for beta in betas:
             if beta in K:
                 for eps in epsilons:
+                    # print('.', end='', flush=True)
                     N = (group_ring_exp(alpha, eps, G_K) - beta ** (12*q_class_group_order)).absolute_norm()
                     N = ZZ(N)
                     output_dict_C[eps] = lcm(output_dict_C[eps], N)
             else:
                 for eps in epsilons:
+                    # print('.', end='', flush=True)
                     N = (K_into_KL(group_ring_exp(alpha, eps, G_K)) - L_into_KL(beta ** (12*q_class_group_order))).absolute_norm()
                     N = ZZ(N)
                     output_dict_C[eps] = lcm(output_dict_C[eps], N)
