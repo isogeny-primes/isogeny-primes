@@ -44,6 +44,7 @@ from sage.all import (QQ, next_prime, IntegerRing, prime_range, ZZ, pari,
 # Global quantitites
 
 GENERIC_UPPER_BOUND = 10**30
+EMERGENCY_AUX_PRIME_COUNT = 2
 EC_Q_ISOGENY_PRIMES = {2,3,5,7,11,13,17,19,37,43,67,163}
 CLASS_NUMBER_ONE_DISCS = {-1, -2, -3, -7, -11, -19, -43, -67, -163}
 SMALL_GONALITIES = {2,3,5,7,11,13,17,19,23,29,31,37,41,47,59,71}
@@ -759,39 +760,39 @@ def get_pre_type_one_two_primes(K, norm_bound=50, loop_curves=False):
 
     Kgal = K.galois_closure('b')
 
-    contains_imaginary_quadratic, contains_hilbert_class_field = contains_imaginary_quadratic_field(Kgal)
+    contains_imaginary_quadratic, contains_hilbert_class_field = contains_imaginary_quadratic_field(K)
 
     if contains_hilbert_class_field:
-        if K.absolute_degree() < Kgal.absolute_degree():
-            # It _would_ be nice to remove the Galois restriction in Momose Lemma 1 ...
-            raise NotImplementedError("The Galois closure of the number field you "
-                "entered contains the Hilbert Class field of an imaginary quadratic "
-                "field. Our algorithm currently cannot deal with this instance.")
-        else:
-            raise ValueError("The number field you entered contains the Hilbert "
-                            "Class field of an imaginary quadratic field. The set "
-                            "of isogeny primes in this case is therefore infinite.")
+        raise ValueError("The number field you entered contains the Hilbert "
+                        "Class field of an imaginary quadratic field. The set "
+                        "of isogeny primes in this case is therefore infinite.")
 
-    aux_primes = Kgal.primes_of_bounded_norm(norm_bound)
+    aux_primes = K.primes_of_bounded_norm(norm_bound)
 
-    try:
-        it = Kgal.primes_of_degree_one_iter(max_iterations=1000)
-        aux_prime_count = 2
-        while aux_prime_count > 0:
-            aux_prime_candidate = next(it)
-            if (not contains_imaginary_quadratic) or (not aux_prime_candidate.is_principal()):
-                if aux_prime_candidate.norm() > norm_bound:
-                    aux_primes.append(aux_prime_candidate)
-                    logging.info("Emergency aux prime added")
-                aux_prime_count -= 1
-    except StopIteration:
-        # This should never happen, because in this case we are probably containing
-        # the Hilbert class field of an imaginary quadratic field and therefore
-        # would already have raised above, but I have been unable to prove this.
-        raise ValueError("The galois closure of your number field contains an "
-                "imaginary quadratic field, and we are unable to find a "
-                "non-principal auxiliary prime which is necessary for the algorithm "
-                "to work.")
+    # First get the emergency aux primes
+
+    C_K = K.class_group()
+    h_K = C_K.order()
+    completely_split_rat_primes = K.completely_split_primes(B=500)
+    good_primes = [p for p in completely_split_rat_primes if gcd(p,6*h_K) == 1]
+    list_of_gens = list(C_K.gens())
+
+    while list_of_gens and (i < len(good_primes)):
+        a_good_prime = good_primes[i]
+        emergency_prime_candidates = K.primes_above(a_good_prime)
+
+        for candidate in emergency_prime_candidates:
+            emergency_gen = C_K(candidate)
+            if emergency_gen in list_of_gens:
+                if a_good_prime > norm_bound:
+                    aux_primes.append(candidate)
+                list_of_gens.remove(emergency_gen)
+        i += 1
+
+    if list_of_gens:
+        raise RuntimeError("We have been unable to add enough emergency "
+                           "auxiliary primes. Try increasing the `B` parameter above.")
+
 
     G_K = Kgal.galois_group()
     C_Kgal = Kgal.class_group()
