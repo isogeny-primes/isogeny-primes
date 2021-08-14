@@ -212,3 +212,13 @@ for q in K_primes_deg_1_princ:
     vals_set = set(vals)
     if (0 in vals_set) or (len(vals_set) > 1):
         print(q)
+
+import pickle
+with open('beta_data.pickle', 'rb') as handle:
+    beta_data = pickle.load(handle)
+
+aux_primes = list(beta_data.keys())
+
+x = polygen(QQ);  K.<a> = NumberField(x^3 + 14*x - 1)
+aux_primes = K.primes_of_bounded_norm(30)
+CK = K.class_group()

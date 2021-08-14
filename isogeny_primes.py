@@ -44,7 +44,6 @@ from sage.all import (QQ, next_prime, IntegerRing, prime_range, ZZ, pari,
 # Global quantitites
 
 GENERIC_UPPER_BOUND = 10**30
-EMERGENCY_AUX_PRIME_COUNT = 2
 EC_Q_ISOGENY_PRIMES = {2,3,5,7,11,13,17,19,37,43,67,163}
 CLASS_NUMBER_ONE_DISCS = {-1, -2, -3, -7, -11, -19, -43, -67, -163}
 SMALL_GONALITIES = {2,3,5,7,11,13,17,19,23,29,31,37,41,47,59,71}
@@ -553,12 +552,8 @@ def get_type_1_primes(K, C_K, norm_bound=50, loop_curves=False):
 ########################################################################
 
 
-def group_ring_exp(x, eps, G_K):
-    return prod([sigma(x)**my_pow for my_pow, sigma in zip(eps, G_K)])
-
-
-def gal_act_eps(eps, sigma):
-    return tuple(eps[i-1] for i in sigma)
+def eps_exp(x, eps, Sigma):
+    return prod([sigma(x)**my_pow for my_pow, sigma in zip(eps, Sigma)])
 
 
 def get_eps_type(eps):
@@ -567,6 +562,8 @@ def get_eps_type(eps):
     """
 
     if 6 in eps:
+        if any(t in eps for t in [4,8]):
+            return 'mixed'
         return 'sextic'
     elif any(t in eps for t in [4,8]):
         return 'quartic'
@@ -574,40 +571,46 @@ def get_eps_type(eps):
         return 'quadratic'
 
 
-def get_redundant_epsilons(eps, G_action):
-    """Redundant epsilons are those in the Galois and dual orbits of a given
+def get_redundant_epsilons(eps, galois_group=None):
+    """Redundant epsilons are those in the dual orbits of a given
     epsilon. They are redundant because they yield the same ABC integers."""
 
-    redundant_epsilons = set()
+    if galois_group:
+        d = galois_group.order()
+        G_action = galois_group.as_finitely_presented_group().as_permutation_group().orbit(tuple(range(1,d+1)), action="OnTuples")
 
-    for sigma in G_action:
-        eps_to_sigma = gal_act_eps(eps, sigma)
-        redundant_epsilons.add(eps_to_sigma)
-        eps_to_sigma_dual = tuple((12 - x) for x in eps_to_sigma)
-        redundant_epsilons.add(eps_to_sigma_dual)
+        redundant_epsilons = set()
+
+        for sigma in G_action:
+            eps_to_sigma = gal_act_eps(eps, sigma)
+            redundant_epsilons.add(eps_to_sigma)
+            eps_to_sigma_dual = tuple((12 - x) for x in eps_to_sigma)
+            redundant_epsilons.add(eps_to_sigma_dual)
+    else:
+        redundant_epsilons = {eps, tuple((12 - x) for x in eps)}
 
     return redundant_epsilons
 
 
-def remove_redundant_epsilons(epsilons, G_action):
+def remove_redundant_epsilons(epsilons, galois_group=None):
 
     epsilons_output = set()
 
     while epsilons:
         an_eps = epsilons.pop()
-        eps_orbit = get_redundant_epsilons(an_eps, G_action)  # galois and dual orbit
+        eps_orbit = get_redundant_epsilons(an_eps, galois_group=galois_group)  # dual (and possibly Galois) orbit
         epsilons_output.add(an_eps)
         epsilons.difference_update(eps_orbit)
 
     return epsilons_output
 
 
-def get_pre_type_one_two_epsilons(G):
+def get_pre_type_one_two_epsilons(d, galgp=None):
     """This method computes the epsilon group ring characters of Lemma 1 and
     Remark 1 of Momose. The three epsilons of type 1 and 2 are excluded.
 
     Args:
-        d ([int]): Absolute degree of the Galois closure
+        d ([int]): Degree of the number field
 
     Returns:
         dictionary with keys a list of tuples defining the epsilon, and value
@@ -615,19 +618,14 @@ def get_pre_type_one_two_epsilons(G):
     """
 
     epsilons_dict = {}
-    d = G.order()
-    G_action = G.as_finitely_presented_group().as_permutation_group().orbit(tuple(range(1,d+1)), action="OnTuples")
 
-    quartic_epsilons = list(product([0,4,8,12], repeat=d))
-    sextic_epsilons = list(product([0,6,12], repeat=d))
-
-    epsilons_keys = set(quartic_epsilons).union(set(sextic_epsilons))
+    epsilons_keys = set(product([0,4,6,8,12], repeat=d))
 
     epsilons_keys -= {(0,)*d, (6,)*d, (12,)*d}  # remove types 1 and 2 epsilons
 
     logging.debug("epsilons before filtering: {}".format(len(epsilons_keys)))
 
-    epsilons_keys = remove_redundant_epsilons(epsilons_keys, G_action)
+    epsilons_keys = remove_redundant_epsilons(epsilons_keys, galois_group=galgp)
 
     logging.debug("epsilons after filtering: {}".format(len(epsilons_keys)))
 
@@ -695,8 +693,7 @@ def filter_ABC_primes(K, prime_list, eps_type):
         raise ValueError("type must be quadratic, quartic, or sextic")
 
 
-def get_AB_primes(G_K,frak_q,epsilons,q_class_group_order):
-    """K is assumed Galois at this point"""
+def get_AB_integers(embeddings,frak_q,epsilons,q_class_group_order):
 
     output_dict_AB = {}
     alphas = (frak_q ** q_class_group_order).gens_reduced()
@@ -704,15 +701,14 @@ def get_AB_primes(G_K,frak_q,epsilons,q_class_group_order):
     alpha = alphas[0]
     nm_q = ZZ(frak_q.norm())
     for eps in epsilons:
-        alpha_to_eps = group_ring_exp(alpha,eps, G_K)
+        alpha_to_eps = eps_exp(alpha,eps, embeddings)
         A = (alpha_to_eps - 1).norm()
         B = (alpha_to_eps - (nm_q ** (12 * q_class_group_order))).norm()
         output_dict_AB[eps] = lcm(A,B)
     return output_dict_AB
 
 
-def get_C_primes(K, G_K, frak_q, epsilons, q_class_group_order, loop_curves=False):
-    """K is assumed Galois at this point, with Galois group G_K"""
+def get_C_integers(K, embeddings, frak_q, epsilons, q_class_group_order, loop_curves=False):
 
     # Initialise output dict to empty sets
     output_dict_C = {}
@@ -728,32 +724,69 @@ def get_C_primes(K, G_K, frak_q, epsilons, q_class_group_order, loop_curves=Fals
     else:
         frob_polys_to_loop = R.weil_polynomials(2, residue_field.cardinality())
 
+    # beta_data = []
     for frob_poly in frob_polys_to_loop:
         if frob_poly.is_irreducible():
             frob_poly_root_field = frob_poly.root_field('a')
-            _, K_into_KL, L_into_KL, _ = K.composite_fields(frob_poly_root_field, 'c', both_maps=True)[0]
         else:
-            frob_poly_root_field = IntegerRing()
+            frob_poly_root_field = NumberField(R.gen(),'a')
+        _, K_into_KL, L_into_KL, _ = K.composite_fields(frob_poly_root_field, 'c', both_maps=True)[0]
         roots_of_frob = frob_poly.roots(frob_poly_root_field)
         betas = [r for r,e in roots_of_frob]
+        beta_data.append((frob_poly_root_field, betas))
 
         for beta in betas:
-            if beta in K:
-                for eps in epsilons:
-                    # print('.', end='', flush=True)
-                    N = (group_ring_exp(alpha, eps, G_K) - beta ** (12*q_class_group_order)).absolute_norm()
-                    N = ZZ(N)
-                    output_dict_C[eps] = lcm(output_dict_C[eps], N)
-            else:
-                for eps in epsilons:
-                    # print('.', end='', flush=True)
-                    N = (K_into_KL(group_ring_exp(alpha, eps, G_K)) - L_into_KL(beta ** (12*q_class_group_order))).absolute_norm()
-                    N = ZZ(N)
-                    output_dict_C[eps] = lcm(output_dict_C[eps], N)
-    return output_dict_C
+            for eps in epsilons:
+                # print('.', end='', flush=True)
+                N = (K_into_KL(eps_exp(alpha, eps, embeddings)) - L_into_KL(beta ** (12*q_class_group_order))).absolute_norm()
+                N = ZZ(N)
+                output_dict_C[eps] = lcm(output_dict_C[eps], N)
+    return output_dict_C, frob_polys_to_loop
 
 
-def get_pre_type_one_two_primes(K, norm_bound=50, loop_curves=False):
+def as_ZZ_module(G):
+    """
+    Input:
+      - An abelian group G
+
+    Output:
+      - (H, Z, L) a tripple of ZZ-modules such that:
+         1. H is isomorphic to G
+         2. Z = ZZ^G.ngens()
+         3. L is a submodule of Z such that Z/L=H
+         4. The coordinates in H are such that
+              G  -> H
+              g |-> H(g.exponents())
+            is an isomoprhism.
+    """
+    invs = list(reversed(G.elementary_divisors()))
+    if debug:
+        assert G.ngens() == len(invs)
+        print(invs,[g.order() for g in G.gens()])
+        for g,inv in zip(G.gens(),invs):
+            assert g.order()==inv
+    ZZn = ZZ**len(invs)
+    H = ZZn.submodule(ZZn.gen(i)*invs[i] for i in range(len(invs)))
+    return ZZn/H, ZZn, H
+
+def principal_ideal_lattice(aux_primes, class_group, debug=False):
+    """
+    Input:
+      - aux_primes - a list of primes in a numberfield
+      - class_group - the classgroup of the same numberfield
+    Output:
+      - The submodule of ZZ^aux_primes corresponding to the prinicpal ideals
+    """
+    C_ZZ_mod, C_num, C_den = as_ZZ_module(class_group)
+    ZZt = ZZ**len(aux_primes)
+    if debug:
+        for q in aux_primes:
+            assert prod(g^i for g,i in zip(class_group.gens(),class_group(q).exponents())) == class_group(q)
+    phi = ZZt.hom(im_gens=[C_num(class_group(q).exponents()) for q in aux_primes],codomain=C_num)
+    return phi.inverse_image(C_den)
+
+
+def get_pre_type_one_two_primes(K, norm_bound=50, loop_curves=False, use_PIL=False):
     """Pre type 1-2 primes are the finitely many primes outside of which
     the isogeny character is necessarily of type 2 (or 3, which is not relevant
     for us)."""
@@ -776,7 +809,7 @@ def get_pre_type_one_two_primes(K, norm_bound=50, loop_curves=False):
     completely_split_rat_primes = K.completely_split_primes(B=500)
     good_primes = [p for p in completely_split_rat_primes if gcd(p,6*h_K) == 1]
     list_of_gens = list(C_K.gens())
-
+    i = 0
     while list_of_gens and (i < len(good_primes)):
         a_good_prime = good_primes[i]
         emergency_prime_candidates = K.primes_above(a_good_prime)
@@ -794,22 +827,40 @@ def get_pre_type_one_two_primes(K, norm_bound=50, loop_curves=False):
                            "auxiliary primes. Try increasing the `B` parameter above.")
 
 
-    G_K = Kgal.galois_group()
-    C_Kgal = Kgal.class_group()
-    logging.debug("C_Kgal = {}".format(C_Kgal))
-    epsilons = get_pre_type_one_two_epsilons(G_K)
+    # G_K = Kgal.galois_group()
+    # C_Kgal = Kgal.class_group()
+    # logging.debug("C_Kgal = {}".format(C_Kgal))
+    embeddings = K.embeddings(Kgal)
+    if K.is_galois():
+        G_K = K.galois_group()
+        epsilons = get_pre_type_one_two_epsilons(K.degree(), galgp=G_K)
+    else:
+        epsilons = get_pre_type_one_two_epsilons(K.degree())
+
+    # Do the unit computation first
+
+    unit_gens = K.unit_group().gens_values()
+
+    divs_from_units = {eps : gcd([ (eps_exp(u, eps, embeddings) - 1).absolute_norm() for u in unit_gens]) for eps in epsilons}
+
     tracking_dict = {}
+    frob_polys_dict = {}
 
     for q in aux_primes:
-        q_class_group_order = C_Kgal(q).multiplicative_order()
+        q_class_group_order = C_K(q).multiplicative_order()
         # these will be dicts with keys the epsilons, values sets of primes
-        AB_primes_dict = get_AB_primes(G_K,q,epsilons, q_class_group_order)
-        C_primes_dict = get_C_primes(Kgal,G_K, q, epsilons, q_class_group_order, loop_curves)
+        AB_integers_dict = get_AB_integers(embeddings,q,epsilons, q_class_group_order)
+        C_integers_dict, frob_polys = get_C_integers(Kgal,embeddings, q, epsilons, q_class_group_order, loop_curves)
         unified_dict = {}
-        q_rat = Integer(q.norm())
+        q_norm = Integer(q.norm())
         for eps in epsilons:
-            unified_dict[eps] = lcm([q_rat, AB_primes_dict[eps], C_primes_dict[eps]])
+            unified_dict[eps] = gcd(lcm([q_norm, AB_integers_dict[eps], C_integers_dict[eps]]),divs_from_units[eps])
         tracking_dict[q] = unified_dict
+        frob_polys_dict[q] = frob_polys
+
+    import pickle
+    with open('beta_data.pickle', 'wb') as handle:
+        pickle.dump(beta_data, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
     tracking_dict_inv_collapsed = {}
     for eps in epsilons:
@@ -818,6 +869,49 @@ def get_pre_type_one_two_primes(K, norm_bound=50, loop_curves=False):
             q_dict[q] = tracking_dict[q][eps]
         q_dict_collapsed = gcd(list(q_dict.values()))
         tracking_dict_inv_collapsed[eps] = q_dict_collapsed
+
+    if use_PIL:
+        beta_data = {}
+        for q in aux_primes:
+            the_poly = prod(frob_polys_dict[q])
+            the_split_field = the_poly.splitting_field('e')
+            the_betas = [r for r,e in the_poly.roots(the_split_field)]
+            the_betas.append(the_split_field(1))
+            the_betas.append(the_split_field(q.norm()))
+            the_betas = set([z**12 for z in the_betas])
+            beta_data[q] = (the_split_field, the_betas)
+
+        Lambda = principal_ideal_lattice(aux_primes, C_K)
+        Lambda_basis = Lambda.basis()
+
+        good_basis_elements = [v for v in Lambda_basis if len(v.nonzero_positions()) > 1]
+
+        pre_eps_data_blob = {}
+
+        for v in good_basis_elements:
+            the_nonzero_positions = v.nonzero_positions()
+            the_nonzero_values = [v[i] for i in the_nonzero_positions]
+            beta_tuples = set(product(beta_data[aux_primes[i]][1] for i in the_nonzero_positions))
+            relevant_split_fields = [beta_data[aux_primes[i]][0] for i in the_nonzero_positions]
+            big_compositum, maps_into_compositum = get_compositum_and_maps(relevant_split_fields)
+            all_beta_prods = { prod([maps_into_compositum[i](bt[i])**the_nonzero_values[i] for i in range(len(the_nonzero_positions))]) for bt in beta_tuples }
+            alphas = prod([aux_primes[i]**v[i] for i in the_nonzero_positions]).gens_reduced()
+            assert len(alphas) == 1, "uh oh"
+            alpha = alphas[0]
+            pre_eps_data_blob[v] = (alpha, big_compositum, all_beta_prods)
+
+        for eps in epsilons:
+            running_gcd = 0
+            for v in good_basis_elements:
+                running_lcm = 1
+                alpha, big_compositum, all_beta_prods = pre_eps_data_blob[v]
+                for a_beta_prod in all_beta_prods:
+                    # TODO construct the final compositum
+                    N = (eps_exp(alpha, eps, embeddings) - a_beta_prod).absolute_norm()
+                    running_lcm = lcm(N, running_lcm)
+                running_gcd = gcd(running_lcm, running_gcd)
+
+            tracking_dict_inv_collapsed[eps] = gcd(tracking_dict_inv_collapsed[eps], running_gcd)
 
     final_split_dict = {}
 
