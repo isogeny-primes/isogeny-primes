@@ -222,3 +222,18 @@ aux_primes = list(beta_data.keys())
 x = polygen(QQ);  K.<a> = NumberField(x^3 + 14*x - 1)
 aux_primes = K.primes_of_bounded_norm(30)
 CK = K.class_group()
+
+
+R.<x> = QQ[]
+f1 = x^3 - 17
+f2 = x^4 - 18
+f3 = x^5 + 19
+
+K1 = NumberField(f1,'a')
+K2 = NumberField(f2,'b')
+K3 = NumberField(f3,'c')
+
+my_list = [K1,K2,K3]
+
+the_shtuff = [chr(i+97) for i,F in enumerate(frob_polys_dict[q])]
+# the_nfs = [NumberField(F, chr(i+97)) for i,F in enumerate(frob_polys_dict[q])]

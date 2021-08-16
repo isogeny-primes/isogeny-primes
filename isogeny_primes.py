@@ -556,6 +556,10 @@ def eps_exp(x, eps, Sigma):
     return prod([sigma(x)**my_pow for my_pow, sigma in zip(eps, Sigma)])
 
 
+def gal_act_eps(eps, sigma):
+    return tuple(eps[i-1] for i in sigma)
+
+
 def get_eps_type(eps):
     """Returns the type of an epsilon (quadratic, quartic, sextic), where
     an epsilon is considered as a tuple
@@ -566,7 +570,10 @@ def get_eps_type(eps):
             return 'mixed'
         return 'sextic'
     elif any(t in eps for t in [4,8]):
-        return 'quartic'
+        if len(set(eps)) == 1:
+            # means it's all 4s or all 8s
+            return 'quartic-diagonal'
+        return 'quartic-nondiagonal'
     else:
         return 'quadratic'
 
@@ -655,6 +662,34 @@ def contains_imaginary_quadratic_field(K):
     return (bool(imag_quad_subfields), contains_hilbert_class_field_of_imag_quad)
 
 
+def get_compositum(nf_list, maps=False):
+
+    if len(nf_list) == 1:
+        K = nf_list[0]
+        return K, [K.hom(K)]
+
+    nf_list_cp = nf_list.copy()
+
+    running_compositum = nf_list_cp.pop(0)
+
+    while nf_list_cp:
+        other = nf_list_cp.pop(0)
+        running_compositum = running_compositum.composite_fields(other)[0]
+
+    # Now get the maps if requested
+
+    if maps:
+        maps_into_compositum = []
+
+        for K in nf_list:
+            K_into_comp = K.embeddings(running_compositum)[0]
+            maps_into_compositum.append(K_into_comp)
+
+        return running_compositum, maps_into_compositum
+
+    return running_compositum
+
+
 def filter_ABC_primes(K, prime_list, eps_type):
     """Apply congruence and splitting conditions to primes in prime
     list, depending on the type of epsilon
@@ -669,7 +704,7 @@ def filter_ABC_primes(K, prime_list, eps_type):
         # no additional restrictions
         return prime_list
 
-    elif eps_type == 'quartic':
+    elif eps_type == 'quartic-nondiagonal':
         # prime must split or ramify in K, and be congruent to 2 mod 3
         output_list = []
 
@@ -677,6 +712,15 @@ def filter_ABC_primes(K, prime_list, eps_type):
             if p%3 == 2:
                 if not K.ideal(p).is_prime():
                     output_list.append(p)
+        return output_list
+
+    elif eps_type == 'quartic-diagonal':
+        # prime must be congruent to 2 mod 3
+        output_list = []
+
+        for p in prime_list:
+            if p%3 == 2:
+                output_list.append(p)
         return output_list
 
     elif eps_type == 'sextic':
@@ -689,8 +733,18 @@ def filter_ABC_primes(K, prime_list, eps_type):
                     output_list.append(p)
         return output_list
 
+    elif eps_type == 'mixed':
+        # prime must split or ramify in K, and be congruent to 1 mod 12
+        output_list = []
+
+        for p in prime_list:
+            if p%12 == 1:
+                if not K.ideal(p).is_prime():
+                    output_list.append(p)
+        return output_list
+
     else:  # should never happen
-        raise ValueError("type must be quadratic, quartic, or sextic")
+        raise ValueError("type must be quadratic, quartic, sextic, or mixed")
 
 
 def get_AB_integers(embeddings,frak_q,epsilons,q_class_group_order):
@@ -724,7 +778,6 @@ def get_C_integers(K, embeddings, frak_q, epsilons, q_class_group_order, loop_cu
     else:
         frob_polys_to_loop = R.weil_polynomials(2, residue_field.cardinality())
 
-    # beta_data = []
     for frob_poly in frob_polys_to_loop:
         if frob_poly.is_irreducible():
             frob_poly_root_field = frob_poly.root_field('a')
@@ -733,7 +786,6 @@ def get_C_integers(K, embeddings, frak_q, epsilons, q_class_group_order, loop_cu
         _, K_into_KL, L_into_KL, _ = K.composite_fields(frob_poly_root_field, 'c', both_maps=True)[0]
         roots_of_frob = frob_poly.roots(frob_poly_root_field)
         betas = [r for r,e in roots_of_frob]
-        beta_data.append((frob_poly_root_field, betas))
 
         for beta in betas:
             for eps in epsilons:
@@ -744,7 +796,7 @@ def get_C_integers(K, embeddings, frak_q, epsilons, q_class_group_order, loop_cu
     return output_dict_C, frob_polys_to_loop
 
 
-def as_ZZ_module(G):
+def as_ZZ_module(G, debug=False):
     """
     Input:
       - An abelian group G
@@ -807,29 +859,35 @@ def get_pre_type_one_two_primes(K, norm_bound=50, loop_curves=False, use_PIL=Fal
     C_K = K.class_group()
     h_K = C_K.order()
     completely_split_rat_primes = K.completely_split_primes(B=500)
-    good_primes = [p for p in completely_split_rat_primes if gcd(p,6*h_K) == 1]
-    list_of_gens = list(C_K.gens())
-    i = 0
-    while list_of_gens and (i < len(good_primes)):
-        a_good_prime = good_primes[i]
-        emergency_prime_candidates = K.primes_above(a_good_prime)
 
-        for candidate in emergency_prime_candidates:
-            emergency_gen = C_K(candidate)
-            if emergency_gen in list_of_gens:
-                if a_good_prime > norm_bound:
-                    aux_primes.append(candidate)
-                list_of_gens.remove(emergency_gen)
-        i += 1
+    if contains_imaginary_quadratic:
 
-    if list_of_gens:
-        raise RuntimeError("We have been unable to add enough emergency "
-                           "auxiliary primes. Try increasing the `B` parameter above.")
+        good_primes = [p for p in completely_split_rat_primes if gcd(p,6*h_K) == 1]
+        list_of_gens = list(C_K.gens())
+        i = 0
+        while list_of_gens and (i < len(good_primes)):
+            a_good_prime = good_primes[i]
+            emergency_prime_candidates = K.primes_above(a_good_prime)
 
+            for candidate in emergency_prime_candidates:
+                emergency_gen = C_K(candidate)
+                if emergency_gen in list_of_gens:
+                    if a_good_prime > norm_bound:
+                        aux_primes.append(candidate)
+                        logging.debug("Emergency aux prime added: {}".format(candidate))
+                    list_of_gens.remove(emergency_gen)
+            i += 1
 
-    # G_K = Kgal.galois_group()
-    # C_Kgal = Kgal.class_group()
-    # logging.debug("C_Kgal = {}".format(C_Kgal))
+        if list_of_gens:
+            raise RuntimeError("We have been unable to add enough emergency "
+                            "auxiliary primes. Try increasing the `B` parameter above.")
+    else:
+        a_good_prime = completely_split_rat_primes[0]
+        candidate = K.primes_above(a_good_prime)[0]
+        if a_good_prime > norm_bound:
+            aux_primes.append(candidate)
+            logging.debug("Emergency aux prime added: {}".format(candidate))
+
     embeddings = K.embeddings(Kgal)
     if K.is_galois():
         G_K = K.galois_group()
@@ -858,10 +916,6 @@ def get_pre_type_one_two_primes(K, norm_bound=50, loop_curves=False, use_PIL=Fal
         tracking_dict[q] = unified_dict
         frob_polys_dict[q] = frob_polys
 
-    import pickle
-    with open('beta_data.pickle', 'wb') as handle:
-        pickle.dump(beta_data, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
     tracking_dict_inv_collapsed = {}
     for eps in epsilons:
         q_dict = {}
@@ -870,20 +924,23 @@ def get_pre_type_one_two_primes(K, norm_bound=50, loop_curves=False, use_PIL=Fal
         q_dict_collapsed = gcd(list(q_dict.values()))
         tracking_dict_inv_collapsed[eps] = q_dict_collapsed
 
-    if use_PIL:
+    if use_PIL and h_K > 1:
+        logging.debug("Using PIL")
         beta_data = {}
         for q in aux_primes:
-            the_poly = prod(frob_polys_dict[q])
-            the_split_field = the_poly.splitting_field('e')
-            the_betas = [r for r,e in the_poly.roots(the_split_field)]
+            # the_nfs = [NumberField(F, chr(i+97)) for i,F in enumerate(frob_polys_dict[q])]
+            the_nfs = [NumberField(F,'a') for i,F in enumerate(frob_polys_dict[q])]
+            the_split_field = get_compositum(the_nfs, maps=False)
+            the_betas = [r for F in frob_polys_dict[q] for r,e in F.roots(the_split_field)]
             the_betas.append(the_split_field(1))
             the_betas.append(the_split_field(q.norm()))
             the_betas = set([z**12 for z in the_betas])
             beta_data[q] = (the_split_field, the_betas)
+        logging.debug("Computed beta data")
 
         Lambda = principal_ideal_lattice(aux_primes, C_K)
         Lambda_basis = Lambda.basis()
-
+        logging.debug("Lambda basis = {}".format(Lambda_basis))
         good_basis_elements = [v for v in Lambda_basis if len(v.nonzero_positions()) > 1]
 
         pre_eps_data_blob = {}
@@ -893,24 +950,24 @@ def get_pre_type_one_two_primes(K, norm_bound=50, loop_curves=False, use_PIL=Fal
             the_nonzero_values = [v[i] for i in the_nonzero_positions]
             beta_tuples = set(product(beta_data[aux_primes[i]][1] for i in the_nonzero_positions))
             relevant_split_fields = [beta_data[aux_primes[i]][0] for i in the_nonzero_positions]
-            big_compositum, maps_into_compositum = get_compositum_and_maps(relevant_split_fields)
+            big_compositum, maps_into_compositum = get_compositum(relevant_split_fields, maps=True)
             all_beta_prods = { prod([maps_into_compositum[i](bt[i])**the_nonzero_values[i] for i in range(len(the_nonzero_positions))]) for bt in beta_tuples }
             alphas = prod([aux_primes[i]**v[i] for i in the_nonzero_positions]).gens_reduced()
             assert len(alphas) == 1, "uh oh"
             alpha = alphas[0]
-            pre_eps_data_blob[v] = (alpha, big_compositum, all_beta_prods)
-
+            _, Kgal_into_huge, big_into_huge, _ = Kgal.composite_fields(big_compositum, 'c', both_maps=True)[0]
+            pre_eps_data_blob[v] = (alpha, Kgal_into_huge, big_into_huge, all_beta_prods)
+        logging.debug("Made the blobs")
         for eps in epsilons:
             running_gcd = 0
             for v in good_basis_elements:
                 running_lcm = 1
-                alpha, big_compositum, all_beta_prods = pre_eps_data_blob[v]
+                alpha, Kgal_into_huge, big_into_huge, all_beta_prods = pre_eps_data_blob[v]
                 for a_beta_prod in all_beta_prods:
-                    # TODO construct the final compositum
-                    N = (eps_exp(alpha, eps, embeddings) - a_beta_prod).absolute_norm()
+                    N = (Kgal_into_huge(eps_exp(alpha, eps, embeddings)) - big_into_huge(a_beta_prod)).absolute_norm()
+                    logging.debug("Successfully computed an N")
                     running_lcm = lcm(N, running_lcm)
                 running_gcd = gcd(running_lcm, running_gcd)
-
             tracking_dict_inv_collapsed[eps] = gcd(tracking_dict_inv_collapsed[eps], running_gcd)
 
     final_split_dict = {}
@@ -1086,7 +1143,7 @@ def DLMV(K):
 ########################################################################
 
 
-def get_isogeny_primes(K, norm_bound, bound=1000, loop_curves=True):
+def get_isogeny_primes(K, norm_bound, bound=1000, loop_curves=True, use_PIL=False):
 
     # Start with some helpful user info
 
@@ -1097,7 +1154,9 @@ def get_isogeny_primes(K, norm_bound, bound=1000, loop_curves=True):
 
     pre_type_one_two_primes = get_pre_type_one_two_primes(K,
                                 norm_bound=norm_bound,
-                                loop_curves=loop_curves)
+                                loop_curves=loop_curves,
+                                use_PIL=use_PIL)
+
     logging.info("pre_type_1_2_primes = {}".format(pre_type_one_two_primes))
 
     # Get and show TypeOnePrimes
@@ -1162,7 +1221,7 @@ def cli_handler(args):
             bound = args.bound
             logging.warning("Only checking Type 2 primes up to {}. "
                             "To check all, use the PARI/GP script.".format(bound))
-        superset = get_isogeny_primes(K, args.norm_bound, bound, args.loop_curves)
+        superset = get_isogeny_primes(K, args.norm_bound, bound, args.loop_curves, args.use_PIL)
 
         superset_list = list(superset)
         superset_list.sort()
@@ -1184,6 +1243,6 @@ if __name__ == "__main__":
     parser.add_argument("--bound", type=int, help="bound on Type 2 prime search", default=1000)
     parser.add_argument("--rigorous", action='store_true', help="search all Type 2 primes up to conjectural bound")
     parser.add_argument("--verbose", action='store_true', help="get more info printed")
-
+    parser.add_argument("--use_PIL", action='store_true', help="Use the principal ideal lattice to get the best possible result. Might take ages.")
     args = parser.parse_args()
     cli_handler(args)
