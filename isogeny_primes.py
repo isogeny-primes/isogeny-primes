@@ -747,6 +747,42 @@ def filter_ABC_primes(K, prime_list, eps_type):
         raise ValueError("type must be quadratic, quartic, sextic, or mixed")
 
 
+def get_aux_primes(K, norm_bound, C_K, h_K):
+    """Get the auxiliary primes, including the emergency aux primes"""
+
+    aux_primes = K.primes_of_bounded_norm(norm_bound)
+    completely_split_rat_primes = K.completely_split_primes(B=500)
+    if contains_imaginary_quadratic:
+
+        good_primes = [p for p in completely_split_rat_primes if gcd(p,6*h_K) == 1]
+        list_of_gens = list(C_K.gens())
+        i = 0
+        while list_of_gens and (i < len(good_primes)):
+            a_good_prime = good_primes[i]
+            emergency_prime_candidates = K.primes_above(a_good_prime)
+
+            for candidate in emergency_prime_candidates:
+                emergency_gen = C_K(candidate)
+                if emergency_gen in list_of_gens:
+                    if a_good_prime > norm_bound:
+                        aux_primes.append(candidate)
+                        logging.debug("Emergency aux prime added: {}".format(candidate))
+                    list_of_gens.remove(emergency_gen)
+            i += 1
+
+        if list_of_gens:
+            raise RuntimeError("We have been unable to add enough emergency "
+                            "auxiliary primes. Try increasing the `B` parameter above.")
+    else:
+        a_good_prime = completely_split_rat_primes[0]
+        candidate = K.primes_above(a_good_prime)[0]
+        if a_good_prime > norm_bound:
+            aux_primes.append(candidate)
+            logging.debug("Emergency aux prime added: {}".format(candidate))
+
+    return aux_primes
+
+
 def get_AB_integers(embeddings,frak_q,epsilons,q_class_group_order):
 
     output_dict_AB = {}
@@ -762,21 +798,16 @@ def get_AB_integers(embeddings,frak_q,epsilons,q_class_group_order):
     return output_dict_AB
 
 
-def get_C_integers(K, embeddings, frak_q, epsilons, q_class_group_order, loop_curves=False):
+def get_C_integers(K, embeddings, frak_q, epsilons, q_class_group_order, frob_polys_to_loop):
 
     # Initialise output dict to empty sets
     output_dict_C = {}
     for eps in epsilons:
         output_dict_C[eps] = 1
 
-    residue_field = frak_q.residue_field(names='z')
     alphas = (frak_q ** q_class_group_order).gens_reduced()
     assert len(alphas) == 1, "q^q_class_group_order not principal, which is very bad"
     alpha = alphas[0]
-    if loop_curves:
-        frob_polys_to_loop = get_weil_polys(residue_field)
-    else:
-        frob_polys_to_loop = R.weil_polynomials(2, residue_field.cardinality())
 
     for frob_poly in frob_polys_to_loop:
         if frob_poly.is_irreducible():
@@ -793,8 +824,64 @@ def get_C_integers(K, embeddings, frak_q, epsilons, q_class_group_order, loop_cu
                 N = (K_into_KL(eps_exp(alpha, eps, embeddings)) - L_into_KL(beta ** (12*q_class_group_order))).absolute_norm()
                 N = ZZ(N)
                 output_dict_C[eps] = lcm(output_dict_C[eps], N)
-    return output_dict_C, frob_polys_to_loop
+    return output_dict_C
 
+
+def get_PIL_integers(aux_primes, frob_polys_dict, Kgal, epsilons, embeddings):
+    """Compute integers coming from the principal ideal lattice"""
+
+    beta_data = {}
+    for q in aux_primes:
+        # the_nfs = [NumberField(F, chr(i+97)) for i,F in enumerate(frob_polys_dict[q])]
+        the_nfs = [NumberField(F,'a') for i,F in enumerate(frob_polys_dict[q])]
+        the_split_field = get_compositum(the_nfs, maps=False)
+        the_betas = [r for F in frob_polys_dict[q] for r,e in F.roots(the_split_field)]
+        the_betas.append(the_split_field(1))
+        the_betas.append(the_split_field(q.norm()))
+        the_betas = set([z**12 for z in the_betas])
+        beta_data[q] = (the_split_field, the_betas)
+    logging.debug("Computed beta data")
+
+    Lambda = principal_ideal_lattice(aux_primes, C_K)
+    Lambda_basis = Lambda.basis()
+    logging.debug("Lambda basis = {}".format(Lambda_basis))
+    good_basis_elements = [v for v in Lambda_basis if len(v.nonzero_positions()) > 1]
+
+    pre_eps_data_blob = {}
+
+    for v in good_basis_elements:
+        the_nonzero_positions = v.nonzero_positions()
+        the_nonzero_values = [v[i] for i in the_nonzero_positions]
+        beta_tuples = set(product(beta_data[aux_primes[i]][1] for i in the_nonzero_positions))
+        relevant_split_fields = [beta_data[aux_primes[i]][0] for i in the_nonzero_positions]
+        big_compositum, maps_into_compositum = get_compositum(relevant_split_fields, maps=True)
+        all_beta_prods = { prod([maps_into_compositum[i](bt[i])**the_nonzero_values[i] for i in range(len(the_nonzero_positions))]) for bt in beta_tuples }
+        alphas = prod([aux_primes[i]**v[i] for i in the_nonzero_positions]).gens_reduced()
+        assert len(alphas) == 1, "uh oh"
+        alpha = alphas[0]
+        _, Kgal_into_huge, big_into_huge, _ = Kgal.composite_fields(big_compositum, 'c', both_maps=True)[0]
+        pre_eps_data_blob[v] = (alpha, Kgal_into_huge, big_into_huge, all_beta_prods)
+    logging.debug("Made the blobs")
+    output_dict = {}
+    for eps in epsilons:
+        running_gcd = 0
+        for v in good_basis_elements:
+            running_lcm = 1
+            alpha, Kgal_into_huge, big_into_huge, all_beta_prods = pre_eps_data_blob[v]
+            for a_beta_prod in all_beta_prods:
+                N = (Kgal_into_huge(eps_exp(alpha, eps, embeddings)) - big_into_huge(a_beta_prod)).absolute_norm()
+                logging.debug("Successfully computed an N")
+                running_lcm = lcm(N, running_lcm)
+            running_gcd = gcd(running_lcm, running_gcd)
+        output_dict[eps] = running_gcd
+    return output_dict
+
+
+def get_U_integers(K, epsilons, embeddings):
+    """Get divisibilities from the units"""
+
+    unit_gens = K.unit_group().gens_values()
+    return {eps : gcd([ (eps_exp(u, eps, embeddings) - 1).absolute_norm() for u in unit_gens]) for eps in epsilons}
 
 def as_ZZ_module(G, debug=False):
     """
@@ -843,8 +930,6 @@ def get_pre_type_one_two_primes(K, norm_bound=50, loop_curves=False, use_PIL=Fal
     the isogeny character is necessarily of type 2 (or 3, which is not relevant
     for us)."""
 
-    Kgal = K.galois_closure('b')
-
     contains_imaginary_quadratic, contains_hilbert_class_field = contains_imaginary_quadratic_field(K)
 
     if contains_hilbert_class_field:
@@ -852,69 +937,49 @@ def get_pre_type_one_two_primes(K, norm_bound=50, loop_curves=False, use_PIL=Fal
                         "Class field of an imaginary quadratic field. The set "
                         "of isogeny primes in this case is therefore infinite.")
 
-    aux_primes = K.primes_of_bounded_norm(norm_bound)
+    # Set up important objects to be used throughout
 
-    # First get the emergency aux primes
-
+    Kgal = K.galois_closure('b')
     C_K = K.class_group()
     h_K = C_K.order()
-    completely_split_rat_primes = K.completely_split_primes(B=500)
-
-    if contains_imaginary_quadratic:
-
-        good_primes = [p for p in completely_split_rat_primes if gcd(p,6*h_K) == 1]
-        list_of_gens = list(C_K.gens())
-        i = 0
-        while list_of_gens and (i < len(good_primes)):
-            a_good_prime = good_primes[i]
-            emergency_prime_candidates = K.primes_above(a_good_prime)
-
-            for candidate in emergency_prime_candidates:
-                emergency_gen = C_K(candidate)
-                if emergency_gen in list_of_gens:
-                    if a_good_prime > norm_bound:
-                        aux_primes.append(candidate)
-                        logging.debug("Emergency aux prime added: {}".format(candidate))
-                    list_of_gens.remove(emergency_gen)
-            i += 1
-
-        if list_of_gens:
-            raise RuntimeError("We have been unable to add enough emergency "
-                            "auxiliary primes. Try increasing the `B` parameter above.")
-    else:
-        a_good_prime = completely_split_rat_primes[0]
-        candidate = K.primes_above(a_good_prime)[0]
-        if a_good_prime > norm_bound:
-            aux_primes.append(candidate)
-            logging.debug("Emergency aux prime added: {}".format(candidate))
-
+    aux_primes = get_aux_primes(K, norm_bound, C_K, h_K)
     embeddings = K.embeddings(Kgal)
+
+    # Generate the epsilons
+
     if K.is_galois():
         G_K = K.galois_group()
         epsilons = get_pre_type_one_two_epsilons(K.degree(), galgp=G_K)
     else:
         epsilons = get_pre_type_one_two_epsilons(K.degree())
 
-    # Do the unit computation first
+    # Now start with the divisibilities. Do the unit computation first
 
-    unit_gens = K.unit_group().gens_values()
+    divs_from_units = get_U_integers(K, epsilons, embeddings)
 
-    divs_from_units = {eps : gcd([ (eps_exp(u, eps, embeddings) - 1).absolute_norm() for u in unit_gens]) for eps in epsilons}
+    # Next do the computation of A,B and C integers
 
     tracking_dict = {}
     frob_polys_dict = {}
 
     for q in aux_primes:
         q_class_group_order = C_K(q).multiplicative_order()
+        residue_field = frak_q.residue_field(names='z')
+        if loop_curves:
+            frob_polys_to_loop = get_weil_polys(residue_field)
+        else:
+            frob_polys_to_loop = R.weil_polynomials(2, residue_field.cardinality())
+        frob_polys_dict[q] = frob_polys_to_loop
         # these will be dicts with keys the epsilons, values sets of primes
         AB_integers_dict = get_AB_integers(embeddings,q,epsilons, q_class_group_order)
-        C_integers_dict, frob_polys = get_C_integers(Kgal,embeddings, q, epsilons, q_class_group_order, loop_curves)
+        C_integers_dict = get_C_integers(Kgal,embeddings, q, epsilons, q_class_group_order, frob_polys_to_loop)
         unified_dict = {}
         q_norm = Integer(q.norm())
         for eps in epsilons:
             unified_dict[eps] = gcd(lcm([q_norm, AB_integers_dict[eps], C_integers_dict[eps]]),divs_from_units[eps])
         tracking_dict[q] = unified_dict
-        frob_polys_dict[q] = frob_polys
+
+    # Take gcds across all aux primes to get one integer for each epsilon
 
     tracking_dict_inv_collapsed = {}
     for eps in epsilons:
@@ -924,54 +989,17 @@ def get_pre_type_one_two_primes(K, norm_bound=50, loop_curves=False, use_PIL=Fal
         q_dict_collapsed = gcd(list(q_dict.values()))
         tracking_dict_inv_collapsed[eps] = q_dict_collapsed
 
+    # Optionally use the principal ideal lattice for further filtering
+
     if use_PIL and h_K > 1:
         logging.debug("Using PIL")
-        beta_data = {}
-        for q in aux_primes:
-            # the_nfs = [NumberField(F, chr(i+97)) for i,F in enumerate(frob_polys_dict[q])]
-            the_nfs = [NumberField(F,'a') for i,F in enumerate(frob_polys_dict[q])]
-            the_split_field = get_compositum(the_nfs, maps=False)
-            the_betas = [r for F in frob_polys_dict[q] for r,e in F.roots(the_split_field)]
-            the_betas.append(the_split_field(1))
-            the_betas.append(the_split_field(q.norm()))
-            the_betas = set([z**12 for z in the_betas])
-            beta_data[q] = (the_split_field, the_betas)
-        logging.debug("Computed beta data")
-
-        Lambda = principal_ideal_lattice(aux_primes, C_K)
-        Lambda_basis = Lambda.basis()
-        logging.debug("Lambda basis = {}".format(Lambda_basis))
-        good_basis_elements = [v for v in Lambda_basis if len(v.nonzero_positions()) > 1]
-
-        pre_eps_data_blob = {}
-
-        for v in good_basis_elements:
-            the_nonzero_positions = v.nonzero_positions()
-            the_nonzero_values = [v[i] for i in the_nonzero_positions]
-            beta_tuples = set(product(beta_data[aux_primes[i]][1] for i in the_nonzero_positions))
-            relevant_split_fields = [beta_data[aux_primes[i]][0] for i in the_nonzero_positions]
-            big_compositum, maps_into_compositum = get_compositum(relevant_split_fields, maps=True)
-            all_beta_prods = { prod([maps_into_compositum[i](bt[i])**the_nonzero_values[i] for i in range(len(the_nonzero_positions))]) for bt in beta_tuples }
-            alphas = prod([aux_primes[i]**v[i] for i in the_nonzero_positions]).gens_reduced()
-            assert len(alphas) == 1, "uh oh"
-            alpha = alphas[0]
-            _, Kgal_into_huge, big_into_huge, _ = Kgal.composite_fields(big_compositum, 'c', both_maps=True)[0]
-            pre_eps_data_blob[v] = (alpha, Kgal_into_huge, big_into_huge, all_beta_prods)
-        logging.debug("Made the blobs")
+        PIL_integers_dict = get_PIL_integers(aux_primes)
         for eps in epsilons:
-            running_gcd = 0
-            for v in good_basis_elements:
-                running_lcm = 1
-                alpha, Kgal_into_huge, big_into_huge, all_beta_prods = pre_eps_data_blob[v]
-                for a_beta_prod in all_beta_prods:
-                    N = (Kgal_into_huge(eps_exp(alpha, eps, embeddings)) - big_into_huge(a_beta_prod)).absolute_norm()
-                    logging.debug("Successfully computed an N")
-                    running_lcm = lcm(N, running_lcm)
-                running_gcd = gcd(running_lcm, running_gcd)
-            tracking_dict_inv_collapsed[eps] = gcd(tracking_dict_inv_collapsed[eps], running_gcd)
+            tracking_dict_inv_collapsed[eps] = gcd(tracking_dict_inv_collapsed[eps], PIL_integers_dict[eps])
+
+    # Split according to epsilon type, get prime divisors, and filter
 
     final_split_dict = {}
-
     for eps_type in set(epsilons.values()):
         eps_type_tracking_dict_inv = {eps:ZZ(tracking_dict_inv_collapsed[eps]) for eps in epsilons if epsilons[eps] == eps_type}
         eps_type_output = lcm(list(eps_type_tracking_dict_inv.values()))
@@ -979,6 +1007,7 @@ def get_pre_type_one_two_primes(K, norm_bound=50, loop_curves=False, use_PIL=Fal
         eps_type_output = filter_ABC_primes(Kgal, eps_type_output, eps_type)
         final_split_dict[eps_type] = set(eps_type_output)
 
+    # Take union of all primes over all epsilons, sort, and return
 
     output = set.union(*(val for val in final_split_dict.values()))
     output = list(output)
