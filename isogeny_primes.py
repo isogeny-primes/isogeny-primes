@@ -993,7 +993,7 @@ def get_pre_type_one_two_primes(K, norm_bound=50, loop_curves=False, use_PIL=Fal
 
     if use_PIL and h_K > 1:
         logging.debug("Using PIL")
-        PIL_integers_dict = get_PIL_integers(aux_primes)
+        PIL_integers_dict = get_PIL_integers(aux_primes, frob_polys_dict, Kgal, epsilons, embeddings)
         for eps in epsilons:
             tracking_dict_inv_collapsed[eps] = gcd(tracking_dict_inv_collapsed[eps], PIL_integers_dict[eps])
 
