@@ -32,13 +32,13 @@ import json
 from pathlib import Path
 from itertools import product
 import logging
-from sage.all import (QQ, next_prime, IntegerRing, prime_range, ZZ, pari,
+from sage.all import (QQ, QQbar, next_prime, IntegerRing, prime_range, ZZ, pari,
         PolynomialRing, Integer, Rationals, legendre_symbol, QuadraticField,
         log, exp, find_root, ceil, NumberField, hilbert_class_polynomial,
         RR, EllipticCurve, ModularSymbols, Gamma0, lcm, oo, parent, Matrix,
         gcd, prod, floor, prime_divisors, kronecker_character,
         J0, kronecker_symbol, companion_matrix, euler_phi, DirichletGroup,
-        CyclotomicField)
+        CyclotomicField, matrix)
 
 
 # Global quantitites
@@ -578,6 +578,16 @@ def get_eps_type(eps):
         return 'quadratic'
 
 
+def collapse_tuple(a_beta_tuple):
+
+    a_beta_tuple_copy = list(a_beta_tuple).copy()
+    beta_list = a_beta_tuple_copy
+    output = beta_list.pop(0)
+    while beta_list:
+        output = output.tensor_product(beta_list.pop(0))
+    return output
+
+
 def get_redundant_epsilons(eps, galois_group=None):
     """Redundant epsilons are those in the dual orbits of a given
     epsilon. They are redundant because they yield the same ABC integers."""
@@ -747,7 +757,7 @@ def filter_ABC_primes(K, prime_list, eps_type):
         raise ValueError("type must be quadratic, quartic, sextic, or mixed")
 
 
-def get_aux_primes(K, norm_bound, C_K, h_K):
+def get_aux_primes(K, norm_bound, C_K, h_K, contains_imaginary_quadratic):
     """Get the auxiliary primes, including the emergency aux primes"""
 
     aux_primes = K.primes_of_bounded_norm(norm_bound)
@@ -827,53 +837,54 @@ def get_C_integers(K, embeddings, frak_q, epsilons, q_class_group_order, frob_po
     return output_dict_C
 
 
-def get_PIL_integers(aux_primes, frob_polys_dict, Kgal, epsilons, embeddings):
-    """Compute integers coming from the principal ideal lattice"""
+def get_relevant_beta_mats(aux_primes, relevant_aux_prime_positions, frob_polys_dict):
 
-    beta_data = {}
-    for q in aux_primes:
-        # the_nfs = [NumberField(F, chr(i+97)) for i,F in enumerate(frob_polys_dict[q])]
-        the_nfs = [NumberField(F,'a') for i,F in enumerate(frob_polys_dict[q])]
-        the_split_field = get_compositum(the_nfs, maps=False)
-        the_betas = [r for F in frob_polys_dict[q] for r,e in F.roots(the_split_field)]
-        the_betas.append(the_split_field(1))
-        the_betas.append(the_split_field(q.norm()))
-        the_betas = set([z**12 for z in the_betas])
-        beta_data[q] = (the_split_field, the_betas)
-    logging.debug("Computed beta data")
+    output_dict = {}
+    for i in relevant_aux_prime_positions:
+        do_stuff = [matrix.companion(a_frob_pol)**12 for a_frob_pol in frob_polys_dict[aux_primes[i]]]
+        output_dict[aux_primes[i]] = do_stuff
+
+    return output_dict
+
+
+def get_PIL_integers(aux_primes, frob_polys_dict, Kgal, epsilons, embeddings, C_K):
 
     Lambda = principal_ideal_lattice(aux_primes, C_K)
     Lambda_basis = Lambda.basis()
     logging.debug("Lambda basis = {}".format(Lambda_basis))
     good_basis_elements = [v for v in Lambda_basis if len(v.nonzero_positions()) > 1]
+    relevant_aux_prime_positions = {k for v in good_basis_elements for k in v.nonzero_positions()}
+    relevant_beta_mats = get_relevant_beta_mats(aux_primes, relevant_aux_prime_positions, frob_polys_dict)
 
-    pre_eps_data_blob = {}
-
+    alphas_dict = {}
+    collapsed_beta_mats = {}
     for v in good_basis_elements:
         the_nonzero_positions = v.nonzero_positions()
-        the_nonzero_values = [v[i] for i in the_nonzero_positions]
-        beta_tuples = set(product(beta_data[aux_primes[i]][1] for i in the_nonzero_positions))
-        relevant_split_fields = [beta_data[aux_primes[i]][0] for i in the_nonzero_positions]
-        big_compositum, maps_into_compositum = get_compositum(relevant_split_fields, maps=True)
-        all_beta_prods = { prod([maps_into_compositum[i](bt[i])**the_nonzero_values[i] for i in range(len(the_nonzero_positions))]) for bt in beta_tuples }
         alphas = prod([aux_primes[i]**v[i] for i in the_nonzero_positions]).gens_reduced()
         assert len(alphas) == 1, "uh oh"
-        alpha = alphas[0]
-        _, Kgal_into_huge, big_into_huge, _ = Kgal.composite_fields(big_compositum, 'c', both_maps=True)[0]
-        pre_eps_data_blob[v] = (alpha, Kgal_into_huge, big_into_huge, all_beta_prods)
-    logging.debug("Made the blobs")
+        alphas_dict[v] = alphas[0]
+        list_list_mats = [relevant_beta_mats[aux_primes[i]] for i in the_nonzero_positions]
+        beta_mat_tuples = list(product(*list_list_mats))
+        # import pdb; pdb.set_trace()
+        collapsed_beta_mats[v] = [collapse_tuple(a_beta_tuple) for a_beta_tuple in beta_mat_tuples]
+    logging.debug("Made the alphas and beta_mat_tuples")
+
     output_dict = {}
+    how_many_eps = len(epsilons)
+    i = 1
     for eps in epsilons:
         running_gcd = 0
         for v in good_basis_elements:
             running_lcm = 1
-            alpha, Kgal_into_huge, big_into_huge, all_beta_prods = pre_eps_data_blob[v]
-            for a_beta_prod in all_beta_prods:
-                N = (Kgal_into_huge(eps_exp(alpha, eps, embeddings)) - big_into_huge(a_beta_prod)).absolute_norm()
-                logging.debug("Successfully computed an N")
-                running_lcm = lcm(N, running_lcm)
+            for a_beta_mat in collapsed_beta_mats[v]:
+                alpha_to_eps_mat = eps_exp(alphas_dict[v], eps, embeddings).matrix()
+                pil_mat = alpha_to_eps_mat.tensor_product(a_beta_mat.parent()(1)) - (alpha_to_eps_mat.parent()(1)).tensor_product(a_beta_mat)
+                pil_int = pil_mat.det()
+                running_lcm = lcm(pil_int, running_lcm)
             running_gcd = gcd(running_lcm, running_gcd)
         output_dict[eps] = running_gcd
+        logging.debug("Successfully computed PIL int for {} epsilons. {} to go".format(i,how_many_eps - i))
+        i += 1
     return output_dict
 
 
@@ -882,6 +893,7 @@ def get_U_integers(K, epsilons, embeddings):
 
     unit_gens = K.unit_group().gens_values()
     return {eps : gcd([ (eps_exp(u, eps, embeddings) - 1).absolute_norm() for u in unit_gens]) for eps in epsilons}
+
 
 def as_ZZ_module(G, debug=False):
     """
@@ -907,6 +919,7 @@ def as_ZZ_module(G, debug=False):
     ZZn = ZZ**len(invs)
     H = ZZn.submodule(ZZn.gen(i)*invs[i] for i in range(len(invs)))
     return ZZn/H, ZZn, H
+
 
 def principal_ideal_lattice(aux_primes, class_group, debug=False):
     """
@@ -942,7 +955,7 @@ def get_pre_type_one_two_primes(K, norm_bound=50, loop_curves=False, use_PIL=Fal
     Kgal = K.galois_closure('b')
     C_K = K.class_group()
     h_K = C_K.order()
-    aux_primes = get_aux_primes(K, norm_bound, C_K, h_K)
+    aux_primes = get_aux_primes(K, norm_bound, C_K, h_K, contains_imaginary_quadratic)
     embeddings = K.embeddings(Kgal)
 
     # Generate the epsilons
@@ -964,7 +977,7 @@ def get_pre_type_one_two_primes(K, norm_bound=50, loop_curves=False, use_PIL=Fal
 
     for q in aux_primes:
         q_class_group_order = C_K(q).multiplicative_order()
-        residue_field = frak_q.residue_field(names='z')
+        residue_field = q.residue_field(names='z')
         if loop_curves:
             frob_polys_to_loop = get_weil_polys(residue_field)
         else:
@@ -993,7 +1006,7 @@ def get_pre_type_one_two_primes(K, norm_bound=50, loop_curves=False, use_PIL=Fal
 
     if use_PIL and h_K > 1:
         logging.debug("Using PIL")
-        PIL_integers_dict = get_PIL_integers(aux_primes, frob_polys_dict, Kgal, epsilons, embeddings)
+        PIL_integers_dict = get_PIL_integers(aux_primes, frob_polys_dict, Kgal, epsilons, embeddings,C_K)
         for eps in epsilons:
             tracking_dict_inv_collapsed[eps] = gcd(tracking_dict_inv_collapsed[eps], PIL_integers_dict[eps])
 
@@ -1003,6 +1016,8 @@ def get_pre_type_one_two_primes(K, norm_bound=50, loop_curves=False, use_PIL=Fal
     for eps_type in set(epsilons.values()):
         eps_type_tracking_dict_inv = {eps:ZZ(tracking_dict_inv_collapsed[eps]) for eps in epsilons if epsilons[eps] == eps_type}
         eps_type_output = lcm(list(eps_type_tracking_dict_inv.values()))
+        if eps_type_output.is_perfect_power():
+            eps_type_output = eps_type_output.perfect_power()[0]
         eps_type_output = eps_type_output.prime_divisors()
         eps_type_output = filter_ABC_primes(Kgal, eps_type_output, eps_type)
         final_split_dict[eps_type] = set(eps_type_output)
