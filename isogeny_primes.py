@@ -32,7 +32,7 @@ import json
 from pathlib import Path
 from itertools import product
 import logging
-from sage.all import (QQ, QQbar, next_prime, IntegerRing, prime_range, ZZ, pari,
+from sage.all import (QQ, next_prime, IntegerRing, prime_range, ZZ, pari,
         PolynomialRing, Integer, Rationals, legendre_symbol, QuadraticField,
         log, exp, find_root, ceil, NumberField, hilbert_class_polynomial,
         RR, EllipticCurve, ModularSymbols, Gamma0, lcm, oo, parent, Matrix,
