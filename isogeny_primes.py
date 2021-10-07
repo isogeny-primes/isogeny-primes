@@ -38,7 +38,7 @@ from sage.all import (QQ, next_prime, IntegerRing, prime_range, ZZ, pari,
         RR, EllipticCurve, ModularSymbols, Gamma0, lcm, oo, parent, Matrix,
         gcd, prod, floor, prime_divisors, kronecker_character,
         J0, kronecker_symbol, companion_matrix, euler_phi, DirichletGroup,
-        CyclotomicField, matrix)
+        CyclotomicField, matrix, GF)
 
 
 # Global quantitites
@@ -793,6 +793,93 @@ def get_aux_primes(K, norm_bound, C_K, h_K, contains_imaginary_quadratic):
     return aux_primes
 
 
+def filter_possible_values(possible_values_list,fq,prime_field):
+
+    output = []
+
+    for c in possible_values_list:
+        if c ** 2 == prime_field(1):
+            output.append(c)
+        elif c ** 2 == prime_field(fq.norm()):
+            output.append(c)
+        else:
+            fq_char = ZZ(fq.norm()).prime_divisors()[0]
+            possible_mid_coeffs = [a for a in range(-fq.norm(),fq.norm()+1) if prime_field(a) == c + prime_field(fq.norm()/c)  ]
+            possible_weil_polys = [x ** 2 + a * x + fq.norm() for a in possible_mid_coeffs]
+            elliptic_weil_polys = [f for f in possible_weil_polys if weil_polynomial_is_elliptic(f,fq_char,fq.residue_class_degree())]
+            if elliptic_weil_polys:
+                output.append(c)
+    return output
+
+def get_possible_vals_at_gens(gens_info, eps, embeddings, residue_field, prime_field):
+
+    output = {}
+    # frak_p0 = K.primes_above(p)[0]  # choice of p_0
+    # residue_field = frak_p0.residue_field(names='z')
+    # prime_field = GF(p)
+
+    for class_gp_gen in gens_info:
+        class_gp_order, alpha = gens_info[class_gp_gen]
+        alpha_to_eps = eps_exp(alpha, eps, embeddings)
+        alpha_to_eps_mod_p0 = residue_field(alpha_to_eps)
+
+        try:
+            c_power_12h = prime_field(alpha_to_eps_mod_p0)
+            possible_values = c_power_12h.nth_root(12*class_gp_order, all=True)
+            filtered_values = filter_possible_values(possible_values)
+            output[class_gp_gen] = filtered_values
+        except TypeError:
+            # means alpha_to_eps_mod_p0 is not in GF(p) so can ignore p and move on
+            return {}
+
+    return output
+
+
+def tuple_exp(tup,exp_tup):
+    return tuple((t**e for t,e in zip(tup,exp_tup)))
+
+
+def final_filter(Kgal, aux_primes, my_gens_ideals, gens_info, p, eps, embeddings):
+
+    frak_p0 = Kgal.primes_above(p)[0]  # choice of p_0
+    residue_field = frak_p0.residue_field(names='z')
+    prime_field = GF(p)
+
+    # Step 1
+    possible_vals_at_gens = get_possible_vals_at_gens(gens_info, eps, embeddings, residue_field, prime_field)
+
+    if not possible_vals_at_gens:
+        return False
+
+    # Step 2
+
+    # a list of tuples
+    possible_vals_cart_prod = list(product(*[possible_vals_at_gens[q] for q in my_gens_ideals]))
+
+    # Step 3
+    for q in aux_primes:
+        exponents_in_class_group = q.exponents()
+        the_principal_ideal = q * prod([Q**(-a) for Q,a in zip(my_gens_ideals, exponents_in_class_group)])
+        alphas = the_principal_ideal.gens_reduced()
+        assert len(alphas) == 1, "the principal ideal isn't principal!!!"
+        alpha = alphas[0]
+        alpha_to_eps = eps_exp(alpha, eps, embeddings)
+        alpha_to_eps_mod_p0 = residue_field(alpha_to_eps)
+        try:
+            thingy = prime_field(alpha_to_eps_mod_p0)
+            possible_vals_with_raised_exp = [ tuple_exp(k,exponents_in_class_group) for k in possible_vals_cart_prod]
+            my_possible_vals = list({thingy * prod(t) for t in possible_vals_with_raised_exp})
+            filtered_values = filter_possible_values(my_possible_vals, q, prime_field)
+            if not filtered_values:
+                return False
+        except TypeError:
+            # means alpha_to_eps_mod_p0 is not in GF(p) so can ignore and move on
+            return False
+
+    # If not returned False by now, then no obstruction to p being an isogeny prime
+    return True
+
+
 def get_AB_integers(embeddings,frak_q,epsilons,q_class_group_order):
 
     output_dict_AB = {}
@@ -938,7 +1025,8 @@ def principal_ideal_lattice(aux_primes, class_group, debug=False):
     return phi.inverse_image(C_den)
 
 
-def get_pre_type_one_two_primes(K, norm_bound=50, loop_curves=False, use_PIL=False):
+def get_pre_type_one_two_primes(K, norm_bound=50, loop_curves=False, use_PIL=False,
+                                    heavy_filter=False):
     """Pre type 1-2 primes are the finitely many primes outside of which
     the isogeny character is necessarily of type 2 (or 3, which is not relevant
     for us)."""
@@ -969,6 +1057,7 @@ def get_pre_type_one_two_primes(K, norm_bound=50, loop_curves=False, use_PIL=Fal
     # Now start with the divisibilities. Do the unit computation first
 
     divs_from_units = get_U_integers(K, epsilons, embeddings)
+    logging.debug("Computed divisibilities from units")
 
     # Next do the computation of A,B and C integers
 
@@ -991,6 +1080,7 @@ def get_pre_type_one_two_primes(K, norm_bound=50, loop_curves=False, use_PIL=Fal
         for eps in epsilons:
             unified_dict[eps] = gcd(lcm([q_norm, AB_integers_dict[eps], C_integers_dict[eps]]),divs_from_units[eps])
         tracking_dict[q] = unified_dict
+    logging.debug("Computed tracking dict")
 
     # Take gcds across all aux primes to get one integer for each epsilon
 
@@ -1000,7 +1090,7 @@ def get_pre_type_one_two_primes(K, norm_bound=50, loop_curves=False, use_PIL=Fal
         for q in aux_primes:
             q_dict[q] = tracking_dict[q][eps]
         q_dict_collapsed = gcd(list(q_dict.values()))
-        tracking_dict_inv_collapsed[eps] = q_dict_collapsed
+        tracking_dict_inv_collapsed[eps] = ZZ(q_dict_collapsed)
 
     # Optionally use the principal ideal lattice for further filtering
 
@@ -1008,26 +1098,56 @@ def get_pre_type_one_two_primes(K, norm_bound=50, loop_curves=False, use_PIL=Fal
         logging.debug("Using PIL")
         PIL_integers_dict = get_PIL_integers(aux_primes, frob_polys_dict, Kgal, epsilons, embeddings,C_K)
         for eps in epsilons:
-            tracking_dict_inv_collapsed[eps] = gcd(tracking_dict_inv_collapsed[eps], PIL_integers_dict[eps])
+            tracking_dict_inv_collapsed[eps] = ZZ(gcd(tracking_dict_inv_collapsed[eps], PIL_integers_dict[eps]))
 
     # Split according to epsilon type, get prime divisors, and filter
 
-    final_split_dict = {}
-    for eps_type in set(epsilons.values()):
-        eps_type_tracking_dict_inv = {eps:ZZ(tracking_dict_inv_collapsed[eps]) for eps in epsilons if epsilons[eps] == eps_type}
-        eps_type_output = lcm(list(eps_type_tracking_dict_inv.values()))
-        if eps_type_output.is_perfect_power():
-            eps_type_output = eps_type_output.perfect_power()[0]
-        eps_type_output = eps_type_output.prime_divisors()
-        eps_type_output = filter_ABC_primes(Kgal, eps_type_output, eps_type)
-        final_split_dict[eps_type] = set(eps_type_output)
+    if heavy_filter:
+        logging.debug("Using Heavy filtering")
+        my_gens_ideals = C_K.gens_ideals()
+        gens_info = {}
+        for q in my_gens_ideals:
+            q_order = C_K(q).multiplicative_order()
+            alphas = (q ** q_order).gens_reduced()
+            assert len(alphas) == 1
+            alpha = alphas[0]
+            gens_info[q] = (q_order, alpha)
 
-    # Take union of all primes over all epsilons, sort, and return
+        eps_prime_dict = {eps : tracking_dict_inv_collapsed[eps].prime_divisors() for eps in epsilons }
 
-    output = set.union(*(val for val in final_split_dict.values()))
-    output = list(output)
-    output.sort()
-    return output
+        eps_prime_filt_dict = {}
+
+        for eps in epsilons:
+            survived_primes = []
+            for p in eps_prime_dict[eps]:
+                if final_filter(Kgal, aux_primes, my_gens_ideals, gens_info, p, eps, embeddings):
+                    survived_primes.append(p)
+            eps_prime_filt_dict[eps] = set(survived_primes)
+
+        output = set.union(*(val for val in eps_prime_filt_dict.values()))
+        output = list(output)
+        output.sort()
+        return output
+
+    else:
+        # Split according to epsilon type, get prime divisors, and filter
+
+        final_split_dict = {}
+        for eps_type in set(epsilons.values()):
+            eps_type_tracking_dict_inv = {eps:ZZ(tracking_dict_inv_collapsed[eps]) for eps in epsilons if epsilons[eps] == eps_type}
+            eps_type_output = lcm(list(eps_type_tracking_dict_inv.values()))
+            if eps_type_output.is_perfect_power():
+                eps_type_output = eps_type_output.perfect_power()[0]
+            eps_type_output = eps_type_output.prime_divisors()
+            eps_type_output = filter_ABC_primes(Kgal, eps_type_output, eps_type)
+            final_split_dict[eps_type] = set(eps_type_output)
+
+        # Take union of all primes over all epsilons, sort, and return
+
+        output = set.union(*(val for val in final_split_dict.values()))
+        output = list(output)
+        output.sort()
+        return output
 
 
 ########################################################################
@@ -1187,7 +1307,8 @@ def DLMV(K):
 ########################################################################
 
 
-def get_isogeny_primes(K, norm_bound, bound=1000, loop_curves=True, use_PIL=False):
+def get_isogeny_primes(K, norm_bound, bound=1000, loop_curves=True, use_PIL=False,
+                          heavy_filter=False):
 
     # Start with some helpful user info
 
@@ -1199,7 +1320,8 @@ def get_isogeny_primes(K, norm_bound, bound=1000, loop_curves=True, use_PIL=Fals
     pre_type_one_two_primes = get_pre_type_one_two_primes(K,
                                 norm_bound=norm_bound,
                                 loop_curves=loop_curves,
-                                use_PIL=use_PIL)
+                                use_PIL=use_PIL,
+                                heavy_filter=heavy_filter)
 
     logging.info("pre_type_1_2_primes = {}".format(pre_type_one_two_primes))
 
@@ -1265,7 +1387,7 @@ def cli_handler(args):
             bound = args.bound
             logging.warning("Only checking Type 2 primes up to {}. "
                             "To check all, use the PARI/GP script.".format(bound))
-        superset = get_isogeny_primes(K, args.norm_bound, bound, args.loop_curves, args.use_PIL)
+        superset = get_isogeny_primes(K, args.norm_bound, bound, args.loop_curves, args.use_PIL, args.heavy_filter)
 
         superset_list = list(superset)
         superset_list.sort()
@@ -1288,5 +1410,6 @@ if __name__ == "__main__":
     parser.add_argument("--rigorous", action='store_true', help="search all Type 2 primes up to conjectural bound")
     parser.add_argument("--verbose", action='store_true', help="get more info printed")
     parser.add_argument("--use_PIL", action='store_true', help="Use the principal ideal lattice to get the best possible result. Might take ages.")
+    parser.add_argument("--heavy_filter", action='store_true', help="Use the heavy Better than PIL method for filtering.")
     args = parser.parse_args()
     cli_handler(args)

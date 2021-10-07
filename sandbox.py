@@ -237,3 +237,60 @@ my_list = [K1,K2,K3]
 
 the_shtuff = [chr(i+97) for i,F in enumerate(frob_polys_dict[q])]
 # the_nfs = [NumberField(F, chr(i+97)) for i,F in enumerate(frob_polys_dict[q])]
+
+x = polygen(QQ);  K.<a> = NumberField(x^3 - 4095)
+Kgal = K.galois_closure('b')
+C_K = K.class_group()
+h_K = C_K.order()
+embeddings = K.embeddings(Kgal)
+gens_info = {}
+R = PolynomialRing(Rationals(), 'x')
+my_gens_ideals = C_K.gens_ideals()
+for q in my_gens_ideals:
+    q_order = C_K(q).multiplicative_order()
+    alphas = (q ** q_order).gens_reduced()
+    assert len(alphas) == 1
+    alpha = alphas[0]
+    gens_info[q] = (q_order, alpha)
+
+def eps_exp(x, eps, Sigma):
+    return prod([sigma(x)**my_pow for my_pow, sigma in zip(eps, Sigma)])
+
+aux_primes = K.primes_of_bounded_norm(30)
+eps = (4,0,6)
+p = 17
+q = C_K.gens_ideals()[0]
+class_gp_order, alpha = gens_info[q]
+alpha_to_eps = eps_exp(alpha, eps, embeddings)
+frak_p0 = Kgal.primes_above(p)[0]
+residue_field = frak_p0.residue_field(names='z')
+prime_field = GF(p)
+alpha_to_eps_mod_p0 = residue_field(alpha_to_eps)
+
+try:
+    c_power_12h = prime_field(alpha_to_eps_mod_p0)
+    possible_values = c_power_12h.nth_root(12*class_gp_order, all=True)
+    filtered_values = filter_possible_values(possible_values)
+except TypeError:
+    # means alpha_to_eps_mod_p0 is not in GF(p) so can ignore and move on
+
+def tuple_exp(tup,exp_tup):
+    return tuple((t**e for t,e in zip(tup,exp_tup)))
+
+def filter_possible_values(possible_values_list,fq,prime_field):
+
+    output = []
+
+    for c in possible_values_list:
+        if c ** 2 == prime_field(1):
+            output.append(c)
+        elif c ** 2 == prime_field(fq.norm()):
+            output.append(c)
+        else:
+            fq_char = ZZ(fq.norm()).prime_divisors()[0]
+            possible_mid_coeffs = [a for a in range(-fq.norm(),fq.norm()+1) if prime_field(a) == c + prime_field(fq.norm()/c)  ]
+            possible_weil_polys = [x ** 2 + a * x + fq.norm() for a in possible_mid_coeffs]
+            elliptic_weil_polys = [f for f in possible_weil_polys if weil_polynomial_is_elliptic(f,fq_char,fq.residue_class_degree())]
+            if elliptic_weil_polys:
+                output.append(c)
+    return output
