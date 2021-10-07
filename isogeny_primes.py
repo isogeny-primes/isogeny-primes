@@ -867,7 +867,7 @@ def final_filter(Kgal, aux_primes, my_gens_ideals, gens_info, p, eps, embeddings
         alpha_to_eps_mod_p0 = residue_field(alpha_to_eps)
         try:
             thingy = prime_field(alpha_to_eps_mod_p0)
-            possible_vals_with_raised_exp = [ tuple_exp(k,exponents_in_class_group) for k in possible_vals_cart_prod]
+            possible_vals_with_raised_exp = [ tuple_exp(k, tuple(12*k for k in exponents_in_class_group)) for k in possible_vals_cart_prod]
             my_possible_vals = list({thingy * prod(t) for t in possible_vals_with_raised_exp})
             filtered_values = filter_possible_values(my_possible_vals, q, prime_field)
             if not filtered_values:
