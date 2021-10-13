@@ -38,7 +38,7 @@ from sage.all import (QQ, next_prime, IntegerRing, prime_range, ZZ, pari,
         RR, EllipticCurve, ModularSymbols, Gamma0, lcm, oo, parent, Matrix,
         gcd, prod, floor, prime_divisors, kronecker_character,
         J0, kronecker_symbol, companion_matrix, euler_phi, DirichletGroup,
-        CyclotomicField, matrix, GF)
+        CyclotomicField, matrix, GF, sqrt)
 
 
 # Global quantitites
@@ -622,7 +622,7 @@ def remove_redundant_epsilons(epsilons, galois_group=None):
     return epsilons_output
 
 
-def get_pre_type_one_two_epsilons(d, galgp=None):
+def get_pre_type_one_two_epsilons(d, galgp=None, heavy_filter=False):
     """This method computes the epsilon group ring characters of Lemma 1 and
     Remark 1 of Momose. The three epsilons of type 1 and 2 are excluded.
 
@@ -642,9 +642,11 @@ def get_pre_type_one_two_epsilons(d, galgp=None):
 
     logging.debug("epsilons before filtering: {}".format(len(epsilons_keys)))
 
-    epsilons_keys = remove_redundant_epsilons(epsilons_keys, galois_group=galgp)
-
-    logging.debug("epsilons after filtering: {}".format(len(epsilons_keys)))
+    if not heavy_filter:
+        epsilons_keys = remove_redundant_epsilons(epsilons_keys, galois_group=galgp)
+        logging.debug("epsilons after filtering: {}".format(len(epsilons_keys)))
+    else:
+        logging.debug("Heavy filtering is on, so no epsilon filtering for now.")
 
     epsilons_dict = {eps: get_eps_type(eps) for eps in epsilons_keys}
 
@@ -804,7 +806,7 @@ def filter_possible_values(possible_values_list,fq,prime_field):
             output.append(c)
         else:
             fq_char = ZZ(fq.norm()).prime_divisors()[0]
-            possible_mid_coeffs = [a for a in range(-fq.norm(),fq.norm()+1) if prime_field(a) == c + prime_field(fq.norm()/c)  ]
+            possible_mid_coeffs = lifts_in_range(2*sqrt(fq.norm()), c + prime_field(fq.norm()/c))
             possible_weil_polys = [x ** 2 + a * x + fq.norm() for a in possible_mid_coeffs]
             elliptic_weil_polys = [f for f in possible_weil_polys if weil_polynomial_is_elliptic(f,fq_char,fq.residue_class_degree())]
             if elliptic_weil_polys:
@@ -827,7 +829,7 @@ def get_possible_vals_at_gens(gens_info, eps, embeddings, residue_field, prime_f
             c_power_12h = prime_field(alpha_to_eps_mod_p0)
             possible_values = c_power_12h.nth_root(12*class_gp_order, all=True)
             filtered_values = filter_possible_values(possible_values)
-            output[class_gp_gen] = filtered_values
+            output[class_gp_gen] = list(set([x**12 for x in filtered_values]))
         except TypeError:
             # means alpha_to_eps_mod_p0 is not in GF(p) so can ignore p and move on
             return {}
@@ -839,8 +841,52 @@ def tuple_exp(tup,exp_tup):
     return tuple((t**e for t,e in zip(tup,exp_tup)))
 
 
-def final_filter(Kgal, aux_primes, my_gens_ideals, gens_info, p, eps, embeddings):
+def lifts_in_range(N, res_class):
 
+    output = []
+    p = res_class.modulus()
+    centered_lift = res_class.lift_centered()
+
+    low_run = centered_lift
+
+    while low_run > -N - 0.5:
+        output.append(low_run)
+        low_run = low_run - p
+
+    high_run = centered_lift
+
+    while high_run < N + 0.5:
+        output.append(high_run)
+        high_run = high_run + p
+
+    return list(set(output))
+
+
+def get_prime_gens(C_K, my_gens):
+
+    output = []
+
+    for a_class in my_gens:
+        it = C_K.number_field().primes_of_bounded_norm_iter(800)
+        candidate = next(it)
+        candidate_class = C_K(candidate)
+        while not candidate_class == a_class:
+            candidate = next(it)
+            candidate_class = C_K(candidate)
+        output.append(candidate)
+
+    # while my_gens:
+    #     candidate = next(it)
+    #     candidate_class = C_K(candidate)
+    #     if candidate_class in my_gens:
+    #         output.append(candidate)
+    #         my_gens.remove(candidate_class)
+
+    return output
+
+def final_filter(C_K, Kgal, aux_primes, my_gens_ideals, gens_info, p, eps, embeddings):
+    """The possible isoegny prime p is assumed coprime to the prime ideals in my_gens_ideals
+    at this point."""
     frak_p0 = Kgal.primes_above(p)[0]  # choice of p_0
     residue_field = frak_p0.residue_field(names='z')
     prime_field = GF(p)
@@ -848,7 +894,8 @@ def final_filter(Kgal, aux_primes, my_gens_ideals, gens_info, p, eps, embeddings
     # Step 1
     possible_vals_at_gens = get_possible_vals_at_gens(gens_info, eps, embeddings, residue_field, prime_field)
 
-    if not possible_vals_at_gens:
+    if (not possible_vals_at_gens) or (not all(possible_vals_at_gens.values())):
+        logging.debug("Prime {} for eps {} filtered in Step 1 of Heavy filter".format(p, eps))
         return False
 
     # Step 2
@@ -858,23 +905,26 @@ def final_filter(Kgal, aux_primes, my_gens_ideals, gens_info, p, eps, embeddings
 
     # Step 3
     for q in aux_primes:
-        exponents_in_class_group = q.exponents()
-        the_principal_ideal = q * prod([Q**(-a) for Q,a in zip(my_gens_ideals, exponents_in_class_group)])
-        alphas = the_principal_ideal.gens_reduced()
-        assert len(alphas) == 1, "the principal ideal isn't principal!!!"
-        alpha = alphas[0]
-        alpha_to_eps = eps_exp(alpha, eps, embeddings)
-        alpha_to_eps_mod_p0 = residue_field(alpha_to_eps)
-        try:
-            thingy = prime_field(alpha_to_eps_mod_p0)
-            possible_vals_with_raised_exp = [ tuple_exp(k, tuple(12*k for k in exponents_in_class_group)) for k in possible_vals_cart_prod]
+        if q.is_coprime(p):
+            exponents_in_class_group = C_K(q).exponents()  # hopefully these are in the same order as my_gens computed higher up the stack. TODO: some assertions to ensure this?
+            the_principal_ideal = q * prod([Q**(-a) for Q,a in zip(my_gens_ideals, exponents_in_class_group)])
+            alphas = the_principal_ideal.gens_reduced()
+            assert len(alphas) == 1, "the principal ideal isn't principal!!!"
+            alpha = alphas[0]
+            alpha_to_eps = eps_exp(alpha, eps, embeddings)
+            alpha_to_eps_mod_p0 = residue_field(alpha_to_eps)
+            try:
+                thingy = prime_field(alpha_to_eps_mod_p0)
+            except TypeError:
+                # means alpha_to_eps_mod_p0 is not in GF(p) so can ignore and move on
+                logging.debug("Prime {} for eps {} filtered in Step 3a of Heavy filter".format(p, eps))
+                return False
+            possible_vals_with_raised_exp = [ tuple_exp(k, exponents_in_class_group) for k in possible_vals_cart_prod]
             my_possible_vals = list({thingy * prod(t) for t in possible_vals_with_raised_exp})
             filtered_values = filter_possible_values(my_possible_vals, q, prime_field)
             if not filtered_values:
+                logging.debug("Prime {} for eps {}filtered in Step 3b of Heavy filter".format(p, eps))
                 return False
-        except TypeError:
-            # means alpha_to_eps_mod_p0 is not in GF(p) so can ignore and move on
-            return False
 
     # If not returned False by now, then no obstruction to p being an isogeny prime
     return True
@@ -1050,9 +1100,9 @@ def get_pre_type_one_two_primes(K, norm_bound=50, loop_curves=False, use_PIL=Fal
 
     if K.is_galois():
         G_K = K.galois_group()
-        epsilons = get_pre_type_one_two_epsilons(K.degree(), galgp=G_K)
+        epsilons = get_pre_type_one_two_epsilons(K.degree(), galgp=G_K, heavy_filter=heavy_filter)
     else:
-        epsilons = get_pre_type_one_two_epsilons(K.degree())
+        epsilons = get_pre_type_one_two_epsilons(K.degree(), heavy_filter=heavy_filter)
 
     # Now start with the divisibilities. Do the unit computation first
 
@@ -1104,7 +1154,8 @@ def get_pre_type_one_two_primes(K, norm_bound=50, loop_curves=False, use_PIL=Fal
 
     if heavy_filter:
         logging.debug("Using Heavy filtering")
-        my_gens_ideals = C_K.gens_ideals()
+        my_gens = list(C_K.gens())  # done here to fix these, since the order matters later
+        my_gens_ideals = get_prime_gens(C_K, my_gens)
         gens_info = {}
         for q in my_gens_ideals:
             q_order = C_K(q).multiplicative_order()
@@ -1114,13 +1165,17 @@ def get_pre_type_one_two_primes(K, norm_bound=50, loop_curves=False, use_PIL=Fal
             gens_info[q] = (q_order, alpha)
 
         eps_prime_dict = {eps : tracking_dict_inv_collapsed[eps].prime_divisors() for eps in epsilons }
-
+        all_pre_type_one_two_primes = {p for k in eps_prime_dict for p in eps_prime_dict[k]}
+        logging.debug("Pre type one two candidates before filtering: {}".format(all_pre_type_one_two_primes))
+        prime_support_my_gens_ideals = list(set([a for P in my_gens_ideals for a in ZZ(P.norm()).prime_divisors()]))
         eps_prime_filt_dict = {}
 
         for eps in epsilons:
             survived_primes = []
             for p in eps_prime_dict[eps]:
-                if final_filter(Kgal, aux_primes, my_gens_ideals, gens_info, p, eps, embeddings):
+                if p in prime_support_my_gens_ideals:
+                    survived_primes.append(p)
+                elif final_filter(C_K, Kgal, aux_primes, my_gens_ideals, gens_info, p, eps, embeddings):
                     survived_primes.append(p)
             eps_prime_filt_dict[eps] = set(survived_primes)
 
