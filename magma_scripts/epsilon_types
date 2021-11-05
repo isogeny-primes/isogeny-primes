@@ -82,7 +82,7 @@ end function;
 from this point on the code is just for generating isogenies and printing info about them 
 */
 
-function quadratic_j(t,p)
+function quadratic_isogeny(t,p)
   /*
   This function generates quadratic points on the modular curve X_0(p), when p is such that this curve is (hyper) elliptic.
   It needs a rational number t as input. The quadratic point will have t as image under the (hyper) elliptic map.
@@ -104,26 +104,21 @@ function quadratic_j(t,p)
   O_K := MaximalOrder(K);
   P_C :=  C(K) ! [t,y];
   P := (phi^(-1))(P_C);
-  jt := Evaluate(j,P);
-  return jt,O_K;
+  phi := Isogeny(P,p);
+  return phi,O_K;
 end function;
 
-function an_isogeny(E,p);
-  div_pol := DivisionPolynomial(E,p);
-  ker_pol := Factorization(div_pol)[1][1];
-  E2, phi := IsogenyFromKernel(E,ker_pol);
-  return phi;
-end function;
+
 
 function print_eps_type_info(t, p)
-  j,OK := quadratic_j(t,p);
+  phi,OK := quadratic_isogeny(t,p);
   K := NumberField(OK);
   print t,K;
-  E := EllipticCurveWithjInvariant(j);
-  D_E := Discriminant(E);
-  phi := an_isogeny(E,p);
-  print "found isogeny between j1 =", j;
+  E := Domain(phi);
+  j := jInvariant(E);
   j2 := jInvariant(Codomain(phi));
+  D_E := Discriminant(E);
+  print "found isogeny between j1 =", j;
   print "and j2 =", j2;
   for pp_e in Factorization(p*OK) do;
     pp := pp_e[1];
