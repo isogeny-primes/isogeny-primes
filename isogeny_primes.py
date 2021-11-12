@@ -914,9 +914,14 @@ def lifts_in_range(N, res_class):
 def get_prime_gens(C_K, my_gens):
 
     output = []
+    it = C_K.number_field().primes_of_bounded_norm_iter(800)
+
+    if not my_gens:
+        # means C_K is trivial, so any prime ideal will do
+        candidate = next(it)
+        output.append(candidate)
 
     for a_class in my_gens:
-        it = C_K.number_field().primes_of_bounded_norm_iter(800)
         candidate = next(it)
         candidate_class = C_K(candidate)
         while not candidate_class == a_class:
@@ -943,8 +948,6 @@ def final_filter(C_K, Kgal, aux_primes, my_gens_ideals, gens_info, p, eps,
     prime_field = GF(p)
 
     logging.debug(f"Starting final filter for Prime {p} for eps {eps}")
-    logging.debug(f"Kgal: {Kgal}, C_K: {C_K}")
-    logging.debug(f"gen_ideals: {my_gens_ideals}, gen_info: {gens_info}")
 
     # Step 1
     possible_vals_at_gens = get_possible_vals_at_gens(gens_info, eps,
@@ -1307,7 +1310,8 @@ def get_pre_type_one_two_primes(K,
             assert len(alphas) == 1
             alpha = alphas[0]
             gens_info[q] = (q_order, alpha)
-
+        logging.debug(f"Kgal: {Kgal}, C_K: {C_K}")
+        logging.debug(f"gen_ideals: {my_gens_ideals}, gen_info: {gens_info}")
         eps_prime_dict = {
             eps: tracking_dict_inv_collapsed[eps].prime_divisors()
             for eps in epsilons
