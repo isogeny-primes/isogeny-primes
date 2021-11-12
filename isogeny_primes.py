@@ -875,7 +875,6 @@ def get_possible_vals_at_gens(gens_info, eps, embeddings, residue_field,
         try:
             c_power_12h = prime_field(alpha_to_eps_mod_p0)
         except TypeError as err:
-            logging.debug(f"Caught error in get_possible_vals_at_gens: {repr(err)}")
             # means alpha_to_eps_mod_p0 is not in GF(p) so can ignore p and move on
             return {}
         possible_values = c_power_12h.nth_root(12 * class_gp_order, all=True)
