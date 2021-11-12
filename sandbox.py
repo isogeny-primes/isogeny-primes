@@ -294,3 +294,102 @@ def filter_possible_values(possible_values_list,fq,prime_field):
             if elliptic_weil_polys:
                 output.append(c)
     return output
+
+def get_more_fi_data():
+
+    for d in range(2,13):
+
+        with open(BAD_FORMAL_IMMERSION_DATA_PATH, 'r') as bfi_dat_file:
+            bfi_dat = json.load(bfi_dat_file)
+
+        if str(d) not in bfi_dat:
+            print("Doing d = {}".format(d))
+            bad_formal_immersion_list, bad_aux_prime_dict = get_bad_formal_immersion_data(d)
+            bfi_dat[str(d)] = {
+                                        "bad_formal_immersion_list" : bad_formal_immersion_list,
+                                        "bad_aux_prime_dict" : bad_aux_prime_dict
+                                       }
+            with open(BAD_FORMAL_IMMERSION_DATA_PATH, 'w') as fp:
+                json.dump(bfi_dat, fp, indent=4)
+
+
+def get_dirichlet_character(K):
+    """Returns a Dirichlet character whose fixed field is K"""
+
+    N = K.conductor()
+    zeta_order = euler_phi(N)  # maybe do this as in LMFDB
+    H = DirichletGroup(N, base_ring=CyclotomicField(zeta_order))
+    return [
+        chi for chi in H
+        if chi.conductor() == N and chi.multiplicative_order() == K.degree()
+    ][0]
+
+
+def is_torsion_same(p, K, chi, J0_min, B=30, uniform=False):
+    """Returns true if the minus part of J0(p) does not gain new torsion when
+    base changing to K"""
+
+    d = K.degree()
+
+    if uniform:
+        frob_poly_data = [(q, d) for q in prime_range(d + 2, B) if q != p]
+    else:
+        frob_poly_data = [(q, 1) if chi(q) == 1 else (q, d)
+                          for q in prime_range(d + 2, B) if gcd(q, p) == 1]
+
+    point_counts = []
+
+    for q, i in frob_poly_data:
+        frob_pol_q = J0_min.frobenius_polynomial(q)
+        frob_mat = companion_matrix(frob_pol_q)
+        point_counts.append((frob_mat**i).charpoly()(1))
+
+    # Recall that the rational torsion on J0(p) is entirely contained in
+    # the minus part (theorem of Mazur), so checking no-growth of torsion
+    # in minus part is done simply as follows
+    # import pdb; pdb.set_trace()
+    return J0(p).rational_torsion_order(proof=False) == gcd(point_counts)
+
+
+# def is_rank_of_twist_zero(d,S_min):
+
+#     my_map = S_min.rational_period_mapping()
+#     tw = M.twisted_winding_element(0,kronecker_character(d))
+#     twmap = my_map(tw)
+#     return twmap != parent(twmap)(0)
+
+
+def is_rank_of_twist_zero(chi, ML, S_min_L):
+    """Returns true if the rank of the twist of the minus part by the
+    character chi is zero"""
+
+    my_map = S_min_L.rational_period_mapping()
+    tw = ML.twisted_winding_element(0, chi)
+    twmap = my_map(tw)
+    return twmap != parent(twmap)(0)
+
+
+def works_method_of_appendix(p, K):
+    """This implements the method of the appendix, returns True if that
+    method is able to remove p as an isogeny prime for K."""
+
+
+    M = ModularSymbols(p)
+    S = M.cuspidal_subspace()
+    T = S.atkin_lehner_operator()
+    S_min = (T + parent(T)(1)).kernel()
+    J0_min = S_min.abelian_variety()
+
+    chi = get_dirichlet_character(K)
+
+    ML = ModularSymbols(p, base_ring=chi.base_ring())
+    SL = ML.cuspidal_subspace()
+    TL = SL.atkin_lehner_operator()
+    S_min_L = (TL + parent(TL)(1)).kernel()
+
+    if is_torsion_same(p, K, chi, J0_min):
+        print("torsion is same")
+    if is_rank_of_twist_zero(chi, ML, S_min_L):
+        print("rank of twist is zero")
+        return True
+    return False

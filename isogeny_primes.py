@@ -9,9 +9,9 @@
     Copyright (C) 2021 Barinder Singh Banwait and Maarten Derickx
 
     Isogeny Primes is free software: you can redistribute it and/or
-    modify it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    any later version.
+    modify it under the terms of the GNU General Public License as
+    published by the Free Software Foundation, either version 3 of the
+    License, or any later version.
 
     This program is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -164,15 +164,7 @@ def is_torsion_same(p, K, chi, J0_min, B=30, uniform=False):
     # the minus part (theorem of Mazur), so checking no-growth of torsion
     # in minus part is done simply as follows
 
-    return J0(p).rational_torsion_order() == gcd(point_counts)
-
-
-# def is_rank_of_twist_zero(d,S_min):
-
-#     my_map = S_min.rational_period_mapping()
-#     tw = M.twisted_winding_element(0,kronecker_character(d))
-#     twmap = my_map(tw)
-#     return twmap != parent(twmap)(0)
+    return J0(p).rational_torsion_order(proof=False) == gcd(point_counts)
 
 
 def is_rank_of_twist_zero(chi, ML, S_min_L):
@@ -189,7 +181,7 @@ def works_method_of_appendix(p, K):
     """This implements the method of the appendix, returns True if that
     method is able to remove p as an isogeny prime for K."""
 
-    if QuadraticField(-p).class_number() > 2:
+    if QuadraticField(-p).class_number() > K.degree():
         if p not in SMALL_GONALITIES:
             M = ModularSymbols(p)
             S = M.cuspidal_subspace()
@@ -311,7 +303,7 @@ def get_M(d, M_start=None, M_stop=None, positive_char=True):
     Gets an integer M such that R_du is rank d for all u in (Z/MZ)^*.
 
     If positive_char=False then R_du only has rank d in characteristic 0
-    Otherwise it has rank d in all characteristics > 2
+    Otherwise it has rank d in all characteristics > 2.
     """
     if not M_start:
         M_start = 3
@@ -365,8 +357,8 @@ def R_dp(d, p):
 
 
 def is_formall_immersion_fast(d, p):
-    """If this function returns true then we have a formall immersion in all characteristics
-    > 2. If it returns false then this means nothing.
+    """If this function returns true then we have a formall immersion in all
+    characteristics > 2. If it returns false then this means nothing.
     """
     R0 = R_du(d, p, 2)
     for M in range(3, floor(p / (2 * d))):
@@ -383,10 +375,6 @@ def is_formall_immersion_fast(d, p):
 
 
 def is_formall_immersion(d, p):
-    M = ModularSymbols(Gamma0(p), 2)
-    S = M.cuspidal_subspace()
-    I2 = M.hecke_operator(2) - 3
-    #assert I2.matrix().rank()==S.dimension()
     D = R_dp(d, p).elementary_divisors()
     if D and D[-1]:
         return int(D[-1].prime_to_m_part(2))
@@ -396,10 +384,10 @@ def is_formall_immersion(d, p):
 def get_bad_formal_immersion_data(d):
     """
     This is the Oesterlé for type 1 primes with modular symbols main routine.
-    The computation of get_bad_formal_immersion_data is actually a two step
-    rocket. First Proposition 6.8 of Derickx-Kamienny-Stein-Stollis used to
-    replace Parents polynomial of degree 6 bound by something reasonable,
-    and then Corollary 6.4 is used to go from something reasonable to the exact list.
+    The computation is actually a two step rocket. First Proposition 6.8 of
+    Derickx-Kamienny-Stein-Stollis used to replace Parents polynomial of
+    degree 6 bound by something reasonable, and then Corollary 6.4 is used
+    to go from something reasonable to the exact list.
     """
     assert d > 0
 
@@ -858,6 +846,10 @@ def filter_possible_values(possible_values_list, fq, prime_field):
             possible_weil_polys = [
                 x**2 + a * x + fq.norm() for a in possible_mid_coeffs
             ]
+            # as sanity check, ensure these are Weil polys
+            possible_weil_polys = [f for f in possible_weil_polys if
+                                   f.is_weil_polynomial()]
+
             elliptic_weil_polys = [
                 f for f in possible_weil_polys if weil_polynomial_is_elliptic(
                     f, fq_char, fq.residue_class_degree())
@@ -906,17 +898,17 @@ def lifts_in_range(N, res_class):
 
     low_run = centered_lift
 
-    while low_run > -N - 0.5:
+    while low_run >= -N:
         output.append(low_run)
         low_run = low_run - p
 
     high_run = centered_lift
 
-    while high_run < N + 0.5:
+    while high_run <= N:
         output.append(high_run)
         high_run = high_run + p
 
-    return list(set(output))
+    return [a for a in list(set(output)) if a.abs() <= N]
 
 
 def get_prime_gens(C_K, my_gens):
@@ -974,10 +966,24 @@ def final_filter(C_K, Kgal, aux_primes, my_gens_ideals, gens_info, p, eps,
         product(*[possible_vals_at_gens[q] for q in my_gens_ideals]))
 
     # Step 3
+
+    # The idea is that we try to filter out each tuple in
+    # possible_vals_cart_prod using aux primes; the paper explains how
+    # these can be considered as refined epsilon types.
+
+    still_in_the_game = possible_vals_cart_prod.copy()
     for q in aux_primes:
         if q.is_coprime(p):
-            exponents_in_class_group = C_K(q).exponents(
-            )  # hopefully these are in the same order as my_gens computed higher up the stack. TODO: some assertions to ensure this?
+            exponents_in_class_group = C_K(q).exponents()
+
+            # Check that these exponents correspond to the ideals in
+            # my_gens_ideals in the correct order
+            sanity_check = prod([
+                Q**a
+                for Q, a in zip(my_gens_ideals, exponents_in_class_group)
+            ])
+            assert C_K(sanity_check) == C_K(q)
+
             the_principal_ideal = q * prod([
                 Q**(-a)
                 for Q, a in zip(my_gens_ideals, exponents_in_class_group)
@@ -994,16 +1000,17 @@ def final_filter(C_K, Kgal, aux_primes, my_gens_ideals, gens_info, p, eps,
                 logging.debug(f"Prime {p} for eps {eps} filtered in Step 3a of Heavy filter")
                 logging.debug(f"{repr(err)}")
                 return False
-            possible_vals_with_raised_exp = [
-                tuple_exp(k, exponents_in_class_group)
-                for k in possible_vals_cart_prod
-            ]
-            my_possible_vals = list(
-                {thingy * prod(t)
-                 for t in possible_vals_with_raised_exp})
-            filtered_values = filter_possible_values(my_possible_vals, q,
-                                                     prime_field)
-            if not filtered_values:
+            new_still_in_the_game = []
+            for possible_val in still_in_the_game:
+                possible_val_with_raised_exp = tuple_exp(possible_val, exponents_in_class_group)
+                my_possible_val = [thingy * prod(possible_val_with_raised_exp)]
+
+                filtered_values = filter_possible_values(my_possible_val, q,
+                                                        prime_field)
+                if filtered_values:
+                    new_still_in_the_game.append(possible_val)
+            still_in_the_game = new_still_in_the_game
+            if not still_in_the_game:
                 logging.debug(f"Prime {p} for eps {eps} filtered in Step 3b of Heavy filter")
                 return False
 
