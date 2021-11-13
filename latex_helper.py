@@ -30,7 +30,7 @@ import argparse
 from sage.all import(Integer, RR, QuadraticField, PolynomialRing, QQ,
                      NumberField, latex)
 from isogeny_primes import (get_isogeny_primes, EC_Q_ISOGENY_PRIMES,
-    contains_imaginary_quadratic_field, CLASS_NUMBER_ONE_DISCS)
+    contains_imaginary_quadratic_field, CLASS_NUMBER_ONE_DISCS, get_type_2_bound, BAD_FORMAL_IMMERSION_DATA_PATH)
 from time import perf_counter
 
 import requests  # for accessing LMFDB API
@@ -66,7 +66,7 @@ def get_smallest_good_number_field(d):
         _, contains_hilbert_class_field = contains_imaginary_quadratic_field(K)
         if not contains_hilbert_class_field:
             Delta_K = dat['disc_sign'] * dat['disc_abs']
-            return (Delta_K, poly, K)
+            return (Delta_K, poly, K, dat['label'])
     raise NotImplementedError("need more hits")
 
 
@@ -126,6 +126,26 @@ class Latexer(object):
         for one_line in latex_output:
             print(one_line)
 
+    def type_2_bounds(self):
+        """generate the type 2 bounds table"""
+
+        output_str = r'${d}$ & ${Delta_K}$ & ${label}$ & ${rem} \times 10^{{{exp_at_10}}}$\\'
+        latex_output = []
+        for d in range(2, self.range + 1):
+            Delta_K, f_K, K, label = get_smallest_good_number_field(d)
+            type_2_bound = RR(get_type_2_bound(K))
+            log_type_2_bound = type_2_bound.log10()
+            exp_at_10 = int(log_type_2_bound)
+            rem = log_type_2_bound - exp_at_10
+            rem = 10**rem
+            rem = rem.numerical_approx(digits=3)
+            # f_K_latex = latex(f_K)
+            output_here = output_str.format(d=d, Delta_K=Delta_K, label=label, rem=rem, exp_at_10=exp_at_10)
+            latex_output.append(output_here)
+
+        for one_line in latex_output:
+            print(one_line)
+
     def lpp_table(self):
         """generate the large putative primes table"""
 
@@ -149,6 +169,61 @@ class Latexer(object):
         # for one_line in latex_output:
         #     print(one_line)
 
+
+def get_smallest_missing_prime(prime_list):
+
+    i=0
+    while(prime_list[i] == nth_prime(i+1)):
+        i += 1
+    # rem = [int(x) for x in prime_list[i+1:] ]
+    return nth_prime(i+1), prime_list[i:]
+
+def bad_formal_immersion_table():
+
+    with open(BAD_FORMAL_IMMERSION_DATA_PATH, 'r') as bfi_dat_file:
+        bfi_dat = json.load(bfi_dat_file)
+
+    degrees = list(bfi_dat.keys())
+    degrees_int = [int(d) for d in degrees]
+    degrees_int.sort()
+    degrees = [str(d) for d in degrees_int]
+
+    output_str = r'${d}$ & ${smallest_good}$ & {sporadic_bad} & {almost_good}\\'
+    latex_output = []
+
+    for d in degrees:
+        bad_formal_immersion_list = bfi_dat[d]['bad_formal_immersion_list']
+        bad_aux_prime_dict = bfi_dat[d]['bad_aux_prime_dict']
+
+        smallest_good, sporadic_bad_list = get_smallest_missing_prime(bad_formal_immersion_list)
+        sporadic_bad = ", ".join(map(str,sporadic_bad_list))
+        bad_aux_prime_dict_rev = {bad_aux_prime_dict[k]:k for k in bad_aux_prime_dict}
+
+        almost_good_primes = list({p for N in list(bad_aux_prime_dict_rev.keys()) for p in ZZ(N).prime_divisors() })
+        almost_good_primes.sort()
+
+        almost_good = {}
+        for p in almost_good_primes:
+            bad_aux_primes = set()
+            for k in bad_aux_prime_dict_rev:
+                if k%p == 0:
+                    the_bad_aux_prime_here = int(bad_aux_prime_dict_rev[k])
+                    bad_aux_primes.add(the_bad_aux_prime_here)
+            bad_aux_primes = list(bad_aux_primes)
+            bad_aux_primes.sort()
+            bad_aux_primes_str = ", ".join(map(str,bad_aux_primes))
+            almost_good[p] = bad_aux_primes_str
+
+        almost_good = ", ".join(["{} ({})".format(p, q) for p,q in almost_good.items()])
+
+        output_here = output_str.format(d=d, smallest_good=smallest_good, sporadic_bad=sporadic_bad, almost_good=almost_good)
+        latex_output.append(output_here)
+
+    for one_line in latex_output:
+        print(one_line)
+
+
+
 def cli_handler(args):
 
     THE_RANGE = args.d
@@ -156,7 +231,7 @@ def cli_handler(args):
     latex_helper = Latexer(THE_RANGE)
 
     if args.table == 'several_d':
-        latex_helper.several_d()
+        latex_helper.type_2_bounds()
     elif args.table == 'lpp':
         latex_helper.lpp_table()
     else:

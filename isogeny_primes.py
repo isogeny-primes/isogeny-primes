@@ -9,9 +9,9 @@
     Copyright (C) 2021 Barinder Singh Banwait and Maarten Derickx
 
     Isogeny Primes is free software: you can redistribute it and/or
-    modify it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    any later version.
+    modify it under the terms of the GNU General Public License as
+    published by the Free Software Foundation, either version 3 of the
+    License, or any later version.
 
     This program is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -33,28 +33,30 @@ from pathlib import Path
 from itertools import product
 import logging
 from sage.all import (QQ, next_prime, IntegerRing, prime_range, ZZ, pari,
-        PolynomialRing, Integer, Rationals, legendre_symbol, QuadraticField,
-        log, exp, find_root, ceil, NumberField, hilbert_class_polynomial,
-        RR, EllipticCurve, ModularSymbols, Gamma0, lcm, oo, parent, Matrix,
-        gcd, prod, floor, prime_divisors, kronecker_character,
-        J0, kronecker_symbol, companion_matrix, euler_phi, DirichletGroup,
-        CyclotomicField, matrix)
-
+                      PolynomialRing, Integer, Rationals, legendre_symbol,
+                      QuadraticField, log, exp, find_root, ceil, NumberField,
+                      hilbert_class_polynomial, RR, EllipticCurve,
+                      ModularSymbols, Gamma0, lcm, oo, parent, Matrix, gcd,
+                      prod, floor, prime_divisors, kronecker_character, J0,
+                      kronecker_symbol, companion_matrix, euler_phi,
+                      DirichletGroup, CyclotomicField, matrix, GF, sqrt)
 
 # Global quantitites
 
 GENERIC_UPPER_BOUND = 10**30
-EC_Q_ISOGENY_PRIMES = {2,3,5,7,11,13,17,19,37,43,67,163}
+EC_Q_ISOGENY_PRIMES = {2, 3, 5, 7, 11, 13, 17, 19, 37, 43, 67, 163}
 CLASS_NUMBER_ONE_DISCS = {-1, -2, -3, -7, -11, -19, -43, -67, -163}
-SMALL_GONALITIES = {2,3,5,7,11,13,17,19,23,29,31,37,41,47,59,71}
+SMALL_GONALITIES = {2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 47, 59, 71}
 R = PolynomialRing(Rationals(), 'x')
+x = R.gen()
 FORMAL_IMMERSION_DATA_AT_2_PATH = Path('formal_immersion_at_2.json')
 BAD_FORMAL_IMMERSION_DATA_PATH = Path('bad_formal_immersion_data.json')
 QUADRATIC_POINTS_DATA_PATH = Path('quadratic_points_catalogue.json')
 
 # Global methods
 
-def weil_polynomial_is_elliptic(f,q,a):
+
+def weil_polynomial_is_elliptic(f, q, a):
     """
     On input of a polynomial f that is a weil polynomial of degree 2 and has constant
     term q^a we check if it actually comes from an elliptic curve over GF(q^a).
@@ -63,21 +65,22 @@ def weil_polynomial_is_elliptic(f,q,a):
     if f[1] % q != 0:
         return True
 
-    if a%2 == 0:
-        if f[1] in [-2*q**(a//2), 2*q**(a//2)]:
+    if a % 2 == 0:
+        if f[1] in [-2 * q**(a // 2), 2 * q**(a // 2)]:
             return True
-        if q%3 != 1 and f[1] in [-q**(a//2), q**(a//2)]:
+        if q % 3 != 1 and f[1] in [-q**(a // 2), q**(a // 2)]:
             return True
-        if q%4 != 1 and f[1] == 0:
+        if q % 4 != 1 and f[1] == 0:
             return True
     else:
-        if q in [2,3]:
-            if f[1] in [-q**((a+1)//2),q**((a+1)//2)]:
+        if q in [2, 3]:
+            if f[1] in [-q**((a + 1) // 2), q**((a + 1) // 2)]:
                 return True
         if f[1] == 0:
             return True
 
     return False
+
 
 def get_weil_polys(F):
     """
@@ -85,8 +88,8 @@ def get_weil_polys(F):
     """
     q = F.characteristic()
     a = F.degree()
-    weil_polys = R.weil_polynomials(2,q**a)
-    return [f for f in weil_polys if weil_polynomial_is_elliptic(f,q,a)]
+    weil_polys = R.weil_polynomials(2, q**a)
+    return [f for f in weil_polys if weil_polynomial_is_elliptic(f, q, a)]
 
 
 ########################################################################
@@ -96,7 +99,7 @@ def get_weil_polys(F):
 ########################################################################
 
 
-def oezman_sieve(p,N):
+def oezman_sieve(p, N):
     """Returns True iff p is in S_N. Only makes sense if p ramifies in K"""
 
     M = QuadraticField(-N)
@@ -132,7 +135,10 @@ def get_dirichlet_character(K):
     N = K.conductor()
     zeta_order = euler_phi(N)  # maybe do this as in LMFDB
     H = DirichletGroup(N, base_ring=CyclotomicField(zeta_order))
-    return [chi for chi in H if chi.conductor() == N and chi.multiplicative_order() == K.degree()][0]
+    return [
+        chi for chi in H
+        if chi.conductor() == N and chi.multiplicative_order() == K.degree()
+    ][0]
 
 
 def is_torsion_same(p, K, chi, J0_min, B=30, uniform=False):
@@ -142,13 +148,14 @@ def is_torsion_same(p, K, chi, J0_min, B=30, uniform=False):
     d = K.degree()
 
     if uniform:
-        frob_poly_data = [(q, d) for q in prime_range(d+2,B) if q != p]
+        frob_poly_data = [(q, d) for q in prime_range(d + 2, B) if q != p]
     else:
-        frob_poly_data = [(q, 1) if chi(q) == 1 else (q, d) for q in prime_range(d+2,B) if gcd(q,p) == 1]
+        frob_poly_data = [(q, 1) if chi(q) == 1 else (q, d)
+                          for q in prime_range(d + 2, B) if gcd(q, p) == 1]
 
     point_counts = []
 
-    for q,i in frob_poly_data:
+    for q, i in frob_poly_data:
         frob_pol_q = J0_min.frobenius_polynomial(q)
         frob_mat = companion_matrix(frob_pol_q)
         point_counts.append((frob_mat**i).charpoly()(1))
@@ -157,31 +164,24 @@ def is_torsion_same(p, K, chi, J0_min, B=30, uniform=False):
     # the minus part (theorem of Mazur), so checking no-growth of torsion
     # in minus part is done simply as follows
 
-    return J0(p).rational_torsion_order() == gcd(point_counts)
+    return J0(p).rational_torsion_order(proof=False) == gcd(point_counts)
 
 
-# def is_rank_of_twist_zero(d,S_min):
-
-#     my_map = S_min.rational_period_mapping()
-#     tw = M.twisted_winding_element(0,kronecker_character(d))
-#     twmap = my_map(tw)
-#     return twmap != parent(twmap)(0)
-
-def is_rank_of_twist_zero(chi,ML,S_min_L):
+def is_rank_of_twist_zero(chi, ML, S_min_L):
     """Returns true if the rank of the twist of the minus part by the
     character chi is zero"""
 
     my_map = S_min_L.rational_period_mapping()
-    tw = ML.twisted_winding_element(0,chi)
+    tw = ML.twisted_winding_element(0, chi)
     twmap = my_map(tw)
     return twmap != parent(twmap)(0)
 
 
-def works_method_of_appendix(p,K):
+def works_method_of_appendix(p, K):
     """This implements the method of the appendix, returns True if that
     method is able to remove p as an isogeny prime for K."""
 
-    if QuadraticField(-p).class_number() > 2:
+    if QuadraticField(-p).class_number() > K.degree():
         if p not in SMALL_GONALITIES:
             M = ModularSymbols(p)
             S = M.cuspidal_subspace()
@@ -196,8 +196,8 @@ def works_method_of_appendix(p,K):
             TL = SL.atkin_lehner_operator()
             S_min_L = (TL + parent(TL)(1)).kernel()
 
-            if is_torsion_same(p,K,chi,J0_min):
-                if is_rank_of_twist_zero(chi,ML,S_min_L):
+            if is_torsion_same(p, K, chi, J0_min):
+                if is_rank_of_twist_zero(chi, ML, S_min_L):
                     return True
     return False
 
@@ -214,7 +214,7 @@ def apply_quadratic_weeding(candidates, K):
     with open(QUADRATIC_POINTS_DATA_PATH, 'r') as qdpts_dat_file:
         qdpts_dat = json.load(qdpts_dat_file)
 
-    for p in candidates-EC_Q_ISOGENY_PRIMES:
+    for p in candidates - EC_Q_ISOGENY_PRIMES:
         if p > 20:
             if str(p) in qdpts_dat:
                 data_this_p = qdpts_dat[str(p)]
@@ -225,22 +225,27 @@ def apply_quadratic_weeding(candidates, K):
                     continue
                 removed_p = False
                 for q in ramified_primes:
-                    if not oezman_sieve(q,p):
+                    if not oezman_sieve(q, p):
                         # Means we have a local obstruction at q
-                        logging.debug("Prime {} removed via Oezman sieve".format(p))
+                        logging.debug(
+                            "Prime {} removed via Oezman sieve".format(p))
                         removed_primes.add(p)
                         removed_p = True
                         break
                 if removed_p:
                     continue
-                logging.debug("Attempting method of appendix on prime {}".format(p))
-                if works_method_of_appendix(p,K):
-                    logging.debug("Prime {} removed via method of appendix".format(p))
+                logging.debug(
+                    "Attempting method of appendix on prime {}".format(p))
+                if works_method_of_appendix(p, K):
+                    logging.debug(
+                        "Prime {} removed via method of appendix".format(p))
                     removed_primes.add(p)
             else:
-                logging.debug("Attempting method of appendix on prime {}".format(p))
-                if works_method_of_appendix(p,K):
-                    logging.debug("Prime {} removed via method of appendix".format(p))
+                logging.debug(
+                    "Attempting method of appendix on prime {}".format(p))
+                if works_method_of_appendix(p, K):
+                    logging.debug(
+                        "Prime {} removed via method of appendix".format(p))
                     removed_primes.add(p)
     return removed_primes
 
@@ -253,11 +258,13 @@ def apply_weeding(candidates, K):
 
     elif K.degree().is_prime() and K.is_abelian():
         removed_primes = set()
-        for p in candidates-EC_Q_ISOGENY_PRIMES:
+        for p in candidates - EC_Q_ISOGENY_PRIMES:
             if p > 20:
-                logging.debug("Attempting method of appendix on prime {}".format(p))
-                if works_method_of_appendix(p,K):
-                    logging.debug("Prime {} removed via method of appendix".format(p))
+                logging.debug(
+                    "Attempting method of appendix on prime {}".format(p))
+                if works_method_of_appendix(p, K):
+                    logging.debug(
+                        "Prime {} removed via method of appendix".format(p))
                     removed_primes.add(p)
         return removed_primes
 
@@ -271,7 +278,7 @@ def apply_weeding(candidates, K):
 ########################################################################
 
 
-def R_du(d,u,M,columns=None,a_inv=False):
+def R_du(d, u, M, columns=None, a_inv=False):
     """Returns a matrix that can be used to verify formall immersions on X_0(p)
     for all p > 2*M*d, such that p*u = 1 mod M.
     Args:
@@ -282,16 +289,13 @@ def R_du(d,u,M,columns=None,a_inv=False):
         [Matrix]: The Matrix of Corollary 6.8 of Derickx-Kamienny-Stein-Stoll.
     """
     if columns == None:
-        columns =[a for a in range(M) if gcd(a,M)==1]
-        a_inv=False
+        columns = [a for a in range(M) if gcd(a, M) == 1]
+        a_inv = False
     if not a_inv:
-        columns = [(a,int((ZZ(1)/a)%M)) for a in columns]
-    return Matrix(ZZ,
-        [
-            [((0 if 2*((r*a[0])%M) < M else 1) -
-              (0 if 2*((r*u*a[1])%M) < M else 1)) for a in columns]
-
-        for r in range(1,d+1)])
+        columns = [(a, int((ZZ(1) / a) % M)) for a in columns]
+    return Matrix(ZZ, [[((0 if 2 * ((r * a[0]) % M) < M else 1) -
+                         (0 if 2 * ((r * u * a[1]) % M) < M else 1))
+                        for a in columns] for r in range(1, d + 1)])
 
 
 def get_M(d, M_start=None, M_stop=None, positive_char=True):
@@ -299,35 +303,37 @@ def get_M(d, M_start=None, M_stop=None, positive_char=True):
     Gets an integer M such that R_du is rank d for all u in (Z/MZ)^*.
 
     If positive_char=False then R_du only has rank d in characteristic 0
-    Otherwise it has rank d in all characteristics > 2
+    Otherwise it has rank d in all characteristics > 2.
     """
     if not M_start:
         M_start = 3
     if not M_stop:
         # based on trial and error, should be big enough
         # if not we just raise an error
-        M_stop=20*d
+        M_stop = 20 * d
 
-    for M in range(M_start,M_stop,2):
-        columns =[(a,int((ZZ(1)/a)%M)) for a in range(M) if gcd(a,M)==1]
+    for M in range(M_start, M_stop, 2):
+        columns = [(a, int((ZZ(1) / a) % M)) for a in range(M)
+                   if gcd(a, M) == 1]
         M_lcm = 1
         for u in range(M):
-            if gcd(u,M)!=1:
+            if gcd(u, M) != 1:
                 continue
-            R = R_du(d,u,M,columns,a_inv=True)
+            R = R_du(d, u, M, columns, a_inv=True)
             if R.rank() < d:
                 break
             assert R.nrows() == d
             elt_divs = R.elementary_divisors()
             if positive_char and elt_divs[-1].prime_to_m_part(2) > 1:
                 break
-            M_lcm = lcm(M_lcm,elt_divs[-1])
+            M_lcm = lcm(M_lcm, elt_divs[-1])
         else:
             return (M, M_lcm)
-    raise ValueError("M_stop was to small, no valid value of M < M_stop could be found")
+    raise ValueError(
+        "M_stop was to small, no valid value of M < M_stop could be found")
 
 
-def R_dp(d,p):
+def R_dp(d, p):
     """Return the formal immersion matrix
     Args:
         d ([int]): degree of number field
@@ -337,24 +343,27 @@ def R_dp(d,p):
                   This is for verifying the linear independance in
                   Corollary 6.4 of Derickx-Kamienny-Stein-Stoll.
     """
-    M = ModularSymbols(Gamma0(p),2)
+    M = ModularSymbols(Gamma0(p), 2)
     S = M.cuspidal_subspace()
     S_int = S.integral_structure()
-    e = M([0,oo])
-    I2 = M.hecke_operator(2)-3
+    e = M([0, oo])
+    I2 = M.hecke_operator(2) - 3
+
     def get_row(i):
-        return S_int.coordinate_vector(S_int(M.coordinate_vector(I2(M.hecke_operator(i)(e)))))
-    return Matrix([get_row(i) for i in range(1,d+1)]).change_ring(ZZ)
+        return S_int.coordinate_vector(
+            S_int(M.coordinate_vector(I2(M.hecke_operator(i)(e)))))
+
+    return Matrix([get_row(i) for i in range(1, d + 1)]).change_ring(ZZ)
 
 
-def is_formall_immersion_fast(d,p):
-    """If this function returns true then we have a formall immersion in all characteristics
-    > 2. If it returns false then this means nothing.
+def is_formall_immersion_fast(d, p):
+    """If this function returns true then we have a formall immersion in all
+    characteristics > 2. If it returns false then this means nothing.
     """
-    R0 = R_du(d,p,2)
-    for M in range(3,floor(p/(2*d))):
-        u = int((ZZ(1)/p)%M)
-        R_M = R_du(d,u,M)
+    R0 = R_du(d, p, 2)
+    for M in range(3, floor(p / (2 * d))):
+        u = int((ZZ(1) / p) % M)
+        R_M = R_du(d, u, M)
         R0 = R0.augment(R_M)
 
         divs = R0.elementary_divisors()
@@ -364,12 +373,9 @@ def is_formall_immersion_fast(d,p):
             return True
     return False
 
-def is_formall_immersion(d,p):
-    M = ModularSymbols(Gamma0(p),2)
-    S = M.cuspidal_subspace()
-    I2 = M.hecke_operator(2)-3
-    #assert I2.matrix().rank()==S.dimension()
-    D = R_dp(d,p).elementary_divisors()
+
+def is_formall_immersion(d, p):
+    D = R_dp(d, p).elementary_divisors()
     if D and D[-1]:
         return int(D[-1].prime_to_m_part(2))
     return 0
@@ -378,10 +384,10 @@ def is_formall_immersion(d,p):
 def get_bad_formal_immersion_data(d):
     """
     This is the Oesterlé for type 1 primes with modular symbols main routine.
-    The computation of get_bad_formal_immersion_data is actually a two step
-    rocket. First Proposition 6.8 of Derickx-Kamienny-Stein-Stollis used to
-    replace Parents polynomial of degree 6 bound by something reasonable,
-    and then Corollary 6.4 is used to go from something reasonable to the exact list.
+    The computation is actually a two step rocket. First Proposition 6.8 of
+    Derickx-Kamienny-Stein-Stollis used to replace Parents polynomial of
+    degree 6 bound by something reasonable, and then Corollary 6.4 is used
+    to go from something reasonable to the exact list.
     """
     assert d > 0
 
@@ -391,21 +397,21 @@ def get_bad_formal_immersion_data(d):
 
     M = get_M(d)[0]
 
-    for p in prime_range(11,2*M*d):
+    for p in prime_range(11, 2 * M * d):
         #first do a relatively cheap test
-        if is_formall_immersion_fast(d,p):
+        if is_formall_immersion_fast(d, p):
             continue
         #this is more expensive
-        is_formall = is_formall_immersion(d,p)
+        is_formall = is_formall_immersion(d, p)
         if is_formall:
             if is_formall > 1:
                 p_done[int(p)] = is_formall
         else:
             p_todo.append(int(p))
 
-    for p,q_prod in p_done.items():
+    for p, q_prod in p_done.items():
         for q in prime_divisors(q_prod):
-            q_to_bad_p[int(q)] = int(q_to_bad_p.get(q,1)*p)
+            q_to_bad_p[int(q)] = int(q_to_bad_p.get(q, 1) * p)
 
     return p_todo, q_to_bad_p
 
@@ -423,13 +429,17 @@ def apply_formal_immersion_at_2(output_thus_far, running_prime_dict_2, Kdeg):
 
     fi2_this_d = fi2_dat[str(Kdeg)]
 
-    stubborn_set = {p for p in output_thus_far if p < fi2_this_d['smallest_good_formal_immersion_prime']
-                                               or p in fi2_this_d['sporadic_bad_formal_immersion_primes']
-                                               or p > largest_prime}
+    stubborn_set = {
+        p
+        for p in output_thus_far
+        if p < fi2_this_d['smallest_good_formal_immersion_prime'] or p in
+        fi2_this_d['sporadic_bad_formal_immersion_primes'] or p > largest_prime
+    }
 
     candidate_set = output_thus_far - stubborn_set
     if not candidate_set:
-        logging.debug("No candidate primes eligible for formal immersion at 2 filtering")
+        logging.debug(
+            "No candidate primes eligible for formal immersion at 2 filtering")
         return output_thus_far
 
     prime_divs_at_2 = running_prime_dict_2.prime_divisors()
@@ -443,7 +453,9 @@ def apply_formal_immersion_at_2(output_thus_far, running_prime_dict_2, Kdeg):
         else:
             failed_candidates.add(p)
 
-    logging.debug("Type one primes removed via formal immersion at 2 filtering: {}".format(failed_candidates))
+    logging.debug(
+        "Type one primes removed via formal immersion at 2 filtering: {}".
+        format(failed_candidates))
 
     return output
 
@@ -459,10 +471,10 @@ def get_N(frob_poly, residue_field_card, exponent):
     if len(roots_of_frob) == 1:
         assert roots_of_frob[0][1] == 2
         beta = roots_of_frob[0][0]
-        return 1 + residue_field_card ** exponent - 2 * beta ** exponent
+        return 1 + residue_field_card**exponent - 2 * beta**exponent
     else:
-        beta, beta_bar = [r for r,e in roots_of_frob]
-        return 1 + residue_field_card ** exponent - beta ** exponent - beta_bar ** exponent
+        beta, beta_bar = [r for r, e in roots_of_frob]
+        return 1 + residue_field_card**exponent - beta**exponent - beta_bar**exponent
 
 
 def get_type_1_primes(K, C_K, norm_bound=50, loop_curves=False):
@@ -473,32 +485,39 @@ def get_type_1_primes(K, C_K, norm_bound=50, loop_curves=False):
     # Get bad formal immersion data
 
     if not BAD_FORMAL_IMMERSION_DATA_PATH.is_file():
-        logging.debug("No bad formal immersion data found. Computing and adding ...")
-        bad_formal_immersion_list, bad_aux_prime_dict = get_bad_formal_immersion_data(K.degree())
-        data_for_json_export = {int(K.degree()) : {
-                                                "bad_formal_immersion_list" : bad_formal_immersion_list,
-                                                "bad_aux_prime_dict" : bad_aux_prime_dict
-                                             }
+        logging.debug(
+            "No bad formal immersion data found. Computing and adding ...")
+        bad_formal_immersion_list, bad_aux_prime_dict = get_bad_formal_immersion_data(
+            K.degree())
+        data_for_json_export = {
+            int(K.degree()): {
+                "bad_formal_immersion_list": bad_formal_immersion_list,
+                "bad_aux_prime_dict": bad_aux_prime_dict
+            }
         }
         with open(BAD_FORMAL_IMMERSION_DATA_PATH, 'w') as fp:
             json.dump(data_for_json_export, fp, indent=4)
         logging.debug("Data added")
     else:
-        logging.debug("Bad formal immersion data found. Reading to see if it has our data ...")
+        logging.debug(
+            "Bad formal immersion data found. Reading to see if it has our data ..."
+        )
         with open(BAD_FORMAL_IMMERSION_DATA_PATH, 'r') as bfi_dat_file:
             bfi_dat = json.load(bfi_dat_file)
 
         if str(K.degree()) in bfi_dat:
             logging.debug("Reading pre-existing data ...")
-            bad_formal_immersion_list = bfi_dat[str(K.degree())]['bad_formal_immersion_list']
+            bad_formal_immersion_list = bfi_dat[str(
+                K.degree())]['bad_formal_immersion_list']
             bad_aux_prime_dict = bfi_dat[str(K.degree())]['bad_aux_prime_dict']
         else:
             logging.debug("Data not found. Computing new record ...")
-            bad_formal_immersion_list, bad_aux_prime_dict = get_bad_formal_immersion_data(K.degree())
+            bad_formal_immersion_list, bad_aux_prime_dict = get_bad_formal_immersion_data(
+                K.degree())
             bfi_dat[str(K.degree())] = {
-                                        "bad_formal_immersion_list" : bad_formal_immersion_list,
-                                        "bad_aux_prime_dict" : bad_aux_prime_dict
-                                       }
+                "bad_formal_immersion_list": bad_formal_immersion_list,
+                "bad_aux_prime_dict": bad_aux_prime_dict
+            }
             with open(BAD_FORMAL_IMMERSION_DATA_PATH, 'w') as fp:
                 json.dump(bfi_dat, fp, indent=4)
 
@@ -534,11 +553,12 @@ def get_type_1_primes(K, C_K, norm_bound=50, loop_curves=False):
 
     output = gcd(list(running_prime_dict.values()))
     output = set(output.prime_divisors())
-    output = apply_formal_immersion_at_2(output, running_prime_dict_2, K.degree())
+    output = apply_formal_immersion_at_2(output, running_prime_dict_2,
+                                         K.degree())
     output = output.union(set(bad_formal_immersion_list))
     Delta_K = K.discriminant().abs()
     output = output.union(set(Delta_K.prime_divisors()))
-    third_set = [1+d for d in (12*h_K).divisors()]  # p : (p-1)|12h_K
+    third_set = [1 + d for d in (12 * h_K).divisors()]  # p : (p-1)|12h_K
     output = output.union(set([p for p in third_set if p.is_prime()]))
     output = list(output)
     output.sort()
@@ -557,7 +577,7 @@ def eps_exp(x, eps, Sigma):
 
 
 def gal_act_eps(eps, sigma):
-    return tuple(eps[i-1] for i in sigma)
+    return tuple(eps[i - 1] for i in sigma)
 
 
 def get_eps_type(eps):
@@ -566,10 +586,10 @@ def get_eps_type(eps):
     """
 
     if 6 in eps:
-        if any(t in eps for t in [4,8]):
+        if any(t in eps for t in [4, 8]):
             return 'mixed'
         return 'sextic'
-    elif any(t in eps for t in [4,8]):
+    elif any(t in eps for t in [4, 8]):
         if len(set(eps)) == 1:
             # means it's all 4s or all 8s
             return 'quartic-diagonal'
@@ -594,7 +614,9 @@ def get_redundant_epsilons(eps, galois_group=None):
 
     if galois_group:
         d = galois_group.order()
-        G_action = galois_group.as_finitely_presented_group().as_permutation_group().orbit(tuple(range(1,d+1)), action="OnTuples")
+        G_action = galois_group.as_finitely_presented_group(
+        ).as_permutation_group().orbit(tuple(range(1, d + 1)),
+                                       action="OnTuples")
 
         redundant_epsilons = set()
 
@@ -615,14 +637,16 @@ def remove_redundant_epsilons(epsilons, galois_group=None):
 
     while epsilons:
         an_eps = epsilons.pop()
-        eps_orbit = get_redundant_epsilons(an_eps, galois_group=galois_group)  # dual (and possibly Galois) orbit
+        eps_orbit = get_redundant_epsilons(
+            an_eps,
+            galois_group=galois_group)  # dual (and possibly Galois) orbit
         epsilons_output.add(an_eps)
         epsilons.difference_update(eps_orbit)
 
     return epsilons_output
 
 
-def get_pre_type_one_two_epsilons(d, galgp=None):
+def get_pre_type_one_two_epsilons(d, galgp=None, heavy_filter=False):
     """This method computes the epsilon group ring characters of Lemma 1 and
     Remark 1 of Momose. The three epsilons of type 1 and 2 are excluded.
 
@@ -636,15 +660,21 @@ def get_pre_type_one_two_epsilons(d, galgp=None):
 
     epsilons_dict = {}
 
-    epsilons_keys = set(product([0,4,6,8,12], repeat=d))
+    epsilons_keys = set(product([0, 4, 6, 8, 12], repeat=d))
 
-    epsilons_keys -= {(0,)*d, (6,)*d, (12,)*d}  # remove types 1 and 2 epsilons
+    epsilons_keys -= {(0, ) * d, (6, ) * d,
+                      (12, ) * d}  # remove types 1 and 2 epsilons
 
     logging.debug("epsilons before filtering: {}".format(len(epsilons_keys)))
 
-    epsilons_keys = remove_redundant_epsilons(epsilons_keys, galois_group=galgp)
-
-    logging.debug("epsilons after filtering: {}".format(len(epsilons_keys)))
+    if not heavy_filter:
+        epsilons_keys = remove_redundant_epsilons(epsilons_keys,
+                                                  galois_group=galgp)
+        logging.debug("epsilons after filtering: {}".format(
+            len(epsilons_keys)))
+    else:
+        logging.debug(
+            "Heavy filtering is on, so no epsilon filtering for now.")
 
     epsilons_dict = {eps: get_eps_type(eps) for eps in epsilons_keys}
 
@@ -657,7 +687,9 @@ def contains_imaginary_quadratic_field(K):
 
     quadratic_subfields = K.subfields(2)
 
-    imag_quad_subfields = [L for L,_,_ in quadratic_subfields if L.is_totally_imaginary()]
+    imag_quad_subfields = [
+        L for L, _, _ in quadratic_subfields if L.is_totally_imaginary()
+    ]
 
     contains_hilbert_class_field_of_imag_quad = False
 
@@ -669,7 +701,8 @@ def contains_imaginary_quadratic_field(K):
                 contains_hilbert_class_field_of_imag_quad = True
                 break
 
-    return (bool(imag_quad_subfields), contains_hilbert_class_field_of_imag_quad)
+    return (bool(imag_quad_subfields),
+            contains_hilbert_class_field_of_imag_quad)
 
 
 def get_compositum(nf_list, maps=False):
@@ -719,7 +752,7 @@ def filter_ABC_primes(K, prime_list, eps_type):
         output_list = []
 
         for p in prime_list:
-            if p%3 == 2:
+            if p % 3 == 2:
                 if not K.ideal(p).is_prime():
                     output_list.append(p)
         return output_list
@@ -729,7 +762,7 @@ def filter_ABC_primes(K, prime_list, eps_type):
         output_list = []
 
         for p in prime_list:
-            if p%3 == 2:
+            if p % 3 == 2:
                 output_list.append(p)
         return output_list
 
@@ -738,7 +771,7 @@ def filter_ABC_primes(K, prime_list, eps_type):
         output_list = []
 
         for p in prime_list:
-            if p%4 == 3:
+            if p % 4 == 3:
                 if not K.ideal(p).is_prime():
                     output_list.append(p)
         return output_list
@@ -748,7 +781,7 @@ def filter_ABC_primes(K, prime_list, eps_type):
         output_list = []
 
         for p in prime_list:
-            if p%12 == 1:
+            if p % 12 == 1:
                 if not K.ideal(p).is_prime():
                     output_list.append(p)
         return output_list
@@ -764,7 +797,9 @@ def get_aux_primes(K, norm_bound, C_K, h_K, contains_imaginary_quadratic):
     completely_split_rat_primes = K.completely_split_primes(B=500)
     if contains_imaginary_quadratic:
 
-        good_primes = [p for p in completely_split_rat_primes if gcd(p,6*h_K) == 1]
+        good_primes = [
+            p for p in completely_split_rat_primes if gcd(p, 6 * h_K) == 1
+        ]
         list_of_gens = list(C_K.gens())
         i = 0
         while list_of_gens and (i < len(good_primes)):
@@ -776,13 +811,15 @@ def get_aux_primes(K, norm_bound, C_K, h_K, contains_imaginary_quadratic):
                 if emergency_gen in list_of_gens:
                     if a_good_prime > norm_bound:
                         aux_primes.append(candidate)
-                        logging.debug("Emergency aux prime added: {}".format(candidate))
+                        logging.debug(
+                            "Emergency aux prime added: {}".format(candidate))
                     list_of_gens.remove(emergency_gen)
             i += 1
 
         if list_of_gens:
-            raise RuntimeError("We have been unable to add enough emergency "
-                            "auxiliary primes. Try increasing the `B` parameter above.")
+            raise RuntimeError(
+                "We have been unable to add enough emergency "
+                "auxiliary primes. Try increasing the `B` parameter above.")
     else:
         a_good_prime = completely_split_rat_primes[0]
         candidate = K.primes_above(a_good_prime)[0]
@@ -793,80 +830,294 @@ def get_aux_primes(K, norm_bound, C_K, h_K, contains_imaginary_quadratic):
     return aux_primes
 
 
-def get_AB_integers(embeddings,frak_q,epsilons,q_class_group_order):
+def filter_possible_values(possible_values_list, fq, prime_field):
+
+    output = []
+
+    for c in possible_values_list:
+        if c**2 == prime_field(1):
+            output.append(c)
+        elif c**2 == prime_field(fq.norm()):
+            output.append(c)
+        else:
+            fq_char = ZZ(fq.norm()).prime_divisors()[0]
+            possible_mid_coeffs = lifts_in_range(
+                2 * sqrt(fq.norm()), c + prime_field(fq.norm()) / c)
+            possible_weil_polys = [
+                x**2 + a * x + fq.norm() for a in possible_mid_coeffs
+            ]
+            # as sanity check, ensure these are Weil polys
+            possible_weil_polys = [f for f in possible_weil_polys if
+                                   f.is_weil_polynomial()]
+
+            elliptic_weil_polys = [
+                f for f in possible_weil_polys if weil_polynomial_is_elliptic(
+                    f, fq_char, fq.residue_class_degree())
+            ]
+            if elliptic_weil_polys:
+                output.append(c)
+    return output
+
+
+def get_possible_vals_at_gens(gens_info, eps, embeddings, residue_field,
+                              prime_field):
+
+    output = {}
+    # frak_p0 = K.primes_above(p)[0]  # choice of p_0
+    # residue_field = frak_p0.residue_field(names='z')
+    # prime_field = GF(p)
+
+    for class_gp_gen in gens_info:
+        class_gp_order, alpha = gens_info[class_gp_gen]
+        alpha_to_eps = eps_exp(alpha, eps, embeddings)
+        alpha_to_eps_mod_p0 = residue_field(alpha_to_eps)
+        logging.debug(f"alpha^eps mod p0: {alpha_to_eps_mod_p0}")
+        try:
+            c_power_12h = prime_field(alpha_to_eps_mod_p0)
+        except TypeError as err:
+            # means alpha_to_eps_mod_p0 is not in GF(p) so can ignore p and move on
+            return {}
+        possible_values = c_power_12h.nth_root(12 * class_gp_order, all=True)
+        filtered_values = filter_possible_values(possible_values, class_gp_gen,
+                                                 prime_field)
+        output[class_gp_gen] = list(set([x**12 for x in filtered_values]))
+
+    return output
+
+
+def tuple_exp(tup, exp_tup):
+    return tuple((t**e for t, e in zip(tup, exp_tup)))
+
+
+def lifts_in_range(N, res_class):
+
+    output = []
+    p = res_class.modulus()
+    centered_lift = res_class.lift_centered()
+
+    low_run = centered_lift
+
+    while low_run >= -N:
+        output.append(low_run)
+        low_run = low_run - p
+
+    high_run = centered_lift
+
+    while high_run <= N:
+        output.append(high_run)
+        high_run = high_run + p
+
+    return [a for a in list(set(output)) if a.abs() <= N]
+
+
+def get_prime_gens(C_K, my_gens):
+
+    output = []
+    it = C_K.number_field().primes_of_bounded_norm_iter(800)
+
+    if not my_gens:
+        # means C_K is trivial, so any prime ideal will do
+        candidate = next(it)
+        output.append(candidate)
+
+    for a_class in my_gens:
+        candidate = next(it)
+        candidate_class = C_K(candidate)
+        while not candidate_class == a_class:
+            candidate = next(it)
+            candidate_class = C_K(candidate)
+        output.append(candidate)
+
+    # while my_gens:
+    #     candidate = next(it)
+    #     candidate_class = C_K(candidate)
+    #     if candidate_class in my_gens:
+    #         output.append(candidate)
+    #         my_gens.remove(candidate_class)
+
+    return output
+
+
+def final_filter(C_K, Kgal, aux_primes, my_gens_ideals, gens_info, p, eps,
+                 embeddings):
+    """The possible isogeny prime p is assumed coprime to the prime ideals in my_gens_ideals
+    at this point."""
+    frak_p0 = Kgal.primes_above(p)[0]  # choice of p_0
+    residue_field = frak_p0.residue_field(names='z')
+    prime_field = GF(p)
+
+    logging.debug(f"Starting final filter for Prime {p} for eps {eps}")
+
+    # Step 1
+    possible_vals_at_gens = get_possible_vals_at_gens(gens_info, eps,
+                                                      embeddings,
+                                                      residue_field,
+                                                      prime_field)
+
+    if (not possible_vals_at_gens) or (not all(
+            possible_vals_at_gens.values())):
+        logging.debug(
+            f"Prime {p} for eps {eps} filtered in Step 1 of Heavy filter")
+        logging.debug(f"Possible vals at gens: {possible_vals_at_gens}")
+        return False
+
+    # Step 2
+
+    # a list of tuples
+    possible_vals_cart_prod = list(
+        product(*[possible_vals_at_gens[q] for q in my_gens_ideals]))
+
+    # Step 3
+
+    # The idea is that we try to filter out each tuple in
+    # possible_vals_cart_prod using aux primes; the paper explains how
+    # these can be considered as refined epsilon types.
+
+    still_in_the_game = possible_vals_cart_prod.copy()
+    for q in aux_primes:
+        if q.is_coprime(p):
+            exponents_in_class_group = C_K(q).exponents()
+
+            # Check that these exponents correspond to the ideals in
+            # my_gens_ideals in the correct order
+            sanity_check = prod([
+                Q**a
+                for Q, a in zip(my_gens_ideals, exponents_in_class_group)
+            ])
+            assert C_K(sanity_check) == C_K(q)
+
+            the_principal_ideal = q * prod([
+                Q**(-a)
+                for Q, a in zip(my_gens_ideals, exponents_in_class_group)
+            ])
+            alphas = the_principal_ideal.gens_reduced()
+            assert len(alphas) == 1, "the principal ideal isn't principal!!!"
+            alpha = alphas[0]
+            alpha_to_eps = eps_exp(alpha, eps, embeddings)
+            alpha_to_eps_mod_p0 = residue_field(alpha_to_eps)
+            try:
+                thingy = prime_field(alpha_to_eps_mod_p0)
+            except TypeError as err:
+                # means alpha_to_eps_mod_p0 is not in GF(p) so can ignore and move on
+                logging.debug(f"Prime {p} for eps {eps} filtered in Step 3a of Heavy filter")
+                logging.debug(f"{repr(err)}")
+                return False
+            new_still_in_the_game = []
+            for possible_val in still_in_the_game:
+                possible_val_with_raised_exp = tuple_exp(possible_val, exponents_in_class_group)
+                my_possible_val = [thingy * prod(possible_val_with_raised_exp)]
+
+                filtered_values = filter_possible_values(my_possible_val, q,
+                                                        prime_field)
+                if filtered_values:
+                    new_still_in_the_game.append(possible_val)
+            still_in_the_game = new_still_in_the_game
+            if not still_in_the_game:
+                logging.debug(f"Prime {p} for eps {eps} filtered in Step 3b of Heavy filter")
+                return False
+
+    logging.debug(f"Prime {p} for eps {eps} survived Heavy filter")
+    # If not returned False by now, then no obstruction to p being an isogeny prime
+    return True
+
+
+def get_AB_integers(embeddings, frak_q, epsilons, q_class_group_order):
 
     output_dict_AB = {}
-    alphas = (frak_q ** q_class_group_order).gens_reduced()
-    assert len(alphas) == 1, "q^q_class_group_order not principal, which is very bad"
+    alphas = (frak_q**q_class_group_order).gens_reduced()
+    assert len(
+        alphas) == 1, "q^q_class_group_order not principal, which is very bad"
     alpha = alphas[0]
     nm_q = ZZ(frak_q.norm())
     for eps in epsilons:
-        alpha_to_eps = eps_exp(alpha,eps, embeddings)
+        alpha_to_eps = eps_exp(alpha, eps, embeddings)
         A = (alpha_to_eps - 1).norm()
-        B = (alpha_to_eps - (nm_q ** (12 * q_class_group_order))).norm()
-        output_dict_AB[eps] = lcm(A,B)
+        B = (alpha_to_eps - (nm_q**(12 * q_class_group_order))).norm()
+        output_dict_AB[eps] = lcm(A, B)
     return output_dict_AB
 
 
-def get_C_integers(K, embeddings, frak_q, epsilons, q_class_group_order, frob_polys_to_loop):
+def get_C_integers(K, embeddings, frak_q, epsilons, q_class_group_order,
+                   frob_polys_to_loop):
 
     # Initialise output dict to empty sets
     output_dict_C = {}
     for eps in epsilons:
         output_dict_C[eps] = 1
 
-    alphas = (frak_q ** q_class_group_order).gens_reduced()
-    assert len(alphas) == 1, "q^q_class_group_order not principal, which is very bad"
+    alphas = (frak_q**q_class_group_order).gens_reduced()
+    assert len(
+        alphas) == 1, "q^q_class_group_order not principal, which is very bad"
     alpha = alphas[0]
 
     for frob_poly in frob_polys_to_loop:
         if frob_poly.is_irreducible():
             frob_poly_root_field = frob_poly.root_field('a')
         else:
-            frob_poly_root_field = NumberField(R.gen(),'a')
-        _, K_into_KL, L_into_KL, _ = K.composite_fields(frob_poly_root_field, 'c', both_maps=True)[0]
+            frob_poly_root_field = NumberField(R.gen(), 'a')
+        _, K_into_KL, L_into_KL, _ = K.composite_fields(frob_poly_root_field,
+                                                        'c',
+                                                        both_maps=True)[0]
         roots_of_frob = frob_poly.roots(frob_poly_root_field)
-        betas = [r for r,e in roots_of_frob]
+        betas = [r for r, e in roots_of_frob]
 
         for beta in betas:
             for eps in epsilons:
                 # print('.', end='', flush=True)
-                N = (K_into_KL(eps_exp(alpha, eps, embeddings)) - L_into_KL(beta ** (12*q_class_group_order))).absolute_norm()
+                N = (K_into_KL(eps_exp(alpha, eps, embeddings)) - L_into_KL(
+                    beta**(12 * q_class_group_order))).absolute_norm()
                 N = ZZ(N)
                 output_dict_C[eps] = lcm(output_dict_C[eps], N)
     return output_dict_C
 
 
-def get_relevant_beta_mats(aux_primes, relevant_aux_prime_positions, frob_polys_dict):
+def get_relevant_beta_mats(aux_primes, relevant_aux_prime_positions,
+                           frob_polys_dict):
 
     output_dict = {}
     for i in relevant_aux_prime_positions:
-        do_stuff = [matrix.companion(a_frob_pol)**12 for a_frob_pol in frob_polys_dict[aux_primes[i]]]
+        do_stuff = [
+            matrix.companion(a_frob_pol)**12
+            for a_frob_pol in frob_polys_dict[aux_primes[i]]
+        ]
         output_dict[aux_primes[i]] = do_stuff
 
     return output_dict
 
 
-def get_PIL_integers(aux_primes, frob_polys_dict, Kgal, epsilons, embeddings, C_K):
+def get_PIL_integers(aux_primes, frob_polys_dict, Kgal, epsilons, embeddings,
+                     C_K):
 
     Lambda = principal_ideal_lattice(aux_primes, C_K)
     Lambda_basis = Lambda.basis()
     logging.debug("Lambda basis = {}".format(Lambda_basis))
-    good_basis_elements = [v for v in Lambda_basis if len(v.nonzero_positions()) > 1]
-    relevant_aux_prime_positions = {k for v in good_basis_elements for k in v.nonzero_positions()}
-    relevant_beta_mats = get_relevant_beta_mats(aux_primes, relevant_aux_prime_positions, frob_polys_dict)
+    good_basis_elements = [
+        v for v in Lambda_basis if len(v.nonzero_positions()) > 1
+    ]
+    relevant_aux_prime_positions = {
+        k
+        for v in good_basis_elements for k in v.nonzero_positions()
+    }
+    relevant_beta_mats = get_relevant_beta_mats(aux_primes,
+                                                relevant_aux_prime_positions,
+                                                frob_polys_dict)
 
     alphas_dict = {}
     collapsed_beta_mats = {}
     for v in good_basis_elements:
         the_nonzero_positions = v.nonzero_positions()
-        alphas = prod([aux_primes[i]**v[i] for i in the_nonzero_positions]).gens_reduced()
+        alphas = prod([aux_primes[i]**v[i]
+                       for i in the_nonzero_positions]).gens_reduced()
         assert len(alphas) == 1, "uh oh"
         alphas_dict[v] = alphas[0]
-        list_list_mats = [relevant_beta_mats[aux_primes[i]] for i in the_nonzero_positions]
+        list_list_mats = [
+            relevant_beta_mats[aux_primes[i]] for i in the_nonzero_positions
+        ]
         beta_mat_tuples = list(product(*list_list_mats))
         # import pdb; pdb.set_trace()
-        collapsed_beta_mats[v] = [collapse_tuple(a_beta_tuple) for a_beta_tuple in beta_mat_tuples]
+        collapsed_beta_mats[v] = [
+            collapse_tuple(a_beta_tuple) for a_beta_tuple in beta_mat_tuples
+        ]
     logging.debug("Made the alphas and beta_mat_tuples")
 
     output_dict = {}
@@ -877,13 +1128,18 @@ def get_PIL_integers(aux_primes, frob_polys_dict, Kgal, epsilons, embeddings, C_
         for v in good_basis_elements:
             running_lcm = 1
             for a_beta_mat in collapsed_beta_mats[v]:
-                alpha_to_eps_mat = eps_exp(alphas_dict[v], eps, embeddings).matrix()
-                pil_mat = alpha_to_eps_mat.tensor_product(a_beta_mat.parent()(1)) - (alpha_to_eps_mat.parent()(1)).tensor_product(a_beta_mat)
+                alpha_to_eps_mat = eps_exp(alphas_dict[v], eps,
+                                           embeddings).matrix()
+                pil_mat = alpha_to_eps_mat.tensor_product(
+                    a_beta_mat.parent()(1)) - (alpha_to_eps_mat.parent()
+                                               (1)).tensor_product(a_beta_mat)
                 pil_int = pil_mat.det()
                 running_lcm = lcm(pil_int, running_lcm)
             running_gcd = gcd(running_lcm, running_gcd)
         output_dict[eps] = running_gcd
-        logging.debug("Successfully computed PIL int for {} epsilons. {} to go".format(i,how_many_eps - i))
+        logging.debug(
+            "Successfully computed PIL int for {} epsilons. {} to go".format(
+                i, how_many_eps - i))
         i += 1
     return output_dict
 
@@ -892,7 +1148,11 @@ def get_U_integers(K, epsilons, embeddings):
     """Get divisibilities from the units"""
 
     unit_gens = K.unit_group().gens_values()
-    return {eps : gcd([ (eps_exp(u, eps, embeddings) - 1).absolute_norm() for u in unit_gens]) for eps in epsilons}
+    return {
+        eps: gcd([(eps_exp(u, eps, embeddings) - 1).absolute_norm()
+                  for u in unit_gens])
+        for eps in epsilons
+    }
 
 
 def as_ZZ_module(G, debug=False):
@@ -913,12 +1173,12 @@ def as_ZZ_module(G, debug=False):
     invs = list(reversed(G.elementary_divisors()))
     if debug:
         assert G.ngens() == len(invs)
-        print(invs,[g.order() for g in G.gens()])
-        for g,inv in zip(G.gens(),invs):
-            assert g.order()==inv
+        print(invs, [g.order() for g in G.gens()])
+        for g, inv in zip(G.gens(), invs):
+            assert g.order() == inv
     ZZn = ZZ**len(invs)
-    H = ZZn.submodule(ZZn.gen(i)*invs[i] for i in range(len(invs)))
-    return ZZn/H, ZZn, H
+    H = ZZn.submodule(ZZn.gen(i) * invs[i] for i in range(len(invs)))
+    return ZZn / H, ZZn, H
 
 
 def principal_ideal_lattice(aux_primes, class_group, debug=False):
@@ -933,42 +1193,58 @@ def principal_ideal_lattice(aux_primes, class_group, debug=False):
     ZZt = ZZ**len(aux_primes)
     if debug:
         for q in aux_primes:
-            assert prod(g^i for g,i in zip(class_group.gens(),class_group(q).exponents())) == class_group(q)
-    phi = ZZt.hom(im_gens=[C_num(class_group(q).exponents()) for q in aux_primes],codomain=C_num)
+            assert prod(
+                g ^ i
+                for g, i in zip(class_group.gens(),
+                                class_group(q).exponents())) == class_group(q)
+    phi = ZZt.hom(
+        im_gens=[C_num(class_group(q).exponents()) for q in aux_primes],
+        codomain=C_num)
     return phi.inverse_image(C_den)
 
 
-def get_pre_type_one_two_primes(K, norm_bound=50, loop_curves=False, use_PIL=False):
+def get_pre_type_one_two_primes(K,
+                                norm_bound=50,
+                                loop_curves=False,
+                                use_PIL=False,
+                                heavy_filter=False):
     """Pre type 1-2 primes are the finitely many primes outside of which
     the isogeny character is necessarily of type 2 (or 3, which is not relevant
     for us)."""
 
-    contains_imaginary_quadratic, contains_hilbert_class_field = contains_imaginary_quadratic_field(K)
+    contains_imaginary_quadratic, contains_hilbert_class_field = contains_imaginary_quadratic_field(
+        K)
 
     if contains_hilbert_class_field:
-        raise ValueError("The number field you entered contains the Hilbert "
-                        "Class field of an imaginary quadratic field. The set "
-                        "of isogeny primes in this case is therefore infinite.")
+        raise ValueError(
+            "The number field you entered contains the Hilbert "
+            "Class field of an imaginary quadratic field. The set "
+            "of isogeny primes in this case is therefore infinite.")
 
     # Set up important objects to be used throughout
 
     Kgal = K.galois_closure('b')
     C_K = K.class_group()
     h_K = C_K.order()
-    aux_primes = get_aux_primes(K, norm_bound, C_K, h_K, contains_imaginary_quadratic)
+    aux_primes = get_aux_primes(K, norm_bound, C_K, h_K,
+                                contains_imaginary_quadratic)
     embeddings = K.embeddings(Kgal)
 
     # Generate the epsilons
 
     if K.is_galois():
         G_K = K.galois_group()
-        epsilons = get_pre_type_one_two_epsilons(K.degree(), galgp=G_K)
+        epsilons = get_pre_type_one_two_epsilons(K.degree(),
+                                                 galgp=G_K,
+                                                 heavy_filter=heavy_filter)
     else:
-        epsilons = get_pre_type_one_two_epsilons(K.degree())
+        epsilons = get_pre_type_one_two_epsilons(K.degree(),
+                                                 heavy_filter=heavy_filter)
 
     # Now start with the divisibilities. Do the unit computation first
 
     divs_from_units = get_U_integers(K, epsilons, embeddings)
+    logging.debug("Computed divisibilities from units")
 
     # Next do the computation of A,B and C integers
 
@@ -981,16 +1257,23 @@ def get_pre_type_one_two_primes(K, norm_bound=50, loop_curves=False, use_PIL=Fal
         if loop_curves:
             frob_polys_to_loop = get_weil_polys(residue_field)
         else:
-            frob_polys_to_loop = R.weil_polynomials(2, residue_field.cardinality())
+            frob_polys_to_loop = R.weil_polynomials(
+                2, residue_field.cardinality())
         frob_polys_dict[q] = frob_polys_to_loop
         # these will be dicts with keys the epsilons, values sets of primes
-        AB_integers_dict = get_AB_integers(embeddings,q,epsilons, q_class_group_order)
-        C_integers_dict = get_C_integers(Kgal,embeddings, q, epsilons, q_class_group_order, frob_polys_to_loop)
+        AB_integers_dict = get_AB_integers(embeddings, q, epsilons,
+                                           q_class_group_order)
+        C_integers_dict = get_C_integers(Kgal, embeddings, q, epsilons,
+                                         q_class_group_order,
+                                         frob_polys_to_loop)
         unified_dict = {}
         q_norm = Integer(q.norm())
         for eps in epsilons:
-            unified_dict[eps] = gcd(lcm([q_norm, AB_integers_dict[eps], C_integers_dict[eps]]),divs_from_units[eps])
+            unified_dict[eps] = gcd(
+                lcm([q_norm, AB_integers_dict[eps], C_integers_dict[eps]]),
+                divs_from_units[eps])
         tracking_dict[q] = unified_dict
+    logging.debug("Computed tracking dict")
 
     # Take gcds across all aux primes to get one integer for each epsilon
 
@@ -1000,34 +1283,90 @@ def get_pre_type_one_two_primes(K, norm_bound=50, loop_curves=False, use_PIL=Fal
         for q in aux_primes:
             q_dict[q] = tracking_dict[q][eps]
         q_dict_collapsed = gcd(list(q_dict.values()))
-        tracking_dict_inv_collapsed[eps] = q_dict_collapsed
+        tracking_dict_inv_collapsed[eps] = ZZ(q_dict_collapsed)
 
     # Optionally use the principal ideal lattice for further filtering
 
     if use_PIL and h_K > 1:
         logging.debug("Using PIL")
-        PIL_integers_dict = get_PIL_integers(aux_primes, frob_polys_dict, Kgal, epsilons, embeddings,C_K)
+        PIL_integers_dict = get_PIL_integers(aux_primes, frob_polys_dict, Kgal,
+                                             epsilons, embeddings, C_K)
         for eps in epsilons:
-            tracking_dict_inv_collapsed[eps] = gcd(tracking_dict_inv_collapsed[eps], PIL_integers_dict[eps])
+            tracking_dict_inv_collapsed[eps] = ZZ(
+                gcd(tracking_dict_inv_collapsed[eps], PIL_integers_dict[eps]))
 
     # Split according to epsilon type, get prime divisors, and filter
 
-    final_split_dict = {}
-    for eps_type in set(epsilons.values()):
-        eps_type_tracking_dict_inv = {eps:ZZ(tracking_dict_inv_collapsed[eps]) for eps in epsilons if epsilons[eps] == eps_type}
-        eps_type_output = lcm(list(eps_type_tracking_dict_inv.values()))
-        if eps_type_output.is_perfect_power():
-            eps_type_output = eps_type_output.perfect_power()[0]
-        eps_type_output = eps_type_output.prime_divisors()
-        eps_type_output = filter_ABC_primes(Kgal, eps_type_output, eps_type)
-        final_split_dict[eps_type] = set(eps_type_output)
+    if heavy_filter:
+        logging.debug("Using Heavy filtering")
+        my_gens = list(C_K.gens(
+        ))  # done here to fix these, since the order matters later
+        my_gens_ideals = get_prime_gens(C_K, my_gens)
+        gens_info = {}
+        for q in my_gens_ideals:
+            q_order = C_K(q).multiplicative_order()
+            alphas = (q**q_order).gens_reduced()
+            assert len(alphas) == 1
+            alpha = alphas[0]
+            gens_info[q] = (q_order, alpha)
+        logging.debug(f"Kgal: {Kgal}, C_K: {C_K}")
+        logging.debug(f"gen_ideals: {my_gens_ideals}, gen_info: {gens_info}")
+        eps_prime_dict = {
+            eps: tracking_dict_inv_collapsed[eps].prime_divisors()
+            for eps in epsilons
+        }
+        all_pre_type_one_two_primes = {
+            p
+            for k in eps_prime_dict for p in eps_prime_dict[k]
+        }
+        logging.debug(
+            "Pre type one two candidates before filtering: {}".format(
+                all_pre_type_one_two_primes))
+        prime_support_my_gens_ideals = list(
+            set([
+                a for P in my_gens_ideals
+                for a in ZZ(P.norm()).prime_divisors()
+            ]))
+        eps_prime_filt_dict = {}
 
-    # Take union of all primes over all epsilons, sort, and return
+        for eps in epsilons:
+            survived_primes = []
+            for p in eps_prime_dict[eps]:
+                if p in prime_support_my_gens_ideals:
+                    survived_primes.append(p)
+                elif final_filter(C_K, Kgal, aux_primes, my_gens_ideals,
+                                  gens_info, p, eps, embeddings):
+                    survived_primes.append(p)
+            eps_prime_filt_dict[eps] = set(survived_primes)
 
-    output = set.union(*(val for val in final_split_dict.values()))
-    output = list(output)
-    output.sort()
-    return output
+        output = set.union(*(val for val in eps_prime_filt_dict.values()))
+        output = list(output)
+        output.sort()
+        return output
+
+    else:
+        # Split according to epsilon type, get prime divisors, and filter
+
+        final_split_dict = {}
+        for eps_type in set(epsilons.values()):
+            eps_type_tracking_dict_inv = {
+                eps: ZZ(tracking_dict_inv_collapsed[eps])
+                for eps in epsilons if epsilons[eps] == eps_type
+            }
+            eps_type_output = lcm(list(eps_type_tracking_dict_inv.values()))
+            if eps_type_output.is_perfect_power():
+                eps_type_output = eps_type_output.perfect_power()[0]
+            eps_type_output = eps_type_output.prime_divisors()
+            eps_type_output = filter_ABC_primes(Kgal, eps_type_output,
+                                                eps_type)
+            final_split_dict[eps_type] = set(eps_type_output)
+
+        # Take union of all primes over all epsilons, sort, and return
+
+        output = set.union(*(val for val in final_split_dict.values()))
+        output = list(output)
+        output.sort()
+        return output
 
 
 ########################################################################
@@ -1048,18 +1387,19 @@ def get_type_2_uniform_bound(ecdb_type):
     elif ecdb_type == 'BS':
         # BOUND_TERM = (4*log(x) + 10)**2
         # BOUND_TERM = (3.29*log(x) + 2.96 + 4.9)**2
-        BOUND_TERM = (1.881*log(x) + 2*0.34 + 5.5)**2
+        BOUND_TERM = (1.881 * log(x) + 2 * 0.34 + 5.5)**2
     else:
         raise ValueError("argument must be LSS or BS")
 
     f = BOUND_TERM**6 + BOUND_TERM**3 + 1 - x
 
     try:
-        bound = find_root(f,1000,GENERIC_UPPER_BOUND)
+        bound = find_root(f, 1000, GENERIC_UPPER_BOUND)
         return ceil(bound)
     except RuntimeError:
-        warning_msg = ("Warning: Type 2 bound for quadratic field with "
-        "discriminant {} failed. Returning generic upper bound").format(5)
+        warning_msg = (
+            "Warning: Type 2 bound for quadratic field with "
+            "discriminant {} failed. Returning generic upper bound").format(5)
         print(warning_msg)
         return GENERIC_UPPER_BOUND
 
@@ -1080,19 +1420,20 @@ def get_type_2_bound(K):
     E = 4 * A * log(delta_K) + 2 * A * n_K * log(12) + 4 * B * n_K + C + 1
 
     x = R.gen()
-    f = x - (D*log(x) + E) ** 4
+    f = x - (D * log(x) + E)**4
 
     try:
-        bound = find_root(f,10,GENERIC_UPPER_BOUND)
+        bound = find_root(f, 10, GENERIC_UPPER_BOUND)
         return ceil(bound)
     except RuntimeError:
         warning_msg = ("Type 2 bound for quadratic field with "
-        "discriminant {} failed. Returning generic upper bound").format(delta_K)
+                       "discriminant {} failed. Returning generic upper bound"
+                       ).format(delta_K)
         logging.warning(warning_msg)
         return GENERIC_UPPER_BOUND
 
 
-def satisfies_condition_CC(K,p):
+def satisfies_condition_CC(K, p):
     """Determine whether K,p satisfies condition CC.
 
     Args:
@@ -1101,28 +1442,28 @@ def satisfies_condition_CC(K,p):
 
     Returns: boolean
     """
-    for q in prime_range(p/4):
+    for q in prime_range(p / 4):
         for frak_q in K.primes_above(q):
             f = frak_q.residue_class_degree()
-            if f%2 == 1 and q**f < p/4:
-                if (q**(2*f) + q**f + 1) % p != 0:
-                    if legendre_symbol(q,p) == 1:  # i.e. not inert
+            if f % 2 == 1 and q**f < p / 4:
+                if (q**(2 * f) + q**f + 1) % p != 0:
+                    if legendre_symbol(q, p) == 1:  # i.e. not inert
                         return False
     return True
 
 
-def satisfies_condition_CC_uniform(possible_odd_f,p):
+def satisfies_condition_CC_uniform(possible_odd_f, p):
     """Determine whether degrees,p satisfies condition CC.
     Args:
         K ([NumberField]): the number field
         p ([Prime]): the prime p
     Returns: boolean
     """
-    if p%4 == 1 or p==2:
+    if p % 4 == 1 or p == 2:
         return False
-    for q in prime_range((p/4)^(1/max(possible_odd_f)) + 1):
-        if legendre_symbol(q,p) == 1:
-            if all((q**(2*f) + q**f + 1) % p != 0 for f in possible_odd_f):
+    for q in prime_range((p / 4) ^ (1 / max(possible_odd_f)) + 1):
+        if legendre_symbol(q, p) == 1:
+            if all((q**(2 * f) + q**f + 1) % p != 0 for f in possible_odd_f):
                 return False
     return True
 
@@ -1142,7 +1483,7 @@ def get_type_2_primes(K, bound=None):
     for p in pari.primes(25, bound):
         p_int = Integer(p)
         if p_int % 4 == 3:  # Type 2 primes necessarily congruent to 3 mod 4
-            if satisfies_condition_CC(K,p_int):
+            if satisfies_condition_CC(K, p_int):
                 output.add(p_int)
 
     output = list(output)
@@ -1166,11 +1507,11 @@ def DLMV(K):
     h_K = K.class_number()
     R_K = K.regulator()
     r_K = K.unit_group().rank()
-    delta_K = log(2)/(r_K + 1)
-    C_1_K = r_K ** (r_K + 1) * delta_K**(-(r_K - 1)) / 2
+    delta_K = log(2) / (r_K + 1)
+    C_1_K = r_K**(r_K + 1) * delta_K**(-(r_K - 1)) / 2
     C_2_K = exp(24 * C_1_K * R_K)
-    CHEB_DEN_BOUND = (4*log(Delta_K**h_K) + 5*h_K + 5)**2
-    C_0 = ((CHEB_DEN_BOUND**(12*h_K))*C_2_K + CHEB_DEN_BOUND**(6*h_K))**4
+    CHEB_DEN_BOUND = (4 * log(Delta_K**h_K) + 5 * h_K + 5)**2
+    C_0 = ((CHEB_DEN_BOUND**(12 * h_K)) * C_2_K + CHEB_DEN_BOUND**(6 * h_K))**4
 
     # Now the Type 1 and 2 bounds
 
@@ -1187,7 +1528,12 @@ def DLMV(K):
 ########################################################################
 
 
-def get_isogeny_primes(K, norm_bound, bound=1000, loop_curves=True, use_PIL=False):
+def get_isogeny_primes(K,
+                       norm_bound,
+                       bound=1000,
+                       loop_curves=True,
+                       use_PIL=False,
+                       heavy_filter=False):
 
     # Start with some helpful user info
 
@@ -1196,10 +1542,12 @@ def get_isogeny_primes(K, norm_bound, bound=1000, loop_curves=True, use_PIL=Fals
 
     # Get and show PreTypeOneTwoPrimes
 
-    pre_type_one_two_primes = get_pre_type_one_two_primes(K,
-                                norm_bound=norm_bound,
-                                loop_curves=loop_curves,
-                                use_PIL=use_PIL)
+    pre_type_one_two_primes = get_pre_type_one_two_primes(
+        K,
+        norm_bound=norm_bound,
+        loop_curves=loop_curves,
+        use_PIL=use_PIL,
+        heavy_filter=heavy_filter)
 
     logging.info("pre_type_1_2_primes = {}".format(pre_type_one_two_primes))
 
@@ -1207,8 +1555,10 @@ def get_isogeny_primes(K, norm_bound, bound=1000, loop_curves=True, use_PIL=Fals
 
     C_K = K.class_group()
 
-    type_1_primes = get_type_1_primes(K, C_K, norm_bound=norm_bound,
-                                         loop_curves=loop_curves)
+    type_1_primes = get_type_1_primes(K,
+                                      C_K,
+                                      norm_bound=norm_bound,
+                                      loop_curves=loop_curves)
     logging.info("type_1_primes = {}".format(type_1_primes))
 
     # Get and show TypeTwoPrimes
@@ -1218,8 +1568,7 @@ def get_isogeny_primes(K, norm_bound, bound=1000, loop_curves=True, use_PIL=Fals
 
     # Put them all together
 
-    candidates = set.union(set(type_1_primes),
-                           set(pre_type_one_two_primes),
+    candidates = set.union(set(type_1_primes), set(pre_type_one_two_primes),
                            set(type_2_primes))
 
     # Try to remove some of these primes via Bruin-Najman and Box tables,
@@ -1250,22 +1599,28 @@ def cli_handler(args):
     K = NumberField(f, name='a')
 
     loglevel = logging.DEBUG if args.verbose else logging.INFO
-    logging.basicConfig(format='%(asctime)s %(levelname)s: %(message)s', datefmt='%H:%M:%S',
+    logging.basicConfig(format='%(asctime)s %(levelname)s: %(message)s',
+                        datefmt='%H:%M:%S',
                         level=loglevel)
     logging.debug("Debugging level for log messages set.")
 
     if args.dlmv:
         dlmv_bound = DLMV(K)
-        logging.info("DLMV bound for {} is:\n\n{}\n\nwhich is approximately {}".format(K, dlmv_bound, RR(dlmv_bound)))
+        logging.info(
+            "DLMV bound for {} is:\n\n{}\n\nwhich is approximately {}".format(
+                K, dlmv_bound, RR(dlmv_bound)))
     else:
         if args.rigorous:
             bound = None
             logging.info("Checking all Type 2 primes up to conjectural bound")
         else:
             bound = args.bound
-            logging.warning("Only checking Type 2 primes up to {}. "
-                            "To check all, use the PARI/GP script.".format(bound))
-        superset = get_isogeny_primes(K, args.norm_bound, bound, args.loop_curves, args.use_PIL)
+            logging.warning(
+                "Only checking Type 2 primes up to {}. "
+                "To check all, use the PARI/GP script.".format(bound))
+        superset = get_isogeny_primes(K, args.norm_bound, bound,
+                                      args.loop_curves, args.use_PIL,
+                                      args.heavy_filter)
 
         superset_list = list(superset)
         superset_list.sort()
@@ -1274,19 +1629,48 @@ def cli_handler(args):
         possible_new_isog_primes = superset - EC_Q_ISOGENY_PRIMES
         possible_new_isog_primes_list = list(possible_new_isog_primes)
         possible_new_isog_primes_list.sort()
-        logging.info("Possible new isogeny primes = {}".format(possible_new_isog_primes_list))
+        logging.info("Possible new isogeny primes = {}".format(
+            possible_new_isog_primes_list))
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('f', metavar='f', type=str,
-                         help='defining polynomial for the Number field')
-    parser.add_argument("--norm_bound", type=int, help="bound on norm of aux primes in PreTypeOneTwo case", default=50)
-    parser.add_argument("--loop_curves", action='store_true', help="loop over elliptic curves, don't just loop over all weil polys")
-    parser.add_argument("--dlmv", action='store_true', help="get only DLMV bound")
-    parser.add_argument("--bound", type=int, help="bound on Type 2 prime search", default=1000)
-    parser.add_argument("--rigorous", action='store_true', help="search all Type 2 primes up to conjectural bound")
-    parser.add_argument("--verbose", action='store_true', help="get more info printed")
-    parser.add_argument("--use_PIL", action='store_true', help="Use the principal ideal lattice to get the best possible result. Might take ages.")
+    parser.add_argument('f',
+                        metavar='f',
+                        type=str,
+                        help='defining polynomial for the Number field')
+    parser.add_argument(
+        "--norm_bound",
+        type=int,
+        help="bound on norm of aux primes in PreTypeOneTwo case",
+        default=50)
+    parser.add_argument(
+        "--loop_curves",
+        action='store_true',
+        help="loop over elliptic curves, don't just loop over all weil polys")
+    parser.add_argument("--dlmv",
+                        action='store_true',
+                        help="get only DLMV bound")
+    parser.add_argument("--bound",
+                        type=int,
+                        help="bound on Type 2 prime search",
+                        default=1000)
+    parser.add_argument(
+        "--rigorous",
+        action='store_true',
+        help="search all Type 2 primes up to conjectural bound")
+    parser.add_argument("--verbose",
+                        action='store_true',
+                        help="get more info printed")
+    parser.add_argument(
+        "--use_PIL",
+        action='store_true',
+        help=
+        "Use the principal ideal lattice to get the best possible result. Might take ages."
+    )
+    parser.add_argument(
+        "--heavy_filter",
+        action='store_true',
+        help="Use the heavy Better than PIL method for filtering.")
     args = parser.parse_args()
     cli_handler(args)
