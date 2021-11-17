@@ -15,7 +15,7 @@ end function;
 function eps_from_isogeny_local(phi, pp);
   p := Degree(phi);
   assert Norm(pp) mod p eq 0;
-  
+
   E := Domain(phi);
   E2 := Codomain(phi);
   j := jInvariant(E);
@@ -61,8 +61,8 @@ end function;
 function eps_from_isogeny(phi);
   /*
   The input should be an isogeny of prime degree p, over a numberfield K.
-  Currently the code only works if p is unramified in K. 
-  It might be possible to extend it to the case where p is larger then 
+  Currently the code only works if p is unramified in K.
+  It might be possible to extend it to the case where p is larger then
   its ramification index in K.
   */
   p := Degree(phi);
@@ -78,15 +78,15 @@ function eps_from_isogeny(phi);
 end function;
 
 
-/* 
-from this point on the code is just for generating isogenies and printing info about them 
+/*
+from this point on the code is just for generating isogenies and printing info about them
 */
 
 function quadratic_isogeny(t,p)
   /*
   This function generates quadratic points on the modular curve X_0(p), when p is such that this curve is (hyper) elliptic.
   It needs a rational number t as input. The quadratic point will have t as image under the (hyper) elliptic map.
-  
+
   As output it just gives the j-invariant of this quadratic point.
   */
   R<Y> := PolynomialRing(RationalField());
