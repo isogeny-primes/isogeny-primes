@@ -135,6 +135,11 @@ def contains_imaginary_quadratic_field(K):
     """Choosing auxiliary primes in the PreTypeOneTwoCase requires us to
     choose non-principal primes if K contains an imaginary quadratic field."""
 
+    K_deg_abs = K.absolute_degree()
+
+    if K_deg_abs % 2 == 1:
+        return (False, False)
+
     quadratic_subfields = K.subfields(2)
 
     imag_quad_subfields = [
@@ -147,7 +152,7 @@ def contains_imaginary_quadratic_field(K):
         HL = L.hilbert_class_field("c")
         if HL.absolute_degree().divides(K.absolute_degree()):
             K_HL_composite = K.composite_fields(HL)[0]
-            if K_HL_composite.absolute_degree() == K.absolute_degree():
+            if K_HL_composite.absolute_degree() == K_deg_abs:
                 contains_hilbert_class_field_of_imag_quad = True
                 break
 
