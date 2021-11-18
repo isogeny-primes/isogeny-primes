@@ -193,8 +193,13 @@ def filter_ABC_primes(K, prime_list, eps_type):
     """
 
     if eps_type == "quadratic":
-        # no additional restrictions
-        return prime_list
+        # prime must split or ramify in K
+        output_list = []
+
+        for p in prime_list:
+            if not K.ideal(p).is_prime():
+                output_list.append(p)
+        return output_list
 
     elif eps_type == "quartic-nondiagonal":
         # prime must split or ramify in K, and be congruent to 2 mod 3
