@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 
 from sage.all import prime_range, Integer, pari, log, ceil, find_root, legendre_symbol
 
-from sage_code.common_utils import R, x
+from sage_code.common_utils import x
 
 GENERIC_UPPER_BOUND = 10 ** 30
 
