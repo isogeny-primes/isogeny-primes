@@ -7,15 +7,25 @@
 import logging
 from itertools import product
 
-from sage.all import GF, ZZ, Integer, NumberField, gcd, lcm, matrix, prod, sqrt
+from sage.all import (
+    GF,
+    ZZ,
+    Integer,
+    NumberField,
+    gcd,
+    lcm,
+    matrix,
+    prod,
+    sqrt,
+)  # pylint: disable=no-name-in-module
 
 from .common_utils import R, get_weil_polys, weil_polynomial_is_elliptic, x
 
 logger = logging.getLogger(__name__)
 
 
-def eps_exp(x, eps, Sigma):
-    return prod([sigma(x) ** my_pow for my_pow, sigma in zip(eps, Sigma)])
+def eps_exp(alpha, eps, Sigma):
+    return prod([sigma(alpha) ** my_pow for my_pow, sigma in zip(eps, Sigma)])
 
 
 def gal_act_eps(eps, sigma):
@@ -205,7 +215,7 @@ def filter_ABC_primes(K, prime_list, eps_type):
                     output_list.append(p)
         return output_list
 
-    elif eps_type == "quartic-diagonal":
+    if eps_type == "quartic-diagonal":
         # prime must be congruent to 2 mod 3
         output_list = []
 
@@ -214,7 +224,7 @@ def filter_ABC_primes(K, prime_list, eps_type):
                 output_list.append(p)
         return output_list
 
-    elif eps_type == "sextic":
+    if eps_type == "sextic":
         # prime must split or ramify in K, and be congruent to 3 mod 4
         output_list = []
 
@@ -224,7 +234,7 @@ def filter_ABC_primes(K, prime_list, eps_type):
                     output_list.append(p)
         return output_list
 
-    elif eps_type == "mixed":
+    if eps_type == "mixed":
         # prime must split or ramify in K, and be congruent to 1 mod 12
         output_list = []
 
@@ -234,8 +244,7 @@ def filter_ABC_primes(K, prime_list, eps_type):
                     output_list.append(p)
         return output_list
 
-    else:  # should never happen
-        raise ValueError("type must be quadratic, quartic, sextic, or mixed")
+    raise ValueError("type must be quadratic, quartic, sextic, or mixed")
 
 
 def get_aux_primes(K, norm_bound, C_K, h_K, contains_imaginary_quadratic):
@@ -771,7 +780,7 @@ def get_pre_type_one_two_primes(
             )
         )
         prime_support_my_gens_ideals = list(
-            set([a for P in my_gens_ideals for a in ZZ(P.norm()).prime_divisors()])
+            {a for P in my_gens_ideals for a in ZZ(P.norm()).prime_divisors()}
         )
         eps_prime_filt_dict = {}
 

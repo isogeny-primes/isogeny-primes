@@ -31,12 +31,22 @@ import json
 from time import perf_counter
 
 import requests  # for accessing LMFDB API
-from sage.all import QQ, RR, Integer, NumberField, PolynomialRing, QuadraticField, latex
+from sage.all import (
+    QQ,
+    RR,
+    Integer,
+    NumberField,
+    PolynomialRing,
+    QuadraticField,
+    latex,
+    ZZ,
+)  # pylint: disable=no-name-in-module
 from sage.arith.misc import nth_prime
 
 from isogeny_primes import EC_Q_ISOGENY_PRIMES, get_isogeny_primes, get_type_2_bound
 
 # The URL containing the data we want. The degree will be put into this URL trunk.
+from sage_code.common_utils import CLASS_NUMBER_ONE_DISCS
 from sage_code.pre_type_one_two import contains_imaginary_quadratic_field
 from sage_code.type_one_primes import BAD_FORMAL_IMMERSION_DATA_PATH
 
@@ -106,7 +116,7 @@ def get_smallest_good_number_field(d):
 #             print(K, dat['label'])
 
 
-class Latexer(object):
+class Latexer:
     def __init__(self, degree_range):
         self.range = degree_range
 
@@ -116,7 +126,7 @@ class Latexer(object):
         output_str = r"${d}$ & ${Delta_K}$ & ${f_K}$ & {possible_isogeny_primes} & ${time_s:.2f}$\\"
         latex_output = []
         for d in range(2, self.range + 1):
-            Delta_K, f_K, K = get_smallest_good_number_field(d)
+            Delta_K, f_K, K, _ = get_smallest_good_number_field(d)
             t_start = perf_counter()
             candidates = get_isogeny_primes(
                 K, norm_bound=50, bound=2000, loop_curves=True

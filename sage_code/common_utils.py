@@ -44,11 +44,11 @@ def weil_polynomial_is_elliptic(f, q, a):
         return True
 
     if a % 2 == 0:
-        if f[1] in [-2 * q ** (a // 2), 2 * q ** (a // 2)]:
-            return True
-        if q % 3 != 1 and f[1] in [-(q ** (a // 2)), q ** (a // 2)]:
-            return True
-        if q % 4 != 1 and f[1] == 0:
+        if (
+            f[1] in [-2 * q ** (a // 2), 2 * q ** (a // 2)]
+            or (q % 3 != 1 and f[1] in [-(q ** (a // 2)), q ** (a // 2)])
+            or (q % 4 != 1 and f[1] == 0)
+        ):
             return True
     else:
         if q in [2, 3]:
@@ -62,7 +62,7 @@ def weil_polynomial_is_elliptic(f, q, a):
 
 def get_weil_polys(F):
     """
-    Returns all degree 2 weil polynomials over F that are actually comming from an elliptic curve.
+    Returns all degree 2 weil polynomials over F that are actually coming from an elliptic curve.
     """
     q = F.characteristic()
     a = F.degree()

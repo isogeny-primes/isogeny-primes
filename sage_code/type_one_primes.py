@@ -29,10 +29,10 @@ import json
 import logging
 from pathlib import Path
 
+from sage.all import Integer  # pylint: disable=no-name-in-module
 from sage.all import (
     ZZ,
     Gamma0,
-    Integer,
     Matrix,
     ModularSymbols,
     floor,
@@ -111,11 +111,11 @@ def get_M(d, M_start=None, M_stop=None, positive_char=True):
         for u in range(M):
             if gcd(u, M) != 1:
                 continue
-            R = R_du(d, u, M, columns, a_inv=True)
-            if R.rank() < d:
+            r_du = R_du(d, u, M, columns, a_inv=True)
+            if r_du.rank() < d:
                 break
-            assert R.nrows() == d
-            elt_divs = R.elementary_divisors()
+            assert r_du.nrows() == d
+            elt_divs = r_du.elementary_divisors()
             if positive_char and elt_divs[-1].prime_to_m_part(2) > 1:
                 break
             M_lcm = lcm(M_lcm, elt_divs[-1])

@@ -27,15 +27,16 @@
 
 import logging
 
+
 from sage.all import (
+    ceil,
     Integer,
-    ceil,  # pylint: disable=no-name-in-module
     find_root,
     legendre_symbol,
     log,
     pari,
     prime_range,
-)
+)  # pylint: disable=no-name-in-module
 
 from sage_code.common_utils import x
 

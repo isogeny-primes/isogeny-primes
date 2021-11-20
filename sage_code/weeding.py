@@ -44,7 +44,7 @@ from sage.all import (
     hilbert_class_polynomial,
     parent,
     prime_range,
-)
+)  # pylint: disable=no-name-in-module
 
 from .common_utils import EC_Q_ISOGENY_PRIMES, R
 

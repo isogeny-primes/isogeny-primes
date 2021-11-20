@@ -137,7 +137,7 @@ def get_isogeny_primes(
 ########################################################################
 
 
-def cli_handler(args):
+def cli_handler(args):  # pylint: disable=redefined-outer-name
 
     f = R(args.f)
 

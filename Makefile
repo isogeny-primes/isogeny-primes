@@ -68,11 +68,9 @@ vulture: venv
 lint: venv  ## Do basic linting
 	@. venv/bin/activate && ${env} pylint --extension-pkg-allow-list=sage ${pysrcdirs}
 
-
-# isort and black linting have different ideas on correctness. isort is cleaner, and most of that is kept by black.
 # should add lint at some point but still has to many failures at the moment
 .PHONY: valid
-valid: venv vulture isort fix lint test test-report
+valid: venv vulture fix test test-report
 
 
 
