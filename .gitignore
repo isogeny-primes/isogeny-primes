@@ -6,3 +6,9 @@ zagreb_explicit_isogenies.pdf
 .vscode/
 __pycache__/
 title_page.png
+
+# virtual environment
+venv
+
+# pycharm
+.idea

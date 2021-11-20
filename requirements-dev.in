@@ -1,0 +1,14 @@
+-c requirements.txt
+
+black
+pylint
+bandit
+mypy
+autoflake
+coverage
+coverage-badge
+pytest
+pytest-mock
+flake8
+pyflakes
+vulture
