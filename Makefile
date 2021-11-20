@@ -1,7 +1,7 @@
 bin = venv/bin
 env = env PATH="${bin}:$$PATH"
 sage_python = python3
-pysrcdirs = sage_code/ isogeny_primes.py latex_helper.py plot_stats.py test_quadratic_isogeny_primes.py
+pysrcdirs = sage_code/ tests/ isogeny_primes.py latex_helper.py plot_stats.py test_quadratic_isogeny_primes.py
 
 
 # make sure that the sage system sage python is in the path under python3
