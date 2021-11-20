@@ -1,8 +1,7 @@
 bin = venv/bin
 env = env PATH="${bin}:$$PATH"
 sage_python = python3
-pysrcdirs = sage_code/
-blackdirs =
+pysrcdirs = sage_code/ isogeny_primes.py latex_helper.py plot_stats.py test_quadratic_isogeny_primes.py
 
 
 # make sure that the sage system sage python is in the path under python3
@@ -40,7 +39,7 @@ test-report: venv
 .PHONY: black
 black: venv ## Check for source issues
 	# verify that all pedantic source issues are resolved.
-	@. venv/bin/activate && ${env} python3 -m black --check ${pysrcdirs} ${blackdirs}
+	@. venv/bin/activate && ${env} python3 -m black --check ${pysrcdirs}
 
 check-types: venv ## Check for type issues with mypy
 	@. venv/bin/activate && ${env} python3 -m mypy --check ${pysrcdirs}
@@ -51,10 +50,10 @@ isort: venv
 fix: venv ## Automatically fix style issues
 	# @. .venv/bin/activate && ${env} python3 -m isort ${pysrcdirs}
 
-	@. venv/bin/activate && ${env} python3 -m black ${pysrcdirs} ${blackdirs}
+	@. venv/bin/activate && ${env} python3 -m black ${pysrcdirs}
 
 	# autoflake removes unused imports and unused variables from Python code. It makes use of pyflakes to do this.
-	@. venv/bin/activate && ${env} python3 -m autoflake -ri --remove-all-unused-imports ${pysrcdirs} ${blackdirs}
+	@. venv/bin/activate && ${env} python3 -m autoflake -ri --remove-all-unused-imports ${pysrcdirs}
 	${MAKE} black
 
 vulture: venv

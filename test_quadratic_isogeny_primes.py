@@ -31,10 +31,14 @@ sage test_quadratic_isogeny_primes.py
 
 import unittest
 from sage.all import QuadraticField, Integer
-from quadratic_isogeny_primes import (get_isogeny_primes, EC_Q_ISOGENY_PRIMES,
-        CLASS_NUMBER_ONE_DISCS)
+from quadratic_isogeny_primes import (
+    get_isogeny_primes,
+    EC_Q_ISOGENY_PRIMES,
+    CLASS_NUMBER_ONE_DISCS,
+)
 
 AUX_PRIME_COUNT = 2
+
 
 class TestQuadraticIsogenyPrimes(unittest.TestCase):
 
@@ -63,14 +67,14 @@ class TestQuadraticIsogenyPrimes(unittest.TestCase):
 
     @unittest.skip("takes too long")
     def test_191(self):
-        K = QuadraticField(61*229*145757)
+        K = QuadraticField(61 * 229 * 145757)
         superset = get_isogeny_primes(K, AUX_PRIME_COUNT)
         self.assertTrue(set(superset).issuperset(EC_Q_ISOGENY_PRIMES))
         self.assertIn(191, superset)
 
     @unittest.skip("takes too long")
     def test_311(self):
-        K = QuadraticField(11*17*9011*23629)
+        K = QuadraticField(11 * 17 * 9011 * 23629)
         superset = get_isogeny_primes(K, AUX_PRIME_COUNT)
         self.assertTrue(set(superset).issuperset(EC_Q_ISOGENY_PRIMES))
         self.assertIn(311, superset)
@@ -92,7 +96,7 @@ class TestQuadraticIsogenyPrimes(unittest.TestCase):
 
         R = 10
 
-        for D in range(-R,R+1):  # -86 takes very long, otherwise -100 to 100 works
+        for D in range(-R, R + 1):  # -86 takes very long, otherwise -100 to 100 works
             if Integer(D).is_squarefree():
                 if not D in CLASS_NUMBER_ONE_DISCS:
                     if D != 1:
@@ -100,5 +104,5 @@ class TestQuadraticIsogenyPrimes(unittest.TestCase):
                         get_isogeny_primes(K, AUX_PRIME_COUNT)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main(buffer=True)
