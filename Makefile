@@ -55,7 +55,7 @@ fix: venv ## Automatically fix style issues
 
 	# autoflake removes unused imports and unused variables from Python code. It makes use of pyflakes to do this.
 	@. venv/bin/activate && ${env} python3 -m autoflake -ri --remove-all-unused-imports ${pysrcdirs} ${blackdirs}
-	${MAKE} check
+	${MAKE} black
 
 vulture: venv
 	@. venv/bin/activate && ${env} python3 -m vulture ${pysrcdirs} --min-confidence 100
