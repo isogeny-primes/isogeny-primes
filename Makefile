@@ -28,11 +28,12 @@ pip-install: requirements.txt
 pip-install-dev: pip-install requirements-dev.txt
 	. venv/bin/activate && ${env} pip install -Ur requirements-dev.txt
 
-
+.PHONY: test
 test: venv ## Run unittests
     # Runs all testcases and delivers a coverage report to your terminal
 	. venv/bin/activate && ${env} coverage run -m pytest -vv
 
+.PHONY: test-report
 test-report: venv
 	. venv/bin/activate && ${env} coverage report
 
@@ -41,12 +42,15 @@ black: venv ## Check for source issues
 	# verify that all pedantic source issues are resolved.
 	@. venv/bin/activate && ${env} python3 -m black --check ${pysrcdirs}
 
+.PHONY: check-types
 check-types: venv ## Check for type issues with mypy
 	@. venv/bin/activate && ${env} python3 -m mypy --check ${pysrcdirs}
 
+.PHONY: isort
 isort: venv
 	@. venv/bin/activate && ${env} python3 -m isort ${pysrcdirs}
 
+.PHONY: fix
 fix: venv ## Automatically fix style issues
 	# @. .venv/bin/activate && ${env} python3 -m isort ${pysrcdirs}
 
@@ -56,9 +60,11 @@ fix: venv ## Automatically fix style issues
 	@. venv/bin/activate && ${env} python3 -m autoflake -ri --remove-all-unused-imports ${pysrcdirs}
 	${MAKE} black
 
+.PHONY: vulture
 vulture: venv
 	@. venv/bin/activate && ${env} python3 -m vulture ${pysrcdirs} --min-confidence 100
 
+.PHONY: lint
 lint: venv  ## Do basic linting
 	@. venv/bin/activate && ${env} pylint ${pysrcdirs}
 
