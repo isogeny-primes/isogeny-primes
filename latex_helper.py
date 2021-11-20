@@ -27,21 +27,19 @@ minimizing typos.
 """
 
 import argparse
-from sage.all import Integer, RR, QuadraticField, PolynomialRing, QQ, NumberField, latex
-from isogeny_primes import (
-    get_isogeny_primes,
-    EC_Q_ISOGENY_PRIMES,
-    contains_imaginary_quadratic_field,
-    CLASS_NUMBER_ONE_DISCS,
-    get_type_2_bound,
-    BAD_FORMAL_IMMERSION_DATA_PATH,
-)
+import json
 from time import perf_counter
 
 import requests  # for accessing LMFDB API
-import json
+from sage.all import QQ, RR, Integer, NumberField, PolynomialRing, QuadraticField, latex
+from sage.arith.misc import nth_prime
+
+from isogeny_primes import EC_Q_ISOGENY_PRIMES, get_isogeny_primes, get_type_2_bound
 
 # The URL containing the data we want. The degree will be put into this URL trunk.
+from sage_code.pre_type_one_two import contains_imaginary_quadratic_field
+from sage_code.type_one_primes import BAD_FORMAL_IMMERSION_DATA_PATH
+
 URL_TRUNK = (
     "https://www.lmfdb.org/api/nf_fields/?_format=json&degree={}&"
     "is_galois=true&_fields=label,disc_abs,disc_sign,coeffs"

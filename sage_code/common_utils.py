@@ -25,14 +25,12 @@
 
 """
 
-from sage.all import (
-    PolynomialRing,
-    Rationals,
-)
+from sage.all import PolynomialRing, Rationals
 
 R = PolynomialRing(Rationals(), "x")
 x = R.gen()
 EC_Q_ISOGENY_PRIMES = {2, 3, 5, 7, 11, 13, 17, 19, 37, 43, 67, 163}
+CLASS_NUMBER_ONE_DISCS = {-3, -4, -7, -8, -11, -19, -43, -67, -163}
 # Global methods
 
 

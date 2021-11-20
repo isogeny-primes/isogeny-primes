@@ -28,14 +28,15 @@ sage test_quadratic_isogeny_primes.py
     ====================================================================
 
 """
+#
+# pylint: disable=no-self-use
 
 import unittest
-from sage.all import QuadraticField, Integer
-from quadratic_isogeny_primes import (
-    get_isogeny_primes,
-    EC_Q_ISOGENY_PRIMES,
-    CLASS_NUMBER_ONE_DISCS,
-)
+
+from sage.all import Integer, QuadraticField
+
+from isogeny_primes import get_isogeny_primes
+from sage_code.common_utils import CLASS_NUMBER_ONE_DISCS, EC_Q_ISOGENY_PRIMES
 
 AUX_PRIME_COUNT = 2
 

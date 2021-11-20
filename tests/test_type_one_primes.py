@@ -1,4 +1,5 @@
 import pytest
+
 from sage_code.type_one_primes import is_formall_immersion
 
 

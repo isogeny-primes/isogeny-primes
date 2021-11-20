@@ -27,11 +27,19 @@
 
 import logging
 
-logger = logging.getLogger(__name__)
-
-from sage.all import prime_range, Integer, pari, log, ceil, find_root, legendre_symbol
+from sage.all import (
+    Integer,
+    ceil,  # pylint: disable=no-name-in-module
+    find_root,
+    legendre_symbol,
+    log,
+    pari,
+    prime_range,
+)
 
 from sage_code.common_utils import x
+
+logger = logging.getLogger(__name__)
 
 GENERIC_UPPER_BOUND = 10 ** 30
 

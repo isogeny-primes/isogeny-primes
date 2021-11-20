@@ -25,27 +25,27 @@
 
 """
 
-from pathlib import Path
-import logging
 import json
+import logging
+from pathlib import Path
 
-logger = logging.getLogger(__name__)
+from sage.all import (
+    ZZ,
+    Gamma0,
+    Integer,
+    Matrix,
+    ModularSymbols,
+    floor,
+    gcd,
+    lcm,
+    oo,
+    prime_divisors,
+    prime_range,
+)
 
 from .common_utils import R, get_weil_polys
 
-from sage.all import (
-    gcd,
-    prime_range,
-    ZZ,
-    lcm,
-    Integer,
-    Matrix,
-    floor,
-    ModularSymbols,
-    Gamma0,
-    oo,
-    prime_divisors,
-)
+logger = logging.getLogger(__name__)
 
 FORMAL_IMMERSION_DATA_AT_2_PATH = Path(
     "sage_code/data_files/formal_immersion_at_2.json"
@@ -71,7 +71,7 @@ def R_du(d, u, M, columns=None, a_inv=False):
     Returns:
         [Matrix]: The Matrix of Corollary 6.8 of Derickx-Kamienny-Stein-Stoll.
     """
-    if columns == None:
+    if columns is None:
         columns = [a for a in range(M) if gcd(a, M) == 1]
         a_inv = False
     if not a_inv:
@@ -260,17 +260,15 @@ def get_N(frob_poly, residue_field_card, exponent):
     if frob_poly.is_irreducible():
         frob_poly_root_field = frob_poly.root_field("a")
     else:
-        frob_poly_root_field = IntegerRing()
+        frob_poly_root_field = ZZ
     roots_of_frob = frob_poly.roots(frob_poly_root_field)
     if len(roots_of_frob) == 1:
         assert roots_of_frob[0][1] == 2
         beta = roots_of_frob[0][0]
         return 1 + residue_field_card ** exponent - 2 * beta ** exponent
-    else:
-        beta, beta_bar = [r for r, e in roots_of_frob]
-        return (
-            1 + residue_field_card ** exponent - beta ** exponent - beta_bar ** exponent
-        )
+
+    beta, beta_bar = [r for r, e in roots_of_frob]
+    return 1 + residue_field_card ** exponent - beta ** exponent - beta_bar ** exponent
 
 
 def get_type_1_primes(K, C_K, norm_bound=50, loop_curves=False):

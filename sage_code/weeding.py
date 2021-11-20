@@ -27,28 +27,28 @@
 
 # Imports
 
+import json
 import logging
 from pathlib import Path
-import json
-
-logger = logging.getLogger(__name__)
 
 from sage.all import (
-    QuadraticField,
-    hilbert_class_polynomial,
-    NumberField,
-    euler_phi,
-    DirichletGroup,
-    CyclotomicField,
-    prime_range,
-    companion_matrix,
-    gcd,
     J0,
-    parent,
+    CyclotomicField,
+    DirichletGroup,
     ModularSymbols,
+    NumberField,
+    QuadraticField,
+    companion_matrix,
+    euler_phi,
+    gcd,
+    hilbert_class_polynomial,
+    parent,
+    prime_range,
 )
 
-from .common_utils import R, EC_Q_ISOGENY_PRIMES
+from .common_utils import EC_Q_ISOGENY_PRIMES, R
+
+logger = logging.getLogger(__name__)
 
 SMALL_GONALITIES = {2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 47, 59, 71}
 QUADRATIC_POINTS_DATA_PATH = Path(

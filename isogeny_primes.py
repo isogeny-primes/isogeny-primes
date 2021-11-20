@@ -30,14 +30,13 @@
 import argparse
 import logging
 
-from sage.all import log, exp, RR, NumberField
+from sage.all import RR, NumberField, exp, log
 
-from sage_code.common_utils import R, EC_Q_ISOGENY_PRIMES
+from sage_code.common_utils import EC_Q_ISOGENY_PRIMES, R
 from sage_code.pre_type_one_two import get_pre_type_one_two_primes
 from sage_code.type_one_primes import get_type_1_primes
-from sage_code.type_two_primes import get_type_2_primes
+from sage_code.type_two_primes import get_type_2_bound, get_type_2_primes
 from sage_code.weeding import apply_weeding
-
 
 ########################################################################
 #                                                                      #
