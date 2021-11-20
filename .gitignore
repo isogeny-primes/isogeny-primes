@@ -7,6 +7,8 @@ zagreb_explicit_isogenies.pdf
 __pycache__/
 title_page.png
 
+.coverage
+
 # virtual environment
 venv
 
