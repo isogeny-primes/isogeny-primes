@@ -1,0 +1,4 @@
+#!/bin/bash
+source ${SAGE_BIN_DIR}/sage-env-config
+source ${SAGE_BIN_DIR}/sage-env
+/bin/bash $@

@@ -27,7 +27,7 @@
 
 import json
 import logging
-from pathlib import Path
+from typing import Set
 
 from sage.all import Integer  # pylint: disable=no-name-in-module
 from sage.all import (
@@ -44,15 +44,10 @@ from sage.all import (
 )
 
 from .common_utils import R, get_weil_polys
+from .config import FORMAL_IMMERSION_DATA_AT_2_PATH, BAD_FORMAL_IMMERSION_DATA_PATH
 
 logger = logging.getLogger(__name__)
 
-FORMAL_IMMERSION_DATA_AT_2_PATH = Path(
-    "sage_code/data_files/formal_immersion_at_2.json"
-)
-BAD_FORMAL_IMMERSION_DATA_PATH = Path(
-    "sage_code/data_files/bad_formal_immersion_data.json"
-)
 
 ########################################################################
 #                                                                      #
@@ -208,7 +203,7 @@ def get_bad_formal_immersion_data(d):
     return p_todo, q_to_bad_p
 
 
-def apply_formal_immersion_at_2(output_thus_far, running_prime_dict_2, Kdeg):
+def apply_formal_immersion_at_2(output_thus_far: Set[int], running_prime_dict_2: int, Kdeg: int):
 
     with open(FORMAL_IMMERSION_DATA_AT_2_PATH, "r") as fi2_dat_file:
         fi2_dat = json.load(fi2_dat_file)
@@ -234,13 +229,11 @@ def apply_formal_immersion_at_2(output_thus_far, running_prime_dict_2, Kdeg):
         logger.debug("No candidate primes eligible for formal immersion at 2 filtering")
         return output_thus_far
 
-    prime_divs_at_2 = running_prime_dict_2.prime_divisors()
-
     output = stubborn_set
     failed_candidates = set()
 
     for p in candidate_set:
-        if p in prime_divs_at_2:
+        if p.divides(running_prime_dict_2):
             output.add(p)
         else:
             failed_candidates.add(p)

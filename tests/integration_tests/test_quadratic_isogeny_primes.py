@@ -38,7 +38,7 @@ from sage.all import Integer, QuadraticField
 from isogeny_primes import get_isogeny_primes
 from sage_code.common_utils import CLASS_NUMBER_ONE_DISCS, EC_Q_ISOGENY_PRIMES
 
-AUX_PRIME_COUNT = 2
+AUX_PRIME_COUNT = 10
 
 
 class TestQuadraticIsogenyPrimes(unittest.TestCase):
@@ -53,27 +53,25 @@ class TestQuadraticIsogenyPrimes(unittest.TestCase):
         self.assertTrue(set(superset).issuperset(EC_Q_ISOGENY_PRIMES))
         self.assertIn(73, superset)
 
+    @unittest.skip("Fails because of sage bug, see https://trac.sagemath.org/ticket/32910")
     def test_103(self):
         K = QuadraticField(5 * 577)
         superset = get_isogeny_primes(K, AUX_PRIME_COUNT)
         self.assertTrue(set(superset).issuperset(EC_Q_ISOGENY_PRIMES))
         self.assertIn(103, superset)
 
-    @unittest.skip("takes too long")
     def test_137(self):
         K = QuadraticField(-31159)
         superset = get_isogeny_primes(K, AUX_PRIME_COUNT)
         self.assertTrue(set(superset).issuperset(EC_Q_ISOGENY_PRIMES))
         self.assertIn(137, superset)
 
-    @unittest.skip("takes too long")
     def test_191(self):
         K = QuadraticField(61 * 229 * 145757)
         superset = get_isogeny_primes(K, AUX_PRIME_COUNT)
         self.assertTrue(set(superset).issuperset(EC_Q_ISOGENY_PRIMES))
         self.assertIn(191, superset)
 
-    @unittest.skip("takes too long")
     def test_311(self):
         K = QuadraticField(11 * 17 * 9011 * 23629)
         superset = get_isogeny_primes(K, AUX_PRIME_COUNT)
@@ -92,17 +90,15 @@ class TestQuadraticIsogenyPrimes(unittest.TestCase):
         self.assertIn(73, superset)
 
     # Check that the code actually runs for several Ds
-
     def test_interval(self):
 
         R = 10
 
         for D in range(-R, R + 1):  # -86 takes very long, otherwise -100 to 100 works
-            if Integer(D).is_squarefree():
-                if not D in CLASS_NUMBER_ONE_DISCS:
-                    if D != 1:
-                        K = QuadraticField(D)
-                        get_isogeny_primes(K, AUX_PRIME_COUNT)
+            if Integer(D).is_squarefree() and D != 1:
+                K = QuadraticField(D)
+                if not K.discriminant() in CLASS_NUMBER_ONE_DISCS:
+                    get_isogeny_primes(K, AUX_PRIME_COUNT)
 
 
 if __name__ == "__main__":

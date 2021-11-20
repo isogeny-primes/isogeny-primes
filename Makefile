@@ -1,7 +1,7 @@
 bin = venv/bin
 env = env PATH="${bin}:$$PATH"
 sage_python = python3
-pysrcdirs = sage_code/ tests/ isogeny_primes.py latex_helper.py plot_stats.py test_quadratic_isogeny_primes.py
+pysrcdirs = sage_code/ tests/ isogeny_primes.py latex_helper.py plot_stats.py
 
 
 # make sure that the sage system sage python is in the path under python3
@@ -28,10 +28,18 @@ pip-install: requirements.txt
 pip-install-dev: pip-install requirements-dev.txt
 	. venv/bin/activate && ${env} pip install -Ur requirements-dev.txt
 
-.PHONY: test
-test: venv ## Run unittests
+.PHONY: unittests
+test: venv ## Run unittests using pytest
     # Runs all testcases and delivers a coverage report to your terminal
-	. venv/bin/activate && ${env} coverage run -m pytest -vv
+	. venv/bin/activate && ${env} coverage run -m pytest -vv --log-cli-level=DEBUG tests/unit_tests
+
+.PHONY: integrationtests
+test: venv ## Run integrationtests using pytest
+	. venv/bin/activate && ${env} coverage run -m pytest -vv --log-cli-level=DEBUG tests/integration_tests
+
+.PHONY: test
+test: venv ## Run all tests using pytest
+	. venv/bin/activate && ${env} coverage run -m pytest -vv -log-cli-level=DEBUG
 
 .PHONY: test-report
 test-report: venv
@@ -70,7 +78,7 @@ lint: venv  ## Do basic linting
 
 # should add lint at some point but still has to many failures at the moment
 .PHONY: valid
-valid: venv vulture fix test test-report
+valid: venv vulture fix unittests test-report
 
 
 

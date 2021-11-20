@@ -76,7 +76,7 @@ def DLMV(K):
 
 
 def get_isogeny_primes(
-    K, norm_bound, bound=1000, loop_curves=True, use_PIL=False, heavy_filter=False
+    K, norm_bound, bound=1000, loop_curves=True, use_PIL=False, heavy_filter=False, appendix_bound=1000
 ):
 
     # Start with some helpful user info
@@ -119,7 +119,7 @@ def get_isogeny_primes(
     # Try to remove some of these primes via Bruin-Najman and Box tables,
     # Özman sieve, and method of Appendix
 
-    removed_primes = apply_weeding(candidates, K)
+    removed_primes = apply_weeding(candidates, K, appendix_bound)
 
     if removed_primes:
         candidates -= removed_primes
@@ -169,7 +169,7 @@ def cli_handler(args):  # pylint: disable=redefined-outer-name
                 "To check all, use the PARI/GP script.".format(bound)
             )
         superset = get_isogeny_primes(
-            K, args.norm_bound, bound, args.loop_curves, args.use_PIL, args.heavy_filter
+            K, args.norm_bound, bound, args.loop_curves, args.use_PIL, args.heavy_filter, args.appendix_bound
         )
 
         superset_list = list(superset)
@@ -203,6 +203,9 @@ if __name__ == "__main__":
     parser.add_argument("--dlmv", action="store_true", help="get only DLMV bound")
     parser.add_argument(
         "--bound", type=int, help="bound on Type 2 prime search", default=1000
+    )
+    parser.add_argument(
+        "--appendix_bound", type=int, help="bound on the primes to try the metod of the appendix", default=1000
     )
     parser.add_argument(
         "--rigorous",

@@ -29,7 +29,6 @@
 
 import json
 import logging
-from pathlib import Path
 
 from sage.all import (
     J0,
@@ -47,13 +46,9 @@ from sage.all import (
 )  # pylint: disable=no-name-in-module
 
 from .common_utils import EC_Q_ISOGENY_PRIMES, R
+from .config import SMALL_GONALITIES, QUADRATIC_POINTS_DATA_PATH
 
 logger = logging.getLogger(__name__)
-
-SMALL_GONALITIES = {2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 47, 59, 71}
-QUADRATIC_POINTS_DATA_PATH = Path(
-    "sage_code/sdata_files/quadratic_points_catalogue.json"
-)
 
 
 ########################################################################
@@ -96,14 +91,15 @@ def oezman_sieve(p, N):
 def get_dirichlet_character(K):
     """Returns a Dirichlet character whose fixed field is K"""
 
-    N = K.conductor()
-    zeta_order = euler_phi(N)  # maybe do this as in LMFDB
-    H = DirichletGroup(N, base_ring=CyclotomicField(zeta_order))
-    return [
-        chi
-        for chi in H
-        if chi.conductor() == N and chi.multiplicative_order() == K.degree()
-    ][0]
+    try:
+        characters = [chi for chi in K.dirichlet_group() if chi.order() == K.degree()]
+    except Exception as err:
+        raise ValueError(f"{K}")
+    if characters:
+        return characters[0]
+    raise ValueError(
+        f"Galois group of {K} must be cyclic for it to come from a dirichlet character"
+    )
 
 
 def is_torsion_same(p, K, chi, J0_min, B=30, uniform=False):
@@ -201,19 +197,10 @@ def apply_quadratic_weeding(candidates, K):
                         break
                 if removed_p:
                     continue
-                logger.debug("Attempting method of appendix on prime {}".format(p))
-                if works_method_of_appendix(p, K):
-                    logger.debug("Prime {} removed via method of appendix".format(p))
-                    removed_primes.add(p)
-            else:
-                logger.debug("Attempting method of appendix on prime {}".format(p))
-                if works_method_of_appendix(p, K):
-                    logger.debug("Prime {} removed via method of appendix".format(p))
-                    removed_primes.add(p)
     return removed_primes
 
 
-def apply_weeding(candidates, K):
+def apply_weeding(candidates, K, appendix_bound=1000):
     """Wrapper for the methods in this section"""
 
     if K.degree() == 2:
@@ -222,7 +209,7 @@ def apply_weeding(candidates, K):
     if K.degree().is_prime() and K.is_abelian():
         removed_primes = set()
         for p in candidates - EC_Q_ISOGENY_PRIMES:
-            if p > 20:
+            if 20 < p < appendix_bound:
                 logger.debug("Attempting method of appendix on prime {}".format(p))
                 if works_method_of_appendix(p, K):
                     logger.debug("Prime {} removed via method of appendix".format(p))
