@@ -76,7 +76,13 @@ def DLMV(K):
 
 
 def get_isogeny_primes(
-    K, norm_bound, bound=1000, loop_curves=True, use_PIL=False, heavy_filter=False, appendix_bound=1000
+    K,
+    norm_bound,
+    bound=1000,
+    loop_curves=True,
+    use_PIL=False,
+    heavy_filter=False,
+    appendix_bound=1000,
 ):
 
     # Start with some helpful user info
@@ -169,7 +175,13 @@ def cli_handler(args):  # pylint: disable=redefined-outer-name
                 "To check all, use the PARI/GP script.".format(bound)
             )
         superset = get_isogeny_primes(
-            K, args.norm_bound, bound, args.loop_curves, args.use_PIL, args.heavy_filter, args.appendix_bound
+            K,
+            args.norm_bound,
+            bound,
+            args.loop_curves,
+            args.use_PIL,
+            args.heavy_filter,
+            args.appendix_bound,
         )
 
         superset_list = list(superset)
@@ -205,7 +217,10 @@ if __name__ == "__main__":
         "--bound", type=int, help="bound on Type 2 prime search", default=1000
     )
     parser.add_argument(
-        "--appendix_bound", type=int, help="bound on the primes to try the metod of the appendix", default=1000
+        "--appendix_bound",
+        type=int,
+        help="bound on the primes to try the metod of the appendix",
+        default=1000,
     )
     parser.add_argument(
         "--rigorous",

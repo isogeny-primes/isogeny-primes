@@ -46,14 +46,13 @@ class TestQuadraticIsogenyPrimes(unittest.TestCase):
     # The first five examples are shown in the table in the article by
     # Gonzaléz, Lario, and Quer
 
-    # This test takes about an hour on Sage v9.2
+    # All these tests together take a few minutes on Sage v9.4
     def test_73(self):
         K = QuadraticField(-127)
         superset = get_isogeny_primes(K, AUX_PRIME_COUNT, loop_curves=True)
         self.assertTrue(set(superset).issuperset(EC_Q_ISOGENY_PRIMES))
         self.assertIn(73, superset)
 
-    @unittest.skip("Fails because of sage bug, see https://trac.sagemath.org/ticket/32910")
     def test_103(self):
         K = QuadraticField(5 * 577)
         superset = get_isogeny_primes(K, AUX_PRIME_COUNT)

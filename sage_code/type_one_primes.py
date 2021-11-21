@@ -203,7 +203,9 @@ def get_bad_formal_immersion_data(d):
     return p_todo, q_to_bad_p
 
 
-def apply_formal_immersion_at_2(output_thus_far: Set[int], running_prime_dict_2: int, Kdeg: int):
+def apply_formal_immersion_at_2(
+    output_thus_far: Set[int], running_prime_dict_2: int, Kdeg: int
+):
 
     with open(FORMAL_IMMERSION_DATA_AT_2_PATH, "r") as fi2_dat_file:
         fi2_dat = json.load(fi2_dat_file)
