@@ -29,12 +29,12 @@ pip-install-dev: pip-install requirements-dev.txt
 	. venv/bin/activate && ${env} pip install -Ur requirements-dev.txt
 
 .PHONY: unittests
-test: venv ## Run unittests using pytest
+unittests: venv ## Run unittests using pytest
     # Runs all testcases and delivers a coverage report to your terminal
 	. venv/bin/activate && ${env} coverage run -m pytest -vv --log-cli-level=DEBUG tests/unit_tests
 
 .PHONY: integrationtests
-test: venv ## Run integrationtests using pytest
+integrationtests: venv ## Run integrationtests using pytest
 	. venv/bin/activate && ${env} coverage run -m pytest -vv --log-cli-level=DEBUG tests/integration_tests
 
 .PHONY: test
@@ -78,7 +78,7 @@ lint: venv  ## Do basic linting
 
 # should add lint at some point but still has to many failures at the moment
 .PHONY: valid
-valid: venv vulture fix unittests test-report
+valid: venv vulture fix test test-report
 
 
 
