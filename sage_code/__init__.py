@@ -28,7 +28,7 @@ def __contains__(self, x):
         sage: H = Zmstar.subgroup(Hgens)
         sage: g = Zmstar.gen(1)**3
         sage: g in H
-        True
+        False
 
     """
     amb_inv = self.ambient_group().gens_orders()
