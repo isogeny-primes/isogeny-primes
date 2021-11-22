@@ -31,8 +31,8 @@ sage test_quadratic_isogeny_primes.py
 #
 # pylint: disable=no-self-use
 
-import unittest
 
+import pytest
 from sage.all import Integer, QuadraticField
 
 from isogeny_primes import get_isogeny_primes
@@ -40,65 +40,43 @@ from sage_code.common_utils import CLASS_NUMBER_ONE_DISCS, EC_Q_ISOGENY_PRIMES
 
 AUX_PRIME_COUNT = 10
 
+# The first five examples are shown in the table in the article by
+# Gonzaléz, Lario, and Quer
 
-class TestQuadraticIsogenyPrimes(unittest.TestCase):
+# The final case comes from Box's determination of quadratic points
+# on X_0(73). From his table, we find that D = -31 should yield a
+# 73. The other values in his table have either been checked above,
+# or are class number one Ds.
 
-    # The first five examples are shown in the table in the article by
-    # Gonzaléz, Lario, and Quer
-
-    # All these tests together take a few minutes on Sage v9.4
-    def test_73(self):
-        K = QuadraticField(-127)
-        superset = get_isogeny_primes(K, AUX_PRIME_COUNT, loop_curves=True)
-        self.assertTrue(set(superset).issuperset(EC_Q_ISOGENY_PRIMES))
-        self.assertIn(73, superset)
-
-    def test_103(self):
-        K = QuadraticField(5 * 577)
-        superset = get_isogeny_primes(K, AUX_PRIME_COUNT)
-        self.assertTrue(set(superset).issuperset(EC_Q_ISOGENY_PRIMES))
-        self.assertIn(103, superset)
-
-    def test_137(self):
-        K = QuadraticField(-31159)
-        superset = get_isogeny_primes(K, AUX_PRIME_COUNT)
-        self.assertTrue(set(superset).issuperset(EC_Q_ISOGENY_PRIMES))
-        self.assertIn(137, superset)
-
-    def test_191(self):
-        K = QuadraticField(61 * 229 * 145757)
-        superset = get_isogeny_primes(K, AUX_PRIME_COUNT)
-        self.assertTrue(set(superset).issuperset(EC_Q_ISOGENY_PRIMES))
-        self.assertIn(191, superset)
-
-    def test_311(self):
-        K = QuadraticField(11 * 17 * 9011 * 23629)
-        superset = get_isogeny_primes(K, AUX_PRIME_COUNT)
-        self.assertTrue(set(superset).issuperset(EC_Q_ISOGENY_PRIMES))
-        self.assertIn(311, superset)
-
-    # The next test comes from Box's determination of quadratic points
-    # on X_0(73). From his table, we find that D = -31 should yield a
-    # 73. The other values in his table have either been checked above,
-    # or are class number one Ds.
-
-    def test_73_Box(self):
-        K = QuadraticField(-31)
-        superset = get_isogeny_primes(K, AUX_PRIME_COUNT)
-        self.assertTrue(set(superset).issuperset(EC_Q_ISOGENY_PRIMES))
-        self.assertIn(73, superset)
-
-    # Check that the code actually runs for several Ds
-    def test_interval(self):
-
-        R = 10
-
-        for D in range(-R, R + 1):  # -86 takes very long, otherwise -100 to 100 works
-            if Integer(D).is_squarefree() and D != 1:
-                K = QuadraticField(D)
-                if not K.discriminant() in CLASS_NUMBER_ONE_DISCS:
-                    get_isogeny_primes(K, AUX_PRIME_COUNT)
+# All these tests together less then 2 minutes on Sage v9.4
+@pytest.mark.parametrize(
+    "D, extra_isogeny, potenial_isogenies",
+    [
+        (-127, 73, {31, 41, 61, 79, 127}),
+        (5 * 577, 103, {577}),
+        (-31159, 137, {23, 29, 41, 61, 79, 109, 157, 313, 31159}),
+        (61 * 229 * 145757, 191, {31, 173, 229, 241, 145757}),
+        (11 * 17 * 9011 * 23629, 311, {71, 9011, 23629}),
+        (-31, 73, {31, 41}),
+    ],
+)
+def test_from_literature(D, extra_isogeny, potenial_isogenies):
+    K = QuadraticField(D)
+    upperbound = potenial_isogenies.union(EC_Q_ISOGENY_PRIMES).union({extra_isogeny})
+    superset = get_isogeny_primes(K, AUX_PRIME_COUNT)
+    assert set(superset).issuperset(EC_Q_ISOGENY_PRIMES)
+    assert extra_isogeny in superset
+    assert upperbound.issuperset(superset)
 
 
-if __name__ == "__main__":
-    unittest.main(buffer=True)
+# Check that the code actually runs for several Ds
+# -86 takes very long, otherwise -100 to 100 works
+R = 100
+
+
+@pytest.mark.parametrize("D", range(-R, R + 1))
+def test_interval(D):
+    if Integer(D).is_squarefree() and D != 1:
+        K = QuadraticField(D)
+        if not K.discriminant() in CLASS_NUMBER_ONE_DISCS:
+            get_isogeny_primes(K, AUX_PRIME_COUNT)
