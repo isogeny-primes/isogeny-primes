@@ -70,8 +70,7 @@ def test_from_literature(D, extra_isogeny, potenial_isogenies):
 
 
 # Check that the code actually runs for several Ds
-# -86 takes very long, otherwise -100 to 100 works
-R = 100
+R = 10
 
 
 @pytest.mark.parametrize("D", range(-R, R + 1))
@@ -79,4 +78,5 @@ def test_interval(D):
     if Integer(D).is_squarefree() and D != 1:
         K = QuadraticField(D)
         if not K.discriminant() in CLASS_NUMBER_ONE_DISCS:
-            get_isogeny_primes(K, AUX_PRIME_COUNT)
+            superset = get_isogeny_primes(K, AUX_PRIME_COUNT)
+            assert set(superset).issuperset(EC_Q_ISOGENY_PRIMES)
