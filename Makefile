@@ -30,11 +30,11 @@ pip-install-dev: pip-install requirements-dev.txt
 .PHONY: unittests
 unittests: venv ## Run unittests using pytest
     # Runs all testcases and delivers a coverage report to your terminal
-	. venv/bin/activate && ${env} coverage run -m pytest -vv --log-cli-level=DEBUG tests/unit_tests
+	. venv/bin/activate && ${env} coverage run -m pytest -vv --log-cli-level=DEBUG tests/fast_tests
 
 .PHONY: integrationtests
 integrationtests: venv ## Run integrationtests using pytest
-	. venv/bin/activate && ${env} coverage run -m pytest -vv --log-cli-level=DEBUG tests/integration_tests
+	. venv/bin/activate && ${env} coverage run -m pytest -vv --log-cli-level=DEBUG tests/slow_tests
 
 .PHONY: test
 test: venv ## Run all tests using pytest

@@ -42,6 +42,19 @@ AUX_PRIME_COUNT = 10
 
 # total running time of all tests in this file is about 5 minutes
 
+# Check that the code actually runs for several Ds
+R = 10
+square_free_D = [D for D in range(-R, R + 1) if Integer(D).is_squarefree() and D != 1]
+
+
+@pytest.mark.parametrize("D", square_free_D)
+def test_interval(D):
+    K = QuadraticField(D)
+    if not K.discriminant() in CLASS_NUMBER_ONE_DISCS:
+        superset = get_isogeny_primes(K, AUX_PRIME_COUNT)
+        assert set(superset).issuperset(EC_Q_ISOGENY_PRIMES)
+
+
 # The first case comes from Box's determination of quadratic points
 # on X_0(73). From his table, we find that D = -31 should yield a
 # 73 isogeny. The other values in his table have either been checked
@@ -77,16 +90,3 @@ def test_from_literature(D, extra_isogeny, appendix_bound, potenial_isogenies):
     assert extra_isogeny in superset
     assert upperbound.issuperset(superset)
     assert set(upperbound.difference(superset)) == set()
-
-
-# Check that the code actually runs for several Ds
-R = 10
-
-
-@pytest.mark.parametrize("D", range(-R, R + 1))
-def test_interval(D):
-    if Integer(D).is_squarefree() and D != 1:
-        K = QuadraticField(D)
-        if not K.discriminant() in CLASS_NUMBER_ONE_DISCS:
-            superset = get_isogeny_primes(K, AUX_PRIME_COUNT)
-            assert set(superset).issuperset(EC_Q_ISOGENY_PRIMES)
