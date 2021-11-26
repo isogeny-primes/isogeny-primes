@@ -4,6 +4,9 @@ bin = venv/bin
 env = env PATH="${bin}:$$PATH"
 sage_python = python3
 pysrcdirs = sage_code/ tests/ isogeny_primes.py latex_helper.py plot_stats.py
+sage_version = >=9.4
+version_command = "from sagemath.check_version import check_version;\
+                   check_version(\"${sage_version}\")"
 
 # this script should automatically get the correct python from sage
 # if not, you can try
@@ -22,16 +25,21 @@ requirements-dev.txt: venv requirements-dev.in
 pip-compile: requirements.txt requirements-dev.txt
 
 .PHONY: pip-install
-pip-install: requirements.txt
+pip-install: venv/make_pip_install_complete
+venv/make_pip_install_complete: requirements.txt
 	. venv/bin/activate && ${env} pip install -Ur requirements.txt
+	. venv/bin/activate && ${env} python -c ${version_command}
+	touch venv/make_pip_install_complete
 
 .PHONY: pip-install-dev
-pip-install-dev: pip-install requirements-dev.txt
+pip-install-dev: venv/make_pip_install_dev_complete
+venv/make_pip_install_dev_complete: venv/make_pip_install_complete requirements-dev.txt
 	. venv/bin/activate && ${env} pip install -Ur requirements-dev.txt
+	touch venv/make_pip_install_dev_complete
+
 
 .PHONY: unittests
 unittests: pip-install-dev ## Run unittests using pytest
-    # Runs all testcases and delivers a coverage report to your terminal
 	. venv/bin/activate && ${env} coverage run -m pytest -vv --log-cli-level=DEBUG tests/fast_tests
 
 .PHONY: integrationtests
@@ -62,6 +70,7 @@ isort: pip-install-dev
 .PHONY: fix
 fix: pip-install-dev ## Automatically fix style issues
 	# @. .venv/bin/activate && ${env} python3 -m isort ${pysrcdirs}
+	# format using black
 	@. venv/bin/activate && ${env} python3 -m black ${pysrcdirs}
 
 	# autoflake removes unused imports and unused variables from Python code. It makes use of pyflakes to do this.
@@ -70,6 +79,7 @@ fix: pip-install-dev ## Automatically fix style issues
 
 .PHONY: vulture
 vulture: pip-install-dev
+	# searching for unreachable code
 	@. venv/bin/activate && ${env} python3 -m vulture ${pysrcdirs} --min-confidence 100
 
 .PHONY: lint
@@ -85,7 +95,7 @@ valid_fast: pip-install-dev vulture fix unittests test-report
 
 
 clean: ## Cleanup
-clean: clean_venv clean_pytest clean_coverage
+clean: clean_venv clean_pytest clean_coverage clean_pycache
 
 clean_venv:
 	@echo "Removing venv"
@@ -99,3 +109,6 @@ clean_coverage:
 	@echo "Removing .coverage"
 	@rm -f .coverage
 
+clean_pycache:
+	@echo "Removing all pyc and pyo files and all __pycache__ direcrories"
+	@find . -type f -name '*.py[co]' -delete -o -type d -name __pycache__ -delete

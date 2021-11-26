@@ -1,7 +1,15 @@
 """
-This init file contains code that monkey patches sage so that :trac:`32910` is fixed::
-The entire content of this file can be made empty once this is fixed in upstream sage
+Make sure we show a decent error if a to old version of sage is being used
 """
+from sagemath.check_version import check_version
+
+check_version(">=9.4")
+
+"""
+The code in the rest of this file monkey patches sage so that :trac:`32910` is fixed::
+This can be removed once this is fixed in upstream sage
+"""
+
 import sage
 from sage.all import ZZ, IntegerModRing, gcd, prod, diagonal_matrix, vector, matrix
 from sage.groups.abelian_gps.abelian_group_element import AbelianGroupElement
