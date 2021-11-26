@@ -1,5 +1,7 @@
+SHELL := helper_scripts/bash_sage_shell
+
 bin = venv/bin
-env = source helper_scripts/bash_sage_init.sh && env PATH="${bin}:$$PATH"
+env = env PATH="${bin}:$$PATH"
 sage_python = python3
 pysrcdirs = sage_code/ tests/ isogeny_primes.py latex_helper.py plot_stats.py
 
@@ -28,37 +30,37 @@ pip-install-dev: pip-install requirements-dev.txt
 	. venv/bin/activate && ${env} pip install -Ur requirements-dev.txt
 
 .PHONY: unittests
-unittests: venv ## Run unittests using pytest
+unittests: pip-install-dev ## Run unittests using pytest
     # Runs all testcases and delivers a coverage report to your terminal
 	. venv/bin/activate && ${env} coverage run -m pytest -vv --log-cli-level=DEBUG tests/fast_tests
 
 .PHONY: integrationtests
-integrationtests: venv ## Run integrationtests using pytest
+integrationtests: pip-install-dev ## Run integrationtests using pytest
 	. venv/bin/activate && ${env} coverage run -m pytest -vv --log-cli-level=DEBUG tests/slow_tests
 
 .PHONY: test
-test: venv ## Run all tests using pytest
+test: pip-install-dev ## Run all tests using pytest
 	. venv/bin/activate && ${env} coverage run -m pytest -vv -log-cli-level=DEBUG
 
 .PHONY: test-report
-test-report: venv
+test-report: pip-install-dev
 	. venv/bin/activate && ${env} coverage report
 
 .PHONY: black
-black: venv ## Check for source issues
+black: pip-install-dev ## Check for source issues
 	# verify that all pedantic source issues are resolved.
 	@. venv/bin/activate && ${env} python3 -m black --check ${pysrcdirs}
 
 .PHONY: check-types
-check-types: venv ## Check for type issues with mypy
+check-types: pip-install-dev ## Check for type issues with mypy
 	@. venv/bin/activate && ${env} python3 -m mypy --check ${pysrcdirs}
 
 .PHONY: isort
-isort: venv
+isort: pip-install-dev
 	@. venv/bin/activate && ${env} python3 -m isort ${pysrcdirs}
 
 .PHONY: fix
-fix: venv ## Automatically fix style issues
+fix: pip-install-dev ## Automatically fix style issues
 	# @. .venv/bin/activate && ${env} python3 -m isort ${pysrcdirs}
 	@. venv/bin/activate && ${env} python3 -m black ${pysrcdirs}
 
@@ -67,25 +69,33 @@ fix: venv ## Automatically fix style issues
 	${MAKE} black
 
 .PHONY: vulture
-vulture: venv
+vulture: pip-install-dev
 	@. venv/bin/activate && ${env} python3 -m vulture ${pysrcdirs} --min-confidence 100
 
 .PHONY: lint
-lint: venv  ## Do basic linting
+lint: pip-install-dev  ## Do basic linting
 	@. venv/bin/activate && ${env} pylint --extension-pkg-allow-list=sage ${pysrcdirs}
 
 # should add lint at some point but still has to many failures at the moment
 .PHONY: valid
-valid: venv vulture fix test test-report
+valid: pip-install-dev vulture fix test test-report
 
 .PHONY: valid_fast
-valid_fast: venv vulture fix unittests test-report
+valid_fast: pip-install-dev vulture fix unittests test-report
 
 
 clean: ## Cleanup
-clean: clean_venv
+clean: clean_venv clean_pytest clean_coverage
 
-clean_venv:  # Remove venv
-	@echo "Cleaning venv"
+clean_venv:
+	@echo "Removing venv"
 	@rm -rf venv
+
+clean_pytest:
+	@echo "Removing pytest_cache"
+	@rm -rf .pytest_cache
+
+clean_coverage:
+	@echo "Removing .coverage"
+	@rm -f .coverage
 

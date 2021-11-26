@@ -1,5 +1,6 @@
 #!/bin/bash
 # this is a wrapper around the python in the venv that
 # running this instead of python makes sure you can import from sage
-source ./bash_sage_init.sh
-./venv/bin/python3 "$@"
+SCRIPT_DIR=$(dirname "${BASH_SOURCE[0]}")
+source ${SCRIPT_DIR}/bash_sage_init.sh
+${SCRIPT_DIR}/../venv/bin/python3 "$@"
