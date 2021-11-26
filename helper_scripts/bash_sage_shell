@@ -1,0 +1,4 @@
+#!/bin/bash
+# run this to get a bash shell in which importing form sage in python works
+source ./bash_sage_init.sh
+/bin/bash $@

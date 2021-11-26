@@ -3,7 +3,8 @@ This init file contains code that monkey patches sage so that :trac:`32910` is f
 The entire content of this file can be made empty once this is fixed in upstream sage
 """
 import sage
-from sage.all import ZZ, diagonal_matrix, vector, matrix
+from sage.all import ZZ, IntegerModRing, gcd, prod, diagonal_matrix, vector, matrix
+from sage.groups.abelian_gps.abelian_group_element import AbelianGroupElement
 
 
 def __contains__(self, x):
@@ -43,6 +44,7 @@ def __contains__(self, x):
         sage: b^2 in H
         True
     """
+
     if not isinstance(x, AbelianGroupElement):
         return False
     if x.parent() is self:
@@ -58,3 +60,78 @@ def __contains__(self, x):
 
 
 sage.groups.abelian_gps.abelian_group.AbelianGroup_subgroup.__contains__ = __contains__
+
+# the following is to significantly speed up the calculation of the dirichlet
+# group of a number field.
+def _splitting_classes_gens_(K, m, d):
+    r"""
+    Given a number field `K` of conductor `m` and degree `d`,
+    this returns a set of multiplicative generators of the
+    subgroup of `(\mathbb{Z}/m\mathbb{Z})^{\times}/(\mathbb{Z}/m\mathbb{Z})^{\times d}`
+    containing exactly the classes that contain the primes splitting
+    completely in `K`.
+
+    EXAMPLES::
+
+        sage: from sage.rings.number_field.number_field import _splitting_classes_gens_
+        sage: K = CyclotomicField(101)
+        sage: L = K.subfields(20)[0][0]
+        sage: L.conductor()
+        101
+        sage: _splitting_classes_gens_(L,101,20)
+        [95]
+
+        sage: K = CyclotomicField(44)
+        sage: L = K.subfields(4)[0][0]
+        sage: _splitting_classes_gens_(L,44,4)
+        [37]
+
+        sage: K = CyclotomicField(44)
+        sage: L = K.subfields(5)[0][0]
+        sage: K.degree()
+        20
+        sage: L
+        Number Field in zeta44_0 with defining polynomial x^5 - 2*x^4 - 16*x^3 + 24*x^2 + 48*x - 32 with zeta44_0 = 3.837971894457990?
+        sage: L.conductor()
+        11
+        sage: _splitting_classes_gens_(L,11,5)
+        [10]
+
+    """
+
+    R = K.ring_of_integers()
+    Zm = IntegerModRing(m)
+    unit_gens = Zm.unit_gens()
+    ZZunits = ZZ ** len(unit_gens)
+    unit_relations = [gcd(d, x.multiplicative_order()) for x in unit_gens]
+    # sparse=False can be removed if the code below doesn't raise the following
+    # AttributeError: 'Matrix_integer_sparse' object has no attribute '_clear_denom'
+    D = diagonal_matrix(unit_relations, sparse=False)
+    Zmstar = ZZunits / D.row_module()
+
+    def map_Zmstar_to_Zm(h):
+        li = h.lift().list()
+        return prod(unit_gens[i] ** li[i] for i in range(len(unit_gens)))
+
+    Hgens = []
+    H = Zmstar.submodule([])
+    Horder = Zmstar.cardinality() / d
+
+    for g in Zmstar:
+        if H.cardinality() == Horder:
+            break
+        if g not in H:
+            u = map_Zmstar_to_Zm(g)
+            p = u.lift()
+            while not p.is_prime():
+                p += m
+            f = R.ideal(p).prime_factors()[0].residue_class_degree()
+            h = g * f
+            if h not in H:
+                Hgens += [h]
+                H = Zmstar.submodule(Hgens)
+
+    return [map_Zmstar_to_Zm(h) for h in Hgens]
+
+
+sage.rings.number_field.number_field._splitting_classes_gens_ = _splitting_classes_gens_

@@ -40,33 +40,43 @@ from sage_code.common_utils import CLASS_NUMBER_ONE_DISCS, EC_Q_ISOGENY_PRIMES
 
 AUX_PRIME_COUNT = 10
 
-# The first five examples are shown in the table in the article by
+# total running time of all tests in this file is about 5 minutes
+
+# The first case comes from Box's determination of quadratic points
+# on X_0(73). From his table, we find that D = -31 should yield a
+# 73 isogeny. The other values in his table have either been checked
+# Gonzaléz, Lario, and Quer or are class number one Ds.
+
+# The last five examples are shown in the table in the article by
 # Gonzaléz, Lario, and Quer
 
-# The final case comes from Box's determination of quadratic points
-# on X_0(73). From his table, we find that D = -31 should yield a
-# 73. The other values in his table have either been checked above,
-# or are class number one Ds.
-
-# All these tests together less then 2 minutes on Sage v9.4
+# The running time and the memory consumption of the method of the appendix is
+# linear in the size of the conductor of the number field. Hence we
+# set "appendix_bound" to 0 in order to disable the method of the appendix for
+#   D = 61 * 229 * 145757 = 2036079533
+#   D = 11 * 17 * 9011 * 23629 = 39816211853
+# since in those cases just simply looping over all integers up to that
+# bound is already taking ages, and even worse. Just list(range(D)) will exaust
+# all memory on most machines.
 @pytest.mark.parametrize(
-    "D, extra_isogeny, potenial_isogenies",
+    "D, extra_isogeny, appendix_bound, potenial_isogenies",
     [
-        (-127, 73, {31, 41, 61, 79, 127}),
-        (5 * 577, 103, {577}),
-        (-31159, 137, {23, 29, 41, 61, 79, 109, 157, 313, 31159}),
-        (61 * 229 * 145757, 191, {31, 173, 229, 241, 145757}),
-        (11 * 17 * 9011 * 23629, 311, {71, 9011, 23629}),
-        (-31, 73, {31, 41}),
+        (-31, 73, 1000, {31, 41}),
+        (-127, 73, 1000, {31, 41, 61, 79}),
+        (5 * 577, 103, 1000, {577}),
+        (-31159, 137, 1000, {23, 29, 41, 61, 79, 109, 31159}),
+        (61 * 229 * 145757, 191, 0, {31, 173, 229, 241, 145757}),
+        (11 * 17 * 9011 * 23629, 311, 0, {71, 9011, 23629}),
     ],
 )
-def test_from_literature(D, extra_isogeny, potenial_isogenies):
+def test_from_literature(D, extra_isogeny, appendix_bound, potenial_isogenies):
     K = QuadraticField(D)
     upperbound = potenial_isogenies.union(EC_Q_ISOGENY_PRIMES).union({extra_isogeny})
-    superset = get_isogeny_primes(K, AUX_PRIME_COUNT)
+    superset = get_isogeny_primes(K, AUX_PRIME_COUNT, appendix_bound=appendix_bound)
     assert set(superset).issuperset(EC_Q_ISOGENY_PRIMES)
     assert extra_isogeny in superset
     assert upperbound.issuperset(superset)
+    assert set(upperbound.difference(superset)) == set()
 
 
 # Check that the code actually runs for several Ds

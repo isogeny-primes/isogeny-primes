@@ -1,14 +1,13 @@
 bin = venv/bin
-env = env PATH="${bin}:$$PATH"
+env = source helper_scripts/bash_sage_init.sh && env PATH="${bin}:$$PATH"
 sage_python = python3
 pysrcdirs = sage_code/ tests/ isogeny_primes.py latex_helper.py plot_stats.py
 
-
-# make sure that the sage system sage python is in the path under python3
-# otherwise run
-# make venv sage_python=python3
+# this script should automatically get the correct python from sage
+# if not, you can try
+# make venv sage_python=/path/to/sagemath/local/bin/python3
 venv:
-	${sage_python} -m venv --system-site-packages venv
+	${env} && ${sage_python} -m venv --system-site-packages venv
 	. venv/bin/activate && ${env} pip install -U pip pip-tools
 
 requirements.txt: venv requirements.in
@@ -61,7 +60,6 @@ isort: venv
 .PHONY: fix
 fix: venv ## Automatically fix style issues
 	# @. .venv/bin/activate && ${env} python3 -m isort ${pysrcdirs}
-
 	@. venv/bin/activate && ${env} python3 -m black ${pysrcdirs}
 
 	# autoflake removes unused imports and unused variables from Python code. It makes use of pyflakes to do this.
@@ -80,6 +78,8 @@ lint: venv  ## Do basic linting
 .PHONY: valid
 valid: venv vulture fix test test-report
 
+.PHONY: valid_fast
+valid_fast: venv vulture fix unittests test-report
 
 
 clean: ## Cleanup
