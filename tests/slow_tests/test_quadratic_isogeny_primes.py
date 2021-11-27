@@ -38,7 +38,12 @@ from sage.all import Integer, QuadraticField
 from isogeny_primes import get_isogeny_primes
 from sage_code.common_utils import CLASS_NUMBER_ONE_DISCS, EC_Q_ISOGENY_PRIMES
 
-AUX_PRIME_COUNT = 10
+TEST_SETTING = {
+    "norm_bound": 10,
+    "bound": 1000,
+    "loop_curves": False,
+    "heavy_filter": True,
+}
 
 # total running time of all tests in this file is about 5 minutes
 
@@ -51,7 +56,7 @@ square_free_D = [D for D in range(-R, R + 1) if Integer(D).is_squarefree() and D
 def test_interval(D):
     K = QuadraticField(D)
     if not K.discriminant() in CLASS_NUMBER_ONE_DISCS:
-        superset = get_isogeny_primes(K, AUX_PRIME_COUNT)
+        superset = get_isogeny_primes(K, **TEST_SETTING)
         assert set(superset).issuperset(EC_Q_ISOGENY_PRIMES)
 
 
@@ -85,7 +90,7 @@ def test_interval(D):
 def test_from_literature(D, extra_isogeny, appendix_bound, potenial_isogenies):
     K = QuadraticField(D)
     upperbound = potenial_isogenies.union(EC_Q_ISOGENY_PRIMES).union({extra_isogeny})
-    superset = get_isogeny_primes(K, AUX_PRIME_COUNT, appendix_bound=appendix_bound)
+    superset = get_isogeny_primes(K, **TEST_SETTING, appendix_bound=appendix_bound)
     assert set(superset).issuperset(EC_Q_ISOGENY_PRIMES)
     assert extra_isogeny in superset
     assert upperbound.issuperset(superset)
