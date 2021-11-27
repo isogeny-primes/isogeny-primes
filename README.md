@@ -18,10 +18,10 @@ Clone this repo to your computer. It is assumed you have [sage](https://sagemath
 
 #### Typical use
 
-The main file is `quadratic_isogeny_primes.py`. It takes one positional argument - D - which corresponds to your quadratic field. So if you're interested to see the isogeny primes over Q(root-5), you'd enter the following at the command line:
+The main file is `isogeny_primes.py`. It takes one positional argument - D - which corresponds to your quadratic field. So if you're interested to see the isogeny primes over Q(root-5), you'd enter the following at the command line:
 
 ```
-sage quadratic_isogeny_primes.py 5
+sage isogeny_primes.py 5
 ```
 
 #### Optional arguments
@@ -29,7 +29,7 @@ sage quadratic_isogeny_primes.py 5
 To see the various options, run
 
 ```
-sage quadratic_isogeny_primes.py --help
+sage isogeny_primes.py --help
 ```
 
 You'll see that you have the following optional arguments:
@@ -37,42 +37,33 @@ You'll see that you have the following optional arguments:
  - `--aux_prime_count`; this tells the program how many auxiliary primes to take. So you could for example do the following to take 6 auxiliary primes:
 
  ```
-sage quadratic_isogeny_primes.py 5 --aux_prime_count 6
+sage isogeny_primes.py 5 --aux_prime_count 6
 ```
 
  - `--loop_curves`; this will loop over all elliptic curves and compute the characteristic polynomials of Frobenius, not just return all possible Weil polynomials. This returns a possibly smaller set of primes at the expense of possibly longer runtime.
 
  ```
-sage quadratic_isogeny_primes.py 5 --aux_prime_count 6 --loop_curves
+sage isogeny_primes.py 5 --aux_prime_count 6 --loop_curves
 ```
 
  - `--dlmv`; this will return the dlmv bound:
 
 ```
-sage quadratic_isogeny_primes.py 17 --dlmv
+sage isogeny_primes.py 17 --dlmv
 ```
 
  - `--bound`; this specifies the bound on Type 2 primes that the sage code will check up to. Sage can go up to about 10 million, but beyond that you'll start seeing pari memory overflows.
 
 ```
-sage quadratic_isogeny_primes.py 17 --bound 10000000
+sage isogeny_primes.py 17 --bound 10000000
 ```
 
  - `--rigorous`; this will attempt to check all primes up to the Type 2 bound. This is a legacy feature which will be phased out in the next release; for checking up to the tens of billions, use the PARI/GP script.
 
 ```
-sage quadratic_isogeny_primes.py 17 --rigorous
+sage isogeny_primes.py 17 --rigorous
 ```
 
-#### Running the tests
-
-Some limited unit testing has been implemented. They can be run with the following:
-
-```
-sage test_quadratic_isogeny_primes.py
-```
-
-Further suggestions on improving the testing, and more test cases, would be very welcome.
 
 #### Generating the tables in the introduction
 
@@ -121,6 +112,64 @@ Well I'm afraid you're gonna have to wait dear reader! Even extending the algori
 ### Where can I learn more about elliptic curves and other cool stuff?
 
 You can head over to the [L-functions and Modular Forms Database](https://lmfdb.org/), there you'll find loads of resources, data, and proper cool images.
+
+# Developers Guide
+
+## Project layout
+The directory layout is as follows
+
+    .
+    ├── gp_scripts          # scripts written in pari/gp
+    ├── helper_scripts      # scripts helping with starting sage
+    ├── magma_scripts       # magma scripts
+    ├── sage_code           # main python/sage source directory
+    │   └── data_files      # json files containing static data and chaches
+    └── tests
+        ├── fast_tests      # unittests - these test should be fast and match
+        │                   #             the sage_code file structure
+        └── slow_tests      # integrationtests - these tests take longer
+
+
+## Developer tools
+
+The most important developer tool is the Makefile. It contains several commands
+that help with development. 
+
+The most important command are:
+
+    make valid
+    make valid_fast
+
+At least one of these should be run before pushing your code to github and
+creating a pull request. Both of these commands do the following things
+
+- Make sure all runtime and development dependencies are installed
+- Fix all code style issues using black
+- Run several code quality inspection tools
+- Run (a subset of) tests in the tests folder
+- Print a coverage report of tests that were run
+
+The main difference is that `make valid` runs all tests. While `make valid_fast` 
+runs only unittests.
+
+Here are some other useful commands:
+
+Create a virtual environment that uses the python in sage as base intepreter:
+
+    make venv
+
+Install all development requirements as specified in the requirements.in
+and the requirements-dev.in files:
+
+    make pip-install-dev
+
+Run all tests:
+
+    make tests
+
+For the rest see the source code of the makefile itself.
+
+# Copyright
 
     ####  Copyright (C) 2021 Barinder Singh Banwait and Maarten Derickx
 

@@ -1,8 +1,20 @@
-nether_regions.py
+nether_regions.sage
 v0.1
 v1.0_submission
 video.mkv
 zagreb_explicit_isogenies.pdf
-.vscode/
-__pycache__/
 title_page.png
+
+# OS files
+.DS_Store
+
+# auto generated files
+.coverage
+__pycache__/
+
+# virtual environment
+venv
+
+# editors/IDE's
+.idea
+.vscode/

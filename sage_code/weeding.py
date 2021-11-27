@@ -27,33 +27,26 @@
 
 # Imports
 
-import logging
-from pathlib import Path
 import json
-
-logger = logging.getLogger(__name__)
+import logging
 
 from sage.all import (
-    QuadraticField,
-    hilbert_class_polynomial,
+    J0,
+    ModularSymbols,
     NumberField,
-    euler_phi,
-    DirichletGroup,
-    CyclotomicField,
-    prime_range,
+    QuadraticField,
     companion_matrix,
     gcd,
-    J0,
+    hilbert_class_polynomial,
+    oo,
     parent,
-    ModularSymbols,
-)
+    prime_range,
+)  # pylint: disable=no-name-in-module
 
-from .common_utils import R, EC_Q_ISOGENY_PRIMES
+from .common_utils import EC_Q_ISOGENY_PRIMES, SMALL_GONALITIES, R
+from .config import QUADRATIC_POINTS_DATA_PATH
 
-SMALL_GONALITIES = {2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 47, 59, 71}
-QUADRATIC_POINTS_DATA_PATH = Path(
-    "sage_code/sdata_files/quadratic_points_catalogue.json"
-)
+logger = logging.getLogger(__name__)
 
 
 ########################################################################
@@ -95,20 +88,23 @@ def oezman_sieve(p, N):
 
 def get_dirichlet_character(K):
     """Returns a Dirichlet character whose fixed field is K"""
+    characters = [chi for chi in K.dirichlet_group() if chi.order() == K.degree()]
 
-    N = K.conductor()
-    zeta_order = euler_phi(N)  # maybe do this as in LMFDB
-    H = DirichletGroup(N, base_ring=CyclotomicField(zeta_order))
-    return [
-        chi
-        for chi in H
-        if chi.conductor() == N and chi.multiplicative_order() == K.degree()
-    ][0]
+    if characters:
+        return characters[0]
+    raise ValueError(
+        f"Galois group of {K} must be cyclic for it to come from a dirichlet character"
+    )
 
 
-def is_torsion_same(p, K, chi, J0_min, B=30, uniform=False):
+def is_torsion_same(p, K, chi, B=30, uniform=False):
     """Returns true if the minus part of J0(p) does not gain new torsion when
     base changing to K"""
+    M = ModularSymbols(p)
+    S = M.cuspidal_subspace()
+    T = S.atkin_lehner_operator()
+    S_min = (T + parent(T)(1)).kernel()
+    J0_min = S_min.abelian_variety()
 
     d = K.degree()
 
@@ -135,14 +131,26 @@ def is_torsion_same(p, K, chi, J0_min, B=30, uniform=False):
     return J0(p).rational_torsion_order(proof=False) == gcd(point_counts)
 
 
-def is_rank_of_twist_zero(chi, ML, S_min_L):
-    """Returns true if the rank of the twist of the minus part by the
-    character chi is zero"""
+def is_rank_of_twist_zero(p, chi):
+    """Returns true if the rank of the twist of the minus part of X_0(p)
+    by the character chi is zero"""
+    ML = ModularSymbols(p, base_ring=chi.base_ring())
+    SL = ML.cuspidal_subspace()
+    TL = SL.atkin_lehner_operator()
+    S_min_L = (TL + parent(TL)(1)).kernel()
 
-    my_map = S_min_L.rational_period_mapping()
-    tw = ML.twisted_winding_element(0, chi)
-    twmap = my_map(tw)
-    return twmap != parent(twmap)(0)
+    for S in S_min_L.decomposition():
+        my_map = S.rational_period_mapping()
+        w = ML([0, oo])
+        wmap = my_map(w)
+        if wmap == 0:
+            return False
+        tw = ML.twisted_winding_element(0, chi)
+        twmap = my_map(tw)
+        if twmap == 0:
+            return False
+
+    return True
 
 
 def works_method_of_appendix(p, K):
@@ -151,22 +159,17 @@ def works_method_of_appendix(p, K):
 
     if QuadraticField(-p).class_number() > K.degree():
         if p not in SMALL_GONALITIES:
-            M = ModularSymbols(p)
-            S = M.cuspidal_subspace()
-            T = S.atkin_lehner_operator()
-            S_min = (T + parent(T)(1)).kernel()
-            J0_min = S_min.abelian_variety()
 
             chi = get_dirichlet_character(K)
 
-            ML = ModularSymbols(p, base_ring=chi.base_ring())
-            SL = ML.cuspidal_subspace()
-            TL = SL.atkin_lehner_operator()
-            S_min_L = (TL + parent(TL)(1)).kernel()
-
-            if is_torsion_same(p, K, chi, J0_min):
-                if is_rank_of_twist_zero(chi, ML, S_min_L):
+            logger.debug("Testing whether torsion is same")
+            if is_torsion_same(p, K, chi):
+                logger.debug("Torsion is same test passed")
+                logger.debug("Testing whether rank is same")
+                if is_rank_of_twist_zero(p, chi):
+                    logger.debug(f"Method of appendix works for {p}")
                     return True
+        logger.debug(f"Method of appendix fails for {p}")
     return False
 
 
@@ -201,32 +204,23 @@ def apply_quadratic_weeding(candidates, K):
                         break
                 if removed_p:
                     continue
-                logger.debug("Attempting method of appendix on prime {}".format(p))
-                if works_method_of_appendix(p, K):
-                    logger.debug("Prime {} removed via method of appendix".format(p))
-                    removed_primes.add(p)
-            else:
-                logger.debug("Attempting method of appendix on prime {}".format(p))
-                if works_method_of_appendix(p, K):
-                    logger.debug("Prime {} removed via method of appendix".format(p))
-                    removed_primes.add(p)
     return removed_primes
 
 
-def apply_weeding(candidates, K):
+def apply_weeding(candidates, K, appendix_bound=1000):
     """Wrapper for the methods in this section"""
 
+    removed_primes = set()
+
     if K.degree() == 2:
-        return apply_quadratic_weeding(candidates, K)
+        removed_primes = apply_quadratic_weeding(candidates, K)
 
     if K.degree().is_prime() and K.is_abelian():
-        removed_primes = set()
-        for p in candidates - EC_Q_ISOGENY_PRIMES:
-            if p > 20:
-                logger.debug("Attempting method of appendix on prime {}".format(p))
+        for p in candidates - EC_Q_ISOGENY_PRIMES - removed_primes:
+            if 20 < p < appendix_bound:
+                logger.debug(f"Attempting method of appendix on prime {p}")
                 if works_method_of_appendix(p, K):
-                    logger.debug("Prime {} removed via method of appendix".format(p))
+                    logger.debug(f"Prime {p} removed via method of appendix")
                     removed_primes.add(p)
-        return removed_primes
 
-    return set()
+    return removed_primes

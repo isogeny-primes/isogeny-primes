@@ -25,14 +25,13 @@
 
 """
 
-from sage.all import (
-    PolynomialRing,
-    Rationals,
-)
+from sage.all import PolynomialRing, Rationals
 
 R = PolynomialRing(Rationals(), "x")
 x = R.gen()
 EC_Q_ISOGENY_PRIMES = {2, 3, 5, 7, 11, 13, 17, 19, 37, 43, 67, 163}
+CLASS_NUMBER_ONE_DISCS = {-3, -4, -7, -8, -11, -19, -43, -67, -163}
+SMALL_GONALITIES = {2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 47, 59, 71}
 # Global methods
 
 
@@ -46,11 +45,11 @@ def weil_polynomial_is_elliptic(f, q, a):
         return True
 
     if a % 2 == 0:
-        if f[1] in [-2 * q ** (a // 2), 2 * q ** (a // 2)]:
-            return True
-        if q % 3 != 1 and f[1] in [-(q ** (a // 2)), q ** (a // 2)]:
-            return True
-        if q % 4 != 1 and f[1] == 0:
+        if (
+            f[1] in [-2 * q ** (a // 2), 2 * q ** (a // 2)]
+            or (q % 3 != 1 and f[1] in [-(q ** (a // 2)), q ** (a // 2)])
+            or (q % 4 != 1 and f[1] == 0)
+        ):
             return True
     else:
         if q in [2, 3]:
@@ -64,7 +63,7 @@ def weil_polynomial_is_elliptic(f, q, a):
 
 def get_weil_polys(F):
     """
-    Returns all degree 2 weil polynomials over F that are actually comming from an elliptic curve.
+    Returns all degree 2 weil polynomials over F that are actually coming from an elliptic curve.
     """
     q = F.characteristic()
     a = F.degree()

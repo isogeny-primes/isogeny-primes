@@ -25,34 +25,29 @@
 
 """
 
-from pathlib import Path
-import logging
 import json
+import logging
+from typing import Set
+
+from sage.all import Integer  # pylint: disable=no-name-in-module
+from sage.all import (
+    ZZ,
+    Gamma0,
+    Matrix,
+    ModularSymbols,
+    floor,
+    gcd,
+    lcm,
+    oo,
+    prime_divisors,
+    prime_range,
+)
+
+from .common_utils import R, get_weil_polys
+from .config import FORMAL_IMMERSION_DATA_AT_2_PATH, BAD_FORMAL_IMMERSION_DATA_PATH
 
 logger = logging.getLogger(__name__)
 
-from .common_utils import R, get_weil_polys
-
-from sage.all import (
-    gcd,
-    prime_range,
-    ZZ,
-    lcm,
-    Integer,
-    Matrix,
-    floor,
-    ModularSymbols,
-    Gamma0,
-    oo,
-    prime_divisors,
-)
-
-FORMAL_IMMERSION_DATA_AT_2_PATH = Path(
-    "sage_code/data_files/formal_immersion_at_2.json"
-)
-BAD_FORMAL_IMMERSION_DATA_PATH = Path(
-    "sage_code/data_files/bad_formal_immersion_data.json"
-)
 
 ########################################################################
 #                                                                      #
@@ -71,7 +66,7 @@ def R_du(d, u, M, columns=None, a_inv=False):
     Returns:
         [Matrix]: The Matrix of Corollary 6.8 of Derickx-Kamienny-Stein-Stoll.
     """
-    if columns == None:
+    if columns is None:
         columns = [a for a in range(M) if gcd(a, M) == 1]
         a_inv = False
     if not a_inv:
@@ -111,11 +106,11 @@ def get_M(d, M_start=None, M_stop=None, positive_char=True):
         for u in range(M):
             if gcd(u, M) != 1:
                 continue
-            R = R_du(d, u, M, columns, a_inv=True)
-            if R.rank() < d:
+            r_du = R_du(d, u, M, columns, a_inv=True)
+            if r_du.rank() < d:
                 break
-            assert R.nrows() == d
-            elt_divs = R.elementary_divisors()
+            assert r_du.nrows() == d
+            elt_divs = r_du.elementary_divisors()
             if positive_char and elt_divs[-1].prime_to_m_part(2) > 1:
                 break
             M_lcm = lcm(M_lcm, elt_divs[-1])
@@ -208,7 +203,9 @@ def get_bad_formal_immersion_data(d):
     return p_todo, q_to_bad_p
 
 
-def apply_formal_immersion_at_2(output_thus_far, running_prime_dict_2, Kdeg):
+def apply_formal_immersion_at_2(
+    output_thus_far: Set[int], running_prime_dict_2: int, Kdeg: int
+):
 
     with open(FORMAL_IMMERSION_DATA_AT_2_PATH, "r") as fi2_dat_file:
         fi2_dat = json.load(fi2_dat_file)
@@ -234,13 +231,11 @@ def apply_formal_immersion_at_2(output_thus_far, running_prime_dict_2, Kdeg):
         logger.debug("No candidate primes eligible for formal immersion at 2 filtering")
         return output_thus_far
 
-    prime_divs_at_2 = running_prime_dict_2.prime_divisors()
-
     output = stubborn_set
     failed_candidates = set()
 
     for p in candidate_set:
-        if p in prime_divs_at_2:
+        if p.divides(running_prime_dict_2):
             output.add(p)
         else:
             failed_candidates.add(p)
@@ -260,17 +255,15 @@ def get_N(frob_poly, residue_field_card, exponent):
     if frob_poly.is_irreducible():
         frob_poly_root_field = frob_poly.root_field("a")
     else:
-        frob_poly_root_field = IntegerRing()
+        frob_poly_root_field = ZZ
     roots_of_frob = frob_poly.roots(frob_poly_root_field)
     if len(roots_of_frob) == 1:
         assert roots_of_frob[0][1] == 2
         beta = roots_of_frob[0][0]
         return 1 + residue_field_card ** exponent - 2 * beta ** exponent
-    else:
-        beta, beta_bar = [r for r, e in roots_of_frob]
-        return (
-            1 + residue_field_card ** exponent - beta ** exponent - beta_bar ** exponent
-        )
+
+    beta, beta_bar = [r for r, e in roots_of_frob]
+    return 1 + residue_field_card ** exponent - beta ** exponent - beta_bar ** exponent
 
 
 def get_type_1_primes(K, C_K, norm_bound=50, loop_curves=False):

@@ -4,28 +4,28 @@
 #                                                                      #
 ########################################################################
 
-from itertools import product
 import logging
+from itertools import product
+
+from sage.all import (
+    GF,
+    ZZ,
+    Integer,
+    NumberField,
+    gcd,
+    lcm,
+    matrix,
+    prod,
+    sqrt,
+)  # pylint: disable=no-name-in-module
+
+from .common_utils import R, get_weil_polys, weil_polynomial_is_elliptic, x
 
 logger = logging.getLogger(__name__)
 
-from .common_utils import R, x, get_weil_polys, weil_polynomial_is_elliptic
 
-from sage.all import (
-    gcd,
-    prod,
-    NumberField,
-    ZZ,
-    lcm,
-    Integer,
-    GF,
-    matrix,
-    sqrt,
-)
-
-
-def eps_exp(x, eps, Sigma):
-    return prod([sigma(x) ** my_pow for my_pow, sigma in zip(eps, Sigma)])
+def eps_exp(alpha, eps, Sigma):
+    return prod([sigma(alpha) ** my_pow for my_pow, sigma in zip(eps, Sigma)])
 
 
 def gal_act_eps(eps, sigma):
@@ -41,13 +41,12 @@ def get_eps_type(eps):
         if any(t in eps for t in [4, 8]):
             return "mixed"
         return "sextic"
-    elif any(t in eps for t in [4, 8]):
+    if any(t in eps for t in [4, 8]):
         if len(set(eps)) == 1:
             # means it's all 4s or all 8s
             return "quartic-diagonal"
         return "quartic-nondiagonal"
-    else:
-        return "quadratic"
+    return "quadratic"
 
 
 def collapse_tuple(a_beta_tuple):
@@ -206,7 +205,7 @@ def filter_ABC_primes(K, prime_list, eps_type):
                 output_list.append(p)
         return output_list
 
-    elif eps_type == "quartic-nondiagonal":
+    if eps_type == "quartic-nondiagonal":
         # prime must split or ramify in K, and be congruent to 2 mod 3
         output_list = []
 
@@ -216,7 +215,7 @@ def filter_ABC_primes(K, prime_list, eps_type):
                     output_list.append(p)
         return output_list
 
-    elif eps_type == "quartic-diagonal":
+    if eps_type == "quartic-diagonal":
         # prime must be congruent to 2 mod 3
         output_list = []
 
@@ -225,7 +224,7 @@ def filter_ABC_primes(K, prime_list, eps_type):
                 output_list.append(p)
         return output_list
 
-    elif eps_type == "sextic":
+    if eps_type == "sextic":
         # prime must split or ramify in K, and be congruent to 3 mod 4
         output_list = []
 
@@ -235,7 +234,7 @@ def filter_ABC_primes(K, prime_list, eps_type):
                     output_list.append(p)
         return output_list
 
-    elif eps_type == "mixed":
+    if eps_type == "mixed":
         # prime must split or ramify in K, and be congruent to 1 mod 12
         output_list = []
 
@@ -245,8 +244,7 @@ def filter_ABC_primes(K, prime_list, eps_type):
                     output_list.append(p)
         return output_list
 
-    else:  # should never happen
-        raise ValueError("type must be quadratic, quartic, sextic, or mixed")
+    raise ValueError("type must be quadratic, quartic, sextic, or mixed")
 
 
 def get_aux_primes(K, norm_bound, C_K, h_K, contains_imaginary_quadratic):
@@ -333,14 +331,14 @@ def get_possible_vals_at_gens(gens_info, eps, embeddings, residue_field, prime_f
         logger.debug(f"alpha^eps mod p0: {alpha_to_eps_mod_p0}")
         try:
             c_power_12h = prime_field(alpha_to_eps_mod_p0)
-        except TypeError as err:
+        except TypeError:
             # means alpha_to_eps_mod_p0 is not in GF(p) so can ignore p and move on
             return {}
         possible_values = c_power_12h.nth_root(12 * class_gp_order, all=True)
         filtered_values = filter_possible_values(
             possible_values, class_gp_gen, prime_field
         )
-        output[class_gp_gen] = list(set([x ** 12 for x in filtered_values]))
+        output[class_gp_gen] = list({x ** 12 for x in filtered_values})
 
     return output
 
@@ -782,7 +780,7 @@ def get_pre_type_one_two_primes(
             )
         )
         prime_support_my_gens_ideals = list(
-            set([a for P in my_gens_ideals for a in ZZ(P.norm()).prime_divisors()])
+            {a for P in my_gens_ideals for a in ZZ(P.norm()).prime_divisors()}
         )
         eps_prime_filt_dict = {}
 
@@ -802,26 +800,25 @@ def get_pre_type_one_two_primes(
         output.sort()
         return output
 
-    else:
-        # Split according to epsilon type, get prime divisors, and filter
+    # Split according to epsilon type, get prime divisors, and filter
 
-        final_split_dict = {}
-        for eps_type in set(epsilons.values()):
-            eps_type_tracking_dict_inv = {
-                eps: ZZ(tracking_dict_inv_collapsed[eps])
-                for eps in epsilons
-                if epsilons[eps] == eps_type
-            }
-            eps_type_output = lcm(list(eps_type_tracking_dict_inv.values()))
-            if eps_type_output.is_perfect_power():
-                eps_type_output = eps_type_output.perfect_power()[0]
-            eps_type_output = eps_type_output.prime_divisors()
-            eps_type_output = filter_ABC_primes(Kgal, eps_type_output, eps_type)
-            final_split_dict[eps_type] = set(eps_type_output)
+    final_split_dict = {}
+    for eps_type in set(epsilons.values()):
+        eps_type_tracking_dict_inv = {
+            eps: ZZ(tracking_dict_inv_collapsed[eps])
+            for eps in epsilons
+            if epsilons[eps] == eps_type
+        }
+        eps_type_output = lcm(list(eps_type_tracking_dict_inv.values()))
+        if eps_type_output.is_perfect_power():
+            eps_type_output = eps_type_output.perfect_power()[0]
+        eps_type_output = eps_type_output.prime_divisors()
+        eps_type_output = filter_ABC_primes(Kgal, eps_type_output, eps_type)
+        final_split_dict[eps_type] = set(eps_type_output)
 
-        # Take union of all primes over all epsilons, sort, and return
+    # Take union of all primes over all epsilons, sort, and return
 
-        output = set.union(*(val for val in final_split_dict.values()))
-        output = list(output)
-        output.sort()
-        return output
+    output = set.union(*(val for val in final_split_dict.values()))
+    output = list(output)
+    output.sort()
+    return output
