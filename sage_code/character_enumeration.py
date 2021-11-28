@@ -10,23 +10,18 @@ from .common_utils import x, weil_polynomial_is_elliptic, eps_exp
 logger = logging.getLogger(__name__)
 
 
-def filter_possible_values(possible_values_list, fq, prime_field):
+def filter_possible_values(possible_values_list, q, residue_class_degree, prime_field):
 
     output = []
-
+    fq = q ** residue_class_degree
     for c in possible_values_list:
         if c ** 2 == prime_field(1):
             output.append(c)
-        elif c ** 2 == prime_field(fq.norm()):
+        elif c ** 2 == prime_field(fq ** 2):
             output.append(c)
         else:
-            fq_char = ZZ(fq.norm()).prime_divisors()[0]
-            possible_mid_coeffs = lifts_in_range(
-                2 * sqrt(fq.norm()), c + prime_field(fq.norm()) / c
-            )
-            possible_weil_polys = [
-                x ** 2 + a * x + fq.norm() for a in possible_mid_coeffs
-            ]
+            possible_mid_coeffs = lifts_in_range(2 * sqrt(fq), c + prime_field(fq) / c)
+            possible_weil_polys = [x ** 2 + a * x + fq for a in possible_mid_coeffs]
             # as sanity check, ensure these are Weil polys
             possible_weil_polys = [
                 f for f in possible_weil_polys if f.is_weil_polynomial()
@@ -35,7 +30,7 @@ def filter_possible_values(possible_values_list, fq, prime_field):
             elliptic_weil_polys = [
                 f
                 for f in possible_weil_polys
-                if weil_polynomial_is_elliptic(f, fq_char, fq.residue_class_degree())
+                if weil_polynomial_is_elliptic(f, q, residue_class_degree)
             ]
             if elliptic_weil_polys:
                 output.append(c)
@@ -60,9 +55,9 @@ def get_possible_vals_at_gens(gens_info, eps, embeddings, residue_field, prime_f
             # means alpha_to_eps_mod_p0 is not in GF(p) so can ignore p and move on
             return {}
         possible_values = c_power_12h.nth_root(12 * class_gp_order, all=True)
-        filtered_values = filter_possible_values(
-            possible_values, class_gp_gen, prime_field
-        )
+        q = class_gp_gen.smallest_integer()
+        e = class_gp_gen.residue_class_degree()
+        filtered_values = filter_possible_values(possible_values, q, e, prime_field)
         output[class_gp_gen] = list({x ** 12 for x in filtered_values})
 
     return output
@@ -108,21 +103,37 @@ def get_prime_gens(C_K, my_gens):
     while my_gens_copy:
         candidate = next(it)
         candidate_class = C_K(candidate)
-        if candidate_class in my_gens:
+        if candidate_class in my_gens_copy:
             output[my_gens.index(candidate_class)] = candidate
             my_gens_copy.remove(candidate_class)
 
     return output
 
 
-def final_filter(C_K, Kgal, aux_primes, my_gens_ideals, gens_info, p, eps, embeddings):
-    """The possible isogeny prime p is assumed coprime to the prime ideals in my_gens_ideals
-    at this point."""
+def character_unit_filter(OK_star_gens, Fp0, eps, embeddings):
+    for alpha in OK_star_gens:
+        alpha_to_eps = eps_exp(alpha, eps, embeddings)
+        alpha_to_eps_mod_p0 = Fp0(alpha_to_eps)
+        if alpha_to_eps_mod_p0 != 1:
+            return False
+    return True
+
+
+def final_filter(
+    C_K, Kgal, OK_star_gens, aux_primes, my_gens_ideals, gens_info, p, eps, embeddings
+):
+    """The possible isogeny prime p is assumed coprime to the prime ideals in
+    my_gens_ideals at this point."""
     frak_p0 = Kgal.primes_above(p)[0]  # choice of p_0
     residue_field = frak_p0.residue_field(names="z")
     prime_field = GF(p)
 
-    logger.debug(f"Starting final filter for Prime {p} for eps {eps}")
+    logger.debug(f"Starting character enumeration filter for Prime {p} for eps {eps}")
+
+    survived = character_unit_filter(OK_star_gens, residue_field, eps, embeddings)
+    if not survived:
+        logger.debug(f"Prime {p} for eps {eps} removed using unit filter")
+        return survived
 
     # Step 1
     possible_vals_at_gens = get_possible_vals_at_gens(
@@ -181,10 +192,12 @@ def final_filter(C_K, Kgal, aux_primes, my_gens_ideals, gens_info, p, eps, embed
                 possible_val_with_raised_exp = tuple_exp(
                     possible_val, exponents_in_class_group
                 )
-                my_possible_val = [thingy * prod(possible_val_with_raised_exp)]
-
+                my_possible_val = thingy * prod(possible_val_with_raised_exp)
+                my_possible_val_roots = my_possible_val.nth_root(12, all=True)
+                char = q.smallest_integer()
+                e = q.residue_class_degree()
                 filtered_values = filter_possible_values(
-                    my_possible_val, q, prime_field
+                    my_possible_val_roots, char, e, prime_field
                 )
                 if filtered_values:
                     new_still_in_the_game.append(possible_val)
@@ -201,8 +214,9 @@ def final_filter(C_K, Kgal, aux_primes, my_gens_ideals, gens_info, p, eps, embed
 
 
 def character_enumeration_filter(
-    C_K, Kgal, tracking_dict_inv_collapsed, epsilons, aux_primes, embeddings
+    K, C_K, Kgal, tracking_dict_inv_collapsed, epsilons, aux_primes, embeddings
 ):
+    OK_star_gens = K.unit_group().gens_values()
     my_gens = list(C_K.gens())  # done here to fix these, since the order matters later
     my_gens_ideals = get_prime_gens(C_K, my_gens)
     gens_info = {}
@@ -234,7 +248,15 @@ def character_enumeration_filter(
             if p in prime_support_my_gens_ideals:
                 survived_primes.append(p)
             elif final_filter(
-                C_K, Kgal, aux_primes, my_gens_ideals, gens_info, p, eps, embeddings
+                C_K,
+                Kgal,
+                OK_star_gens,
+                aux_primes,
+                my_gens_ideals,
+                gens_info,
+                p,
+                eps,
+                embeddings,
             ):
                 survived_primes.append(p)
         eps_prime_filt_dict[eps] = set(survived_primes)

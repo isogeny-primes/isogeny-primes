@@ -38,8 +38,8 @@ from sage.all import Integer, QuadraticField
 from isogeny_primes import get_isogeny_primes
 from sage_code.common_utils import CLASS_NUMBER_ONE_DISCS, EC_Q_ISOGENY_PRIMES
 
-TEST_SETTING = {
-    "norm_bound": 10,
+TEST_SETTINGS = {
+    "norm_bound": 20,
     "bound": 1000,
     "loop_curves": False,
     "heavy_filter": True,
@@ -48,16 +48,18 @@ TEST_SETTING = {
 # total running time of all tests in this file is about 5 minutes
 
 # Check that the code actually runs for several Ds
-R = 10
-square_free_D = [D for D in range(-R, R + 1) if Integer(D).is_squarefree() and D != 1]
+R = 30
+square_free_D = [D for D in range(-R, R) if Integer(D).is_squarefree() and D != 1]
 
 
 @pytest.mark.parametrize("D", square_free_D)
 def test_interval(D):
     K = QuadraticField(D)
     if not K.discriminant() in CLASS_NUMBER_ONE_DISCS:
-        superset = get_isogeny_primes(K, **TEST_SETTING)
-        assert set(superset).issuperset(EC_Q_ISOGENY_PRIMES)
+        superset = get_isogeny_primes(K, **TEST_SETTINGS)
+        # test that we are not to many primes left over
+        todo = set(superset).difference(EC_Q_ISOGENY_PRIMES)
+        assert len(todo) <= 2 or max(todo) <= 31
 
 
 # The first case comes from Box's determination of quadratic points
@@ -79,19 +81,19 @@ def test_interval(D):
 @pytest.mark.parametrize(
     "D, extra_isogeny, appendix_bound, potenial_isogenies",
     [
-        (-31, 73, 1000, {31, 41}),
-        (-127, 73, 1000, {31, 41, 61, 79}),
+        (-31, 73, 1000, {31}),
+        (-127, 73, 1000, {31, 61}),
         (5 * 577, 103, 1000, {577}),
-        (-31159, 137, 1000, {23, 29, 41, 61, 79, 109, 31159}),
-        (61 * 229 * 145757, 191, 0, {31, 173, 229, 241, 145757}),
+        (-31159, 137, 1000, {23, 29, 61, 79, 109, 157, 31159}),
+        (61 * 229 * 145757, 191, 0, {31, 229, 241, 145757}),
         (11 * 17 * 9011 * 23629, 311, 0, {71, 9011, 23629}),
     ],
 )
 def test_from_literature(D, extra_isogeny, appendix_bound, potenial_isogenies):
     K = QuadraticField(D)
     upperbound = potenial_isogenies.union(EC_Q_ISOGENY_PRIMES).union({extra_isogeny})
-    superset = get_isogeny_primes(K, **TEST_SETTING, appendix_bound=appendix_bound)
-    assert set(superset).issuperset(EC_Q_ISOGENY_PRIMES)
+    superset = get_isogeny_primes(K, appendix_bound=appendix_bound, **TEST_SETTINGS)
+    assert set(EC_Q_ISOGENY_PRIMES).difference(superset) == set()
     assert extra_isogeny in superset
-    assert upperbound.issuperset(superset)
+    assert set(superset.difference(upperbound)) == set()
     assert set(upperbound.difference(superset)) == set()

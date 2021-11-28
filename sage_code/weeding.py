@@ -157,19 +157,23 @@ def works_method_of_appendix(p, K):
     """This implements the method of the appendix, returns True if that
     method is able to remove p as an isogeny prime for K."""
 
-    if QuadraticField(-p).class_number() > K.degree():
-        if p not in SMALL_GONALITIES:
+    if QuadraticField(-p).class_number() <= K.degree():
+        return False
 
-            chi = get_dirichlet_character(K)
+    if p in SMALL_GONALITIES:
+        return False
 
-            logger.debug("Testing whether torsion is same")
-            if is_torsion_same(p, K, chi):
-                logger.debug("Torsion is same test passed")
-                logger.debug("Testing whether rank is same")
-                if is_rank_of_twist_zero(p, chi):
-                    logger.debug(f"Method of appendix works for {p}")
-                    return True
-        logger.debug(f"Method of appendix fails for {p}")
+    chi = get_dirichlet_character(K)
+
+    if K.degree() == 2 and chi(p) == -1:
+        return False
+
+    logger.debug("Testing whether torsion is same")
+    if is_torsion_same(p, K, chi):
+        logger.debug("Torsion is same test passed")
+        logger.debug("Testing whether rank is same")
+        if is_rank_of_twist_zero(p, chi):
+            return True
     return False
 
 
@@ -222,5 +226,7 @@ def apply_weeding(candidates, K, appendix_bound=1000):
                 if works_method_of_appendix(p, K):
                     logger.debug(f"Prime {p} removed via method of appendix")
                     removed_primes.add(p)
+                else:
+                    logger.debug(f"Method of appendix fails for {p}")
 
     return removed_primes

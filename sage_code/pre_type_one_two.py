@@ -551,7 +551,7 @@ def get_pre_type_one_two_primes(
     if heavy_filter:
         logger.debug("Using Heavy filtering")
         output = character_enumeration_filter(
-            C_K, Kgal, tracking_dict_inv_collapsed, epsilons, aux_primes, embeddings
+            K, C_K, Kgal, tracking_dict_inv_collapsed, epsilons, aux_primes, embeddings
         )
         return output
 
