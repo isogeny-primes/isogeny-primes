@@ -25,7 +25,7 @@
 
 """
 
-from sage.all import PolynomialRing, Rationals
+from sage.all import PolynomialRing, Rationals, prod
 
 R = PolynomialRing(Rationals(), "x")
 x = R.gen()
@@ -69,3 +69,11 @@ def get_weil_polys(F):
     a = F.degree()
     weil_polys = R.weil_polynomials(2, q ** a)
     return [f for f in weil_polys if weil_polynomial_is_elliptic(f, q, a)]
+
+
+def eps_exp(alpha, eps, Sigma):
+    return prod([sigma(alpha) ** my_pow for my_pow, sigma in zip(eps, Sigma)])
+
+
+def gal_act_eps(eps, sigma):
+    return tuple(eps[i - 1] for i in sigma)

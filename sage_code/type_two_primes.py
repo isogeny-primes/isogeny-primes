@@ -38,7 +38,7 @@ from sage.all import (
     prime_range,
 )  # pylint: disable=no-name-in-module
 
-from sage_code.common_utils import x
+from .common_utils import x
 
 logger = logging.getLogger(__name__)
 
