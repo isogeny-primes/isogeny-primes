@@ -16,10 +16,10 @@ venv:
 	. venv/bin/activate && ${env} pip install -U pip pip-tools
 
 requirements.txt: venv requirements.in
-	. venv/bin/activate && ${env} python3 -m piptools compile requirements.in
+	. venv/bin/activate && ${env} ${sage_python} -m piptools compile requirements.in
 
 requirements-dev.txt: venv requirements-dev.in
-	. venv/bin/activate && ${env} python3 -m piptools compile requirements-dev.in
+	. venv/bin/activate && ${env} ${sage_python} -m piptools compile requirements-dev.in
 
 .PHONY:	pip-compile
 pip-compile: requirements.txt requirements-dev.txt
@@ -27,18 +27,19 @@ pip-compile: requirements.txt requirements-dev.txt
 .PHONY: pip-install
 pip-install: venv/make_pip_install_complete
 venv/make_pip_install_complete: requirements.txt
-	. venv/bin/activate && ${env} pip install -Ur requirements.txt
+	. venv/bin/activate && ${env} pip install -IUr requirements.txt
 	. venv/bin/activate && ${env} python -c ${version_command}
 	touch venv/make_pip_install_complete
 
 .PHONY: pip-install-dev
 pip-install-dev: venv/make_pip_install_dev_complete
 venv/make_pip_install_dev_complete: venv/make_pip_install_complete requirements-dev.txt
-	. venv/bin/activate && ${env} pip install -Ur requirements-dev.txt
+	. venv/bin/activate && ${env} pip install -IUr requirements-dev.txt
 	touch venv/make_pip_install_dev_complete
 
 
 .PHONY: unittests
+unittests: export PROFILE=
 unittests: pip-install-dev ## Run unittests using pytest
 	. venv/bin/activate && ${env} coverage run -m pytest -vv --log-cli-level=DEBUG tests/fast_tests
 
@@ -86,12 +87,29 @@ vulture: pip-install-dev
 lint: pip-install-dev  ## Do basic linting
 	@. venv/bin/activate && ${env} pylint --extension-pkg-allow-list=sage ${pysrcdirs}
 
+PSTATS = $(wildcard profiling_results/**/*.pstats)
+PNG = $(PSTATS:.pstats=.png)
+
+.PHONY: profile
+profile: pip-install-dev $(PNG)
+
+.PHONY: profile_test
+profile_valid: profile
+# means the above command is not executed if profile is not set
+profile_valid${PROFILE}:
+
+
+profiling_results/%.png: profiling_results/%.pstats
+	gprof2dot -f pstats $< | dot -Tpng -o $@
+
 # should add lint at some point but still has to many failures at the moment
 .PHONY: valid
 valid: pip-install-dev vulture fix test test-report
+	${MAKE} profile_valid PROFILE=${PROFILE}
 
 .PHONY: valid_fast
 valid_fast: pip-install-dev vulture fix unittests test-report
+	${MAKE} profile_valid PROFILE=${PROFILE}
 
 
 clean: ## Cleanup

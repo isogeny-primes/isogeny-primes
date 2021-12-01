@@ -1,14 +1,15 @@
 -c requirements.txt
 
-black
-pylint
-bandit
-mypy
 autoflake
+bandit
+black
 coverage
 coverage-badge
+flake8
+gprof2dot
+mypy
+pylint
+pyflakes
 pytest
 pytest-mock
-flake8
-pyflakes
 vulture
