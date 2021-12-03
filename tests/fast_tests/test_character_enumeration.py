@@ -1,7 +1,7 @@
 import pytest
 from sage.all import GF
 
-from sage_code.character_enumeration import filter_possible_values
+from sage_code.character_enumeration import filter_possible_values, lifts_in_hasse_range
 
 
 @pytest.mark.parametrize(
@@ -19,3 +19,19 @@ def test_filter_possible_values(possible_values_list, q, e, prime, result):
     possible_values_list = [prime_field(v) for v in possible_values_list]
     possible_values = filter_possible_values(possible_values_list, q, e, prime_field)
     assert possible_values == result
+
+
+@pytest.mark.parametrize(
+    "fq, res_class, expected_range",
+    [
+        (11, GF(3)(0), [0, -3, -6, 3, 6]),
+        # make sure we include +/-2sqrt(fq) but not +/-(2sqrt(fq)+1),
+        (145757 ** 2, GF(357686312646216567629137)(2 * 145757), [2 * 145757]),
+        (145757 ** 2, GF(357686312646216567629137)(-2 * 145757), [-2 * 145757]),
+        (145757 ** 2, GF(357686312646216567629137)(2 * 145757 + 1), []),
+        (145757 ** 2, GF(357686312646216567629137)(-2 * 145757 - 1), []),
+    ],
+)
+def test_lifts_in_hasse_range(fq, res_class, expected_range):
+    result = lifts_in_hasse_range(fq, res_class)
+    assert result == expected_range

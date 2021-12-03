@@ -1,6 +1,6 @@
 from itertools import product
 
-from sage.all import prod, ZZ, sqrt, GF
+from sage.all import GF, ZZ, prod
 
 import logging
 
@@ -20,12 +20,8 @@ def filter_possible_values(possible_values_list, q, residue_class_degree, prime_
         elif c ** 2 == prime_field(fq ** 2):
             output.append(c)
         else:
-            possible_mid_coeffs = lifts_in_range(2 * sqrt(fq), c + prime_field(fq) / c)
+            possible_mid_coeffs = lifts_in_hasse_range(fq, c + prime_field(fq) / c)
             possible_weil_polys = [x ** 2 + a * x + fq for a in possible_mid_coeffs]
-            # as sanity check, ensure these are Weil polys
-            possible_weil_polys = [
-                f for f in possible_weil_polys if f.is_weil_polynomial()
-            ]
 
             elliptic_weil_polys = [
                 f
@@ -67,7 +63,11 @@ def tuple_exp(tup, exp_tup):
     return tuple((t ** e for t, e in zip(tup, exp_tup)))
 
 
-def lifts_in_range(N, res_class):
+def lifts_in_hasse_range(fq, res_class):
+    # N = 2 * sqrt(fq)
+    # low_run >=-N
+    # low_run ** 2 = (-low_run) ** 2 <= N**2 = 4*fq
+    fq4 = 4 * fq
 
     output = []
     p = res_class.modulus()
@@ -75,17 +75,17 @@ def lifts_in_range(N, res_class):
 
     low_run = centered_lift
 
-    while low_run >= -N:
+    while low_run ** 2 <= fq4:
         output.append(low_run)
         low_run = low_run - p
 
-    high_run = centered_lift
+    high_run = centered_lift + p
 
-    while high_run <= N:
+    while high_run ** 2 <= fq4:
         output.append(high_run)
         high_run = high_run + p
 
-    return [a for a in list(set(output)) if a.abs() <= N]
+    return output
 
 
 def get_prime_gens(C_K, my_gens):
@@ -160,53 +160,50 @@ def final_filter(
 
     still_in_the_game = possible_vals_cart_prod.copy()
     for q in aux_primes:
-        if q.is_coprime(p):
-            exponents_in_class_group = C_K(q).exponents()
+        if not q.is_coprime(p):
+            continue
+        exponents_in_class_group = C_K(q).exponents()
 
-            # Check that these exponents correspond to the ideals in
-            # my_gens_ideals in the correct order
-            sanity_check = prod(
-                [Q ** a for Q, a in zip(my_gens_ideals, exponents_in_class_group)]
-            )
-            assert C_K(sanity_check) == C_K(q)
+        # Check that these exponents correspond to the ideals in
+        # my_gens_ideals in the correct order
+        sanity_check = prod(
+            [Q ** a for Q, a in zip(my_gens_ideals, exponents_in_class_group)]
+        )
+        assert C_K(sanity_check) == C_K(q)
 
-            the_principal_ideal = q * prod(
-                [Q ** (-a) for Q, a in zip(my_gens_ideals, exponents_in_class_group)]
+        the_principal_ideal = q * prod(
+            [Q ** (-a) for Q, a in zip(my_gens_ideals, exponents_in_class_group)]
+        )
+        alphas = the_principal_ideal.gens_reduced()
+        assert len(alphas) == 1, "the principal ideal isn't principal!!!"
+        alpha = alphas[0]
+        alpha_to_eps = eps_exp(alpha, eps, embeddings)
+        alpha_to_eps_mod_p0 = residue_field(alpha_to_eps)
+        try:
+            thingy = prime_field(alpha_to_eps_mod_p0)
+        except TypeError as err:
+            # means alpha_to_eps_mod_p0 is not in GF(p) so can ignore and move on
+            logger.debug(f"Prime {p} for eps {eps} filtered in Step 3a of Heavy filter")
+            logger.debug(f"{repr(err)}")
+            return False
+        new_still_in_the_game = []
+        for possible_val in still_in_the_game:
+            possible_val_with_raised_exp = tuple_exp(
+                possible_val, exponents_in_class_group
             )
-            alphas = the_principal_ideal.gens_reduced()
-            assert len(alphas) == 1, "the principal ideal isn't principal!!!"
-            alpha = alphas[0]
-            alpha_to_eps = eps_exp(alpha, eps, embeddings)
-            alpha_to_eps_mod_p0 = residue_field(alpha_to_eps)
-            try:
-                thingy = prime_field(alpha_to_eps_mod_p0)
-            except TypeError as err:
-                # means alpha_to_eps_mod_p0 is not in GF(p) so can ignore and move on
-                logger.debug(
-                    f"Prime {p} for eps {eps} filtered in Step 3a of Heavy filter"
-                )
-                logger.debug(f"{repr(err)}")
-                return False
-            new_still_in_the_game = []
-            for possible_val in still_in_the_game:
-                possible_val_with_raised_exp = tuple_exp(
-                    possible_val, exponents_in_class_group
-                )
-                my_possible_val = thingy * prod(possible_val_with_raised_exp)
-                my_possible_val_roots = my_possible_val.nth_root(12, all=True)
-                char = q.smallest_integer()
-                e = q.residue_class_degree()
-                filtered_values = filter_possible_values(
-                    my_possible_val_roots, char, e, prime_field
-                )
-                if filtered_values:
-                    new_still_in_the_game.append(possible_val)
-            still_in_the_game = new_still_in_the_game
-            if not still_in_the_game:
-                logger.debug(
-                    f"Prime {p} for eps {eps} filtered in Step 3b of Heavy filter"
-                )
-                return False
+            my_possible_val = thingy * prod(possible_val_with_raised_exp)
+            my_possible_val_roots = my_possible_val.nth_root(12, all=True)
+            char = q.smallest_integer()
+            e = q.residue_class_degree()
+            filtered_values = filter_possible_values(
+                my_possible_val_roots, char, e, prime_field
+            )
+            if filtered_values:
+                new_still_in_the_game.append(possible_val)
+        still_in_the_game = new_still_in_the_game
+        if not still_in_the_game:
+            logger.debug(f"Prime {p} for eps {eps} filtered in Step 3b of Heavy filter")
+            return False
 
     logger.debug(f"Prime {p} for eps {eps} survived Heavy filter")
     # If not returned False by now, then no obstruction to p being an isogeny prime
@@ -231,11 +228,9 @@ def character_enumeration_filter(
     eps_prime_dict = {
         eps: tracking_dict_inv_collapsed[eps].prime_divisors() for eps in epsilons
     }
-    all_pre_type_one_two_primes = {p for k in eps_prime_dict for p in eps_prime_dict[k]}
-    logger.debug(
-        "Pre type one two candidates before filtering: {}".format(
-            all_pre_type_one_two_primes
-        )
+    pre_type_one_two = {p for k in eps_prime_dict for p in eps_prime_dict[k]}
+    logger.info(
+        f"Pre type one two primes before enumeration filter: {sorted(pre_type_one_two)}"
     )
     prime_support_my_gens_ideals = list(
         {a for P in my_gens_ideals for a in ZZ(P.norm()).prime_divisors()}
@@ -262,4 +257,6 @@ def character_enumeration_filter(
         eps_prime_filt_dict[eps] = set(survived_primes)
 
     output = set.union(*(val for val in eps_prime_filt_dict.values()))
+    removed = sorted(pre_type_one_two.difference(output))
+    logger.info(f"Pre type one two candidates removed by filtering: {removed}")
     return sorted(output)
