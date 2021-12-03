@@ -276,7 +276,9 @@ def get_aux_primes(K, norm_bound, C_K, h_K, contains_imaginary_quadratic):
     return aux_primes
 
 
-def get_AB_integers(embeddings, frak_q, epsilons, q_class_group_order):
+def get_AB_integers(
+    embeddings, frak_q, epsilons, q_class_group_order, multiplicative_bounds={}
+):
 
     output_dict_AB = {}
     alphas = (frak_q ** q_class_group_order).gens_reduced()
@@ -285,14 +287,22 @@ def get_AB_integers(embeddings, frak_q, epsilons, q_class_group_order):
     nm_q = ZZ(frak_q.norm())
     for eps in epsilons:
         alpha_to_eps = eps_exp(alpha, eps, embeddings)
-        A = (alpha_to_eps - 1).norm()
-        B = (alpha_to_eps - (nm_q ** (12 * q_class_group_order))).norm()
+        A = ZZ((alpha_to_eps - 1).norm())
+        B = ZZ((alpha_to_eps - (nm_q ** (12 * q_class_group_order))).norm())
         output_dict_AB[eps] = lcm(A, B)
+        if multiplicative_bounds.get(eps):
+            output_dict_AB[eps] = gcd(output_dict_AB[eps], multiplicative_bounds[eps])
     return output_dict_AB
 
 
 def get_C_integers(
-    K, embeddings, frak_q, epsilons, q_class_group_order, frob_polys_to_loop
+    K,
+    embeddings,
+    frak_q,
+    epsilons,
+    q_class_group_order,
+    frob_polys_to_loop,
+    multiplicative_bounds={},
 ):
 
     # Initialise output dict to empty sets
@@ -312,8 +322,11 @@ def get_C_integers(
             alpha_eps = eps_exp(alpha, eps, embeddings).matrix(QQ)
             alpha_one = alpha_eps.parent()(1)
             C_mat = alpha_eps.tensor_product(beta_one) - alpha_one.tensor_product(beta)
-            N = C_mat.det()
-            N = ZZ(N)
+            N = ZZ(C_mat.det())
+            if multiplicative_bounds.get(eps):
+                N = gcd(N, multiplicative_bounds[eps])
+            else:
+                N = N.abs().perfect_power()[0]
             output_dict_C[eps] = lcm(output_dict_C[eps], N)
     return output_dict_C
 
@@ -393,7 +406,9 @@ def get_U_integers(K, epsilons, embeddings):
 
     unit_gens = K.unit_group().gens_values()
     return {
-        eps: gcd([(eps_exp(u, eps, embeddings) - 1).absolute_norm() for u in unit_gens])
+        eps: gcd(
+            [ZZ((eps_exp(u, eps, embeddings) - 1).absolute_norm()) for u in unit_gens]
+        )
         for eps in epsilons
     }
 
@@ -484,7 +499,7 @@ def get_pre_type_one_two_primes(
 
     # Now start with the divisibilities. Do the unit computation first
 
-    divs_from_units = get_U_integers(K, epsilons, embeddings)
+    U_integers_dict = get_U_integers(K, epsilons, embeddings)
     logger.debug("Computed divisibilities from units")
 
     # Next do the computation of A,B and C integers
@@ -492,38 +507,34 @@ def get_pre_type_one_two_primes(
     tracking_dict = {}
     frob_polys_dict = {}
 
+    bound_dict = U_integers_dict
+
     for q in aux_primes:
         q_class_group_order = C_K(q).multiplicative_order()
         residue_field = q.residue_field(names="z")
         if loop_curves:
-            frob_polys_to_loop = get_weil_polys(residue_field)
+            frob_polys = get_weil_polys(residue_field)
         else:
-            frob_polys_to_loop = R.weil_polynomials(2, residue_field.cardinality())
-        frob_polys_dict[q] = frob_polys_to_loop
+            frob_polys = R.weil_polynomials(2, residue_field.cardinality())
+        frob_polys_dict[q] = frob_polys
         # these will be dicts with keys the epsilons, values sets of primes
-        AB_integers_dict = get_AB_integers(embeddings, q, epsilons, q_class_group_order)
+        AB_integers_dict = get_AB_integers(
+            embeddings, q, epsilons, q_class_group_order, bound_dict
+        )
         C_integers_dict = get_C_integers(
-            Kgal, embeddings, q, epsilons, q_class_group_order, frob_polys_to_loop
+            Kgal, embeddings, q, epsilons, q_class_group_order, frob_polys, bound_dict
         )
         unified_dict = {}
-        q_norm = Integer(q.norm())
+        q_char = q.smallest_integer()
         for eps in epsilons:
-            unified_dict[eps] = gcd(
-                lcm([q_norm, AB_integers_dict[eps], C_integers_dict[eps]]),
-                divs_from_units[eps],
+            q_char_eps = gcd(q_char, bound_dict[eps])
+            unified_dict[eps] = lcm(
+                [q_char_eps, AB_integers_dict[eps], C_integers_dict[eps]]
             )
         tracking_dict[q] = unified_dict
-    logger.debug("Computed tracking dict")
+        bound_dict = unified_dict
 
-    # Take gcds across all aux primes to get one integer for each epsilon
-
-    tracking_dict_inv_collapsed = {}
-    for eps in epsilons:
-        q_dict = {}
-        for q in aux_primes:
-            q_dict[q] = tracking_dict[q][eps]
-        q_dict_collapsed = gcd(list(q_dict.values()))
-        tracking_dict_inv_collapsed[eps] = ZZ(q_dict_collapsed)
+    logger.debug(f"Computed bound dict: \n{bound_dict}")
 
     # Optionally use the principal ideal lattice for further filtering
 
@@ -533,16 +544,14 @@ def get_pre_type_one_two_primes(
             aux_primes, frob_polys_dict, Kgal, epsilons, embeddings, C_K
         )
         for eps in epsilons:
-            tracking_dict_inv_collapsed[eps] = ZZ(
-                gcd(tracking_dict_inv_collapsed[eps], PIL_integers_dict[eps])
-            )
+            bound_dict[eps] = ZZ(gcd(bound_dict[eps], PIL_integers_dict[eps]))
 
     # Split according to epsilon type, get prime divisors, and filter
 
     if heavy_filter:
         logger.debug("Using Heavy filtering")
         output = character_enumeration_filter(
-            K, C_K, Kgal, tracking_dict_inv_collapsed, epsilons, aux_primes, embeddings
+            K, C_K, Kgal, bound_dict, epsilons, aux_primes, embeddings
         )
         return output
 
@@ -551,9 +560,7 @@ def get_pre_type_one_two_primes(
     final_split_dict = {}
     for eps_type in set(epsilons.values()):
         eps_type_tracking_dict_inv = {
-            eps: ZZ(tracking_dict_inv_collapsed[eps])
-            for eps in epsilons
-            if epsilons[eps] == eps_type
+            eps: ZZ(bound_dict[eps]) for eps in epsilons if epsilons[eps] == eps_type
         }
         eps_type_output = lcm(list(eps_type_tracking_dict_inv.values()))
         if eps_type_output.is_perfect_power():

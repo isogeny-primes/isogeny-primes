@@ -1,8 +1,8 @@
 """test_quadratic_isogeny_primes.py
 
-To run these tests, enter the following, possibly as sudo:
+To run these tests, enter the following:
 
-sage test_quadratic_isogeny_primes.py
+make integrationtests
 
     ====================================================================
 
