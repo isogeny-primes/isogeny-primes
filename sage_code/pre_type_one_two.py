@@ -9,8 +9,8 @@ from itertools import product
 
 from sage.all import (
     ZZ,
+    QQ,
     Integer,
-    NumberField,
     gcd,
     lcm,
     matrix,
@@ -305,25 +305,16 @@ def get_C_integers(
     alpha = alphas[0]
 
     for frob_poly in frob_polys_to_loop:
-        if frob_poly.is_irreducible():
-            frob_poly_root_field = frob_poly.root_field("a")
-        else:
-            frob_poly_root_field = NumberField(R.gen(), "a")
-        _, K_into_KL, L_into_KL, _ = K.composite_fields(
-            frob_poly_root_field, "c", both_maps=True
-        )[0]
-        roots_of_frob = frob_poly.roots(frob_poly_root_field)
-        betas = [r for r, e in roots_of_frob]
+        beta = matrix.companion(frob_poly) ** (12 * q_class_group_order)
+        beta_one = beta.parent()(1)
 
-        for beta in betas:
-            for eps in epsilons:
-                # print('.', end='', flush=True)
-                N = (
-                    K_into_KL(eps_exp(alpha, eps, embeddings))
-                    - L_into_KL(beta ** (12 * q_class_group_order))
-                ).absolute_norm()
-                N = ZZ(N)
-                output_dict_C[eps] = lcm(output_dict_C[eps], N)
+        for eps in epsilons:
+            alpha_eps = eps_exp(alpha, eps, embeddings).matrix(QQ)
+            alpha_one = alpha_eps.parent()(1)
+            C_mat = alpha_eps.tensor_product(beta_one) - alpha_one.tensor_product(beta)
+            N = C_mat.det()
+            N = ZZ(N)
+            output_dict_C[eps] = lcm(output_dict_C[eps], N)
     return output_dict_C
 
 
