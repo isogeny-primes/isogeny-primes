@@ -1,7 +1,13 @@
 import pytest
-from sage.all import GF
+from sage.all import GF, NumberField, QQ
+from sage.misc.misc_c import prod
+from sage.rings.polynomial.polynomial_ring import polygen
 
-from sage_code.character_enumeration import filter_possible_values, lifts_in_hasse_range
+from sage_code.character_enumeration import (
+    filter_possible_values,
+    lifts_in_hasse_range,
+    get_prime_gens,
+)
 
 
 @pytest.mark.parametrize(
@@ -35,3 +41,49 @@ def test_filter_possible_values(possible_values_list, q, e, prime, result):
 def test_lifts_in_hasse_range(fq, res_class, expected_range):
     result = lifts_in_hasse_range(fq, res_class)
     assert result == expected_range
+
+
+x = polygen(QQ)
+
+
+@pytest.mark.parametrize(
+    "f, q",
+    [
+        (x ** 2 - x + 1007, 13),
+        (x ** 2 - x + 1007, 17),
+        (x ** 2 - x + 1007, 19),
+        (x ** 2 - 11 * 17 * 9011 * 23629, 17),
+        (x ** 2 - 11 * 17 * 9011 * 23629, 47),
+        (x ** 2 - 11 * 17 * 9011 * 23629, 89),
+    ],
+)
+@pytest.mark.skip(reason="Only for profiling putative faster solution")
+def test_ideal_log_relation_prime_gens(f, q):
+    # also tests get_prime_gens
+    # x = polygen(QQ)
+    # f = x ** 2 - x + 1007
+    # q = 13
+    K = NumberField(f, "b")
+    C_K = K.class_group()
+    qq = (q * K).factor()[0][0]
+
+    prime_gens, relations = get_prime_gens(C_K)
+    ideal_gens = C_K.gens_ideals()
+    for prime, ideal, relation in zip(prime_gens, ideal_gens, relations):
+        assert prime * relation == ideal
+
+    exponents = C_K(qq).exponents()
+
+    t = qq.ideal_log_relation()
+    alpha_new = t * prod([(relation ** e) for relation, e in zip(relations, exponents)])
+
+    sanity_check = prod([Q ** a for Q, a in zip(prime_gens, exponents)])
+    assert C_K(sanity_check) == C_K(qq)
+
+    the_principal_ideal = qq * prod([Q ** (-a) for Q, a in zip(prime_gens, exponents)])
+
+    alphas = the_principal_ideal.gens_reduced()
+    assert len(alphas) == 1, "the principal ideal isn't principal!!!"
+    alpha = alphas[0]
+
+    assert alpha == alpha_new or (alpha / alpha_new).is_unit()

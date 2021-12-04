@@ -1,6 +1,8 @@
 """
 Make sure we show a decent error if a to old version of sage is being used
 """
+from sage.structure.proof.proof import get_flag
+
 try:
     from sagemath.check_version import check_version
 
@@ -152,3 +154,81 @@ def _splitting_classes_gens_(K, m, d):
 
 
 sage.rings.number_field.number_field._splitting_classes_gens_ = _splitting_classes_gens_
+
+
+def _cache_bnfisprincipal(self, proof=None, gens=False):
+    r"""
+    This function is essentially the implementation of
+    :meth:`is_principal`, :meth:`gens_reduced` and
+    :meth:`ideal_class_log`.
+    INPUT:
+    - ``self`` -- an ideal
+    - ``proof`` -- proof flag.  If ``proof=False``, assume GRH.
+    - ``gens`` -- (default: False) if True, also computes the reduced
+      generators of the ideal.
+    OUTPUT:
+    None.  This function simply caches the results: it sets
+    ``_ideal_class_log`` (see :meth:`ideal_class_log`),
+    ``_is_principal`` (see :meth:`is_principal`) and
+    ``_reduced_generators``.
+    TESTS:
+    Check that no warnings are triggered from PARI/GP (see :trac:`30801`)::
+        sage: K.<a> = NumberField(x^2 - x + 112941801)
+        sage: I = K.ideal((112941823, a + 49942513))
+        sage: I.is_principal()
+        False
+    """
+    # Since pari_bnf() is cached, this call to pari_bnf() should not
+    # influence the run-time much.  Also, this simplifies the handling
+    # of the proof flag: if we computed bnfisprincipal() in the past
+    # with proof=False, then we do not need to recompute the result.
+    # We just need to check correctness of pari_bnf().
+    proof = get_flag(proof, "number_field")
+    bnf = self.number_field().pari_bnf(proof)
+
+    # If we already have _reduced_generators, no need to compute them again
+    if hasattr(self, "_reduced_generators"):
+        gens = False
+
+    # Is there something to do?
+    if hasattr(self, "_ideal_class_log") and not gens:
+        self._is_principal = not any(self._ideal_class_log)
+        return
+
+    if not gens:
+        v = bnf.bnfisprincipal(self.pari_hnf(), 0)
+        self._ideal_class_log = list(v)
+        self._is_principal = not any(self._ideal_class_log)
+    else:
+        # TODO: this is a bit of a waste. We ask bnfisprincipal to compute the compact form and then
+        # convert this compact form back into an expanded form.
+        # (though calling with 3 instead of 5 most likely triggers an error with memory allocation failure)
+        v = bnf.bnfisprincipal(self.pari_hnf(), 5)
+        e = v[0]
+        t = v[1]
+        t = bnf.nfbasistoalg(bnf.nffactorback(t))
+        self._ideal_class_log = list(e)
+        g = self.number_field()(t)
+        self._ideal_log_relation = g
+        self._is_principal = not any(self._ideal_class_log)
+
+        if self._is_principal:
+            self._reduced_generators = (g,)
+        elif gens:
+            # Non-principal ideal
+            self._reduced_generators = self.gens_two()
+
+
+def ideal_log_relation(self, proof=None):
+    if not hasattr(self, "_ideal_log_relation"):
+        self._cache_bnfisprincipal(proof=proof, gens=True)
+
+    return self._ideal_log_relation
+
+
+sage.rings.number_field.number_field_ideal.NumberFieldFractionalIdeal._cache_bnfisprincipal = (
+    _cache_bnfisprincipal
+)
+sage.rings.number_field.number_field_ideal.NumberFieldFractionalIdeal.ideal_log_relation = (
+    ideal_log_relation
+)

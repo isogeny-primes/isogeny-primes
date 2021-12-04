@@ -4,6 +4,7 @@ from sage.all import GF, ZZ, prod
 
 import logging
 
+
 from .common_utils import x, weil_polynomial_is_elliptic, eps_exp
 
 
@@ -88,26 +89,22 @@ def lifts_in_hasse_range(fq, res_class):
     return output
 
 
-def get_prime_gens(C_K, my_gens):
+def get_prime_gens(C_K, norm_bound=800):
+    gens = list(C_K.gens())
+    gen_ideals = list(C_K.gens_ideals())
 
-    output = []
-    it = C_K.number_field().primes_of_bounded_norm_iter(800)
+    it = C_K.number_field().primes_of_bounded_norm_iter(norm_bound)
 
-    if not my_gens:
-        # means C_K is trivial, so any prime ideal will do
-        candidate = next(it)
-        output.append(candidate)
-
-    output = [None] * len(my_gens)
-    my_gens_copy = set(my_gens)
-    while my_gens_copy:
+    prime_gens = [None] * len(gens)
+    gens_todo = set(gens)
+    while gens_todo:
         candidate = next(it)
         candidate_class = C_K(candidate)
-        if candidate_class in my_gens_copy:
-            output[my_gens.index(candidate_class)] = candidate
-            my_gens_copy.remove(candidate_class)
+        if candidate_class in gens_todo:
+            prime_gens[gens.index(candidate_class)] = candidate
+            gens_todo.remove(candidate_class)
 
-    return output
+    return prime_gens
 
 
 def character_unit_filter(OK_star_gens, Fp0, eps, embeddings):
@@ -120,7 +117,16 @@ def character_unit_filter(OK_star_gens, Fp0, eps, embeddings):
 
 
 def final_filter(
-    C_K, Kgal, OK_star_gens, aux_primes, my_gens_ideals, gens_info, p, eps, embeddings
+    C_K,
+    Kgal,
+    OK_star_gens,
+    aux_primes,
+    my_gens_ideals,
+    gens_info,
+    p,
+    eps,
+    embeddings,
+    alpha_cache={},
 ):
     """The possible isogeny prime p is assumed coprime to the prime ideals in
     my_gens_ideals at this point."""
@@ -162,21 +168,25 @@ def final_filter(
     for q in aux_primes:
         if not q.is_coprime(p):
             continue
-        exponents_in_class_group = C_K(q).exponents()
+        if q in alpha_cache:
+            alpha, exponents_in_class_group = alpha_cache[q]
+        else:
+            exponents_in_class_group = C_K(q).exponents()
 
-        # Check that these exponents correspond to the ideals in
-        # my_gens_ideals in the correct order
-        sanity_check = prod(
-            [Q ** a for Q, a in zip(my_gens_ideals, exponents_in_class_group)]
-        )
-        assert C_K(sanity_check) == C_K(q)
+            # Check that these exponents correspond to the ideals in
+            # my_gens_ideals in the correct order
+            sanity_check = prod(
+                [Q ** a for Q, a in zip(my_gens_ideals, exponents_in_class_group)]
+            )
+            assert C_K(sanity_check) == C_K(q)
 
-        the_principal_ideal = q * prod(
-            [Q ** (-a) for Q, a in zip(my_gens_ideals, exponents_in_class_group)]
-        )
-        alphas = the_principal_ideal.gens_reduced()
-        assert len(alphas) == 1, "the principal ideal isn't principal!!!"
-        alpha = alphas[0]
+            the_principal_ideal = q * prod(
+                [Q ** (-a) for Q, a in zip(my_gens_ideals, exponents_in_class_group)]
+            )
+            alphas = the_principal_ideal.gens_reduced()
+            assert len(alphas) == 1, "the principal ideal isn't principal!!!"
+            alpha = alphas[0]
+            alpha_cache[q] = (alpha, exponents_in_class_group)
         alpha_to_eps = eps_exp(alpha, eps, embeddings)
         alpha_to_eps_mod_p0 = residue_field(alpha_to_eps)
         try:
@@ -214,8 +224,7 @@ def character_enumeration_filter(
     K, C_K, Kgal, tracking_dict_inv_collapsed, epsilons, aux_primes, embeddings
 ):
     OK_star_gens = K.unit_group().gens_values()
-    my_gens = list(C_K.gens())  # done here to fix these, since the order matters later
-    my_gens_ideals = get_prime_gens(C_K, my_gens)
+    my_gens_ideals = get_prime_gens(C_K)
     gens_info = {}
     for q in my_gens_ideals:
         q_order = C_K(q).multiplicative_order()
@@ -237,6 +246,7 @@ def character_enumeration_filter(
     )
     eps_prime_filt_dict = {}
 
+    alpha_cache = {}
     for eps in epsilons:
         survived_primes = []
         for p in eps_prime_dict[eps]:
@@ -252,6 +262,7 @@ def character_enumeration_filter(
                 p,
                 eps,
                 embeddings,
+                alpha_cache,
             ):
                 survived_primes.append(p)
         eps_prime_filt_dict[eps] = set(survived_primes)
