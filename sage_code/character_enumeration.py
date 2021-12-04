@@ -166,7 +166,9 @@ def final_filter(
 
     still_in_the_game = possible_vals_cart_prod.copy()
     for q in aux_primes:
-        if not q.is_coprime(p):
+        # same result as q.is_coprime(p) but faster
+        not_is_coprime = p.divides(q.absolute_norm())
+        if not_is_coprime:
             continue
         if q in alpha_cache:
             alpha, exponents_in_class_group = alpha_cache[q]

@@ -7,6 +7,7 @@ pysrcdirs = sage_code/ tests/ isogeny_primes.py latex_helper.py plot_stats.py
 sage_version = >=9.4
 version_command = "from sagemath.check_version import check_version;\
                    check_version(\"${sage_version}\")"
+log_level = INFO
 
 # this script should automatically get the correct python from sage
 # if not, you can try
@@ -40,15 +41,19 @@ venv/make_pip_install_dev_complete: venv/make_pip_install_complete requirements-
 
 .PHONY: unittests
 unittests: pip-install-dev ## Run unittests using pytest
-	. venv/bin/activate && ${env} coverage run -m pytest -vv --log-cli-level=DEBUG tests/fast_tests
+	. venv/bin/activate && ${env} coverage run -m pytest -vv --log-cli-level=${log_level} tests/fast_tests
 
 .PHONY: integrationtests
 integrationtests: pip-install-dev ## Run integrationtests using pytest
-	. venv/bin/activate && ${env} coverage run -m pytest -vv --log-cli-level=DEBUG tests/slow_tests
+	. venv/bin/activate && ${env} coverage run -m pytest -vv --log-cli-level=${log_level} tests/slow_tests
+
+.PHONY: performancetests
+performancetests: pip-install-dev ## Run performancetests using pytest
+	. venv/bin/activate && ${env} coverage run -m pytest -vv tests/performance_tests
 
 .PHONY: test
-test: pip-install-dev ## Run all tests using pytest
-	. venv/bin/activate && ${env} coverage run -m pytest -vv -log-cli-level=DEBUG
+test: pip-install-dev
+	. venv/bin/activate && ${env} coverage run -m pytest -vv --log-cli-level=${log_level} tests/fast_tests tests/slow_tests
 
 .PHONY: test-report
 test-report: pip-install-dev

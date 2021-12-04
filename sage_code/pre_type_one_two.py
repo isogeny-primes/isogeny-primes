@@ -18,7 +18,13 @@ from sage.all import (
 )  # pylint: disable=no-name-in-module
 
 from .character_enumeration import character_enumeration_filter
-from .common_utils import R, get_weil_polys, gal_act_eps, eps_exp
+from .common_utils import (
+    R,
+    get_weil_polys,
+    gal_act_eps,
+    eps_exp,
+    CLASS_NUMBER_ONE_DISCS,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -121,6 +127,12 @@ def get_pre_type_one_two_epsilons(d, galgp=None, heavy_filter=False):
     return epsilons_dict
 
 
+def _contains_imaginary_quadratic_field_deg_2(K):
+    imag_quad = K.is_totally_imaginary()
+    hilbert = K.discriminant() in CLASS_NUMBER_ONE_DISCS
+    return imag_quad, hilbert
+
+
 def contains_imaginary_quadratic_field(K):
     """Choosing auxiliary primes in the PreTypeOneTwoCase requires us to
     choose non-principal primes if K contains an imaginary quadratic field."""
@@ -128,7 +140,10 @@ def contains_imaginary_quadratic_field(K):
     K_deg_abs = K.absolute_degree()
 
     if K_deg_abs % 2 == 1:
-        return (False, False)
+        return False, False
+
+    if K_deg_abs == 2:
+        return _contains_imaginary_quadratic_field_deg_2(K)
 
     quadratic_subfields = K.subfields(2)
 
