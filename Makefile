@@ -39,7 +39,6 @@ venv/make_pip_install_dev_complete: venv/make_pip_install_complete requirements-
 
 
 .PHONY: unittests
-unittests: export PROFILE=
 unittests: pip-install-dev ## Run unittests using pytest
 	. venv/bin/activate && ${env} coverage run -m pytest -vv --log-cli-level=DEBUG tests/fast_tests
 
@@ -95,8 +94,8 @@ profile: pip-install-dev $(PNG)
 
 .PHONY: profile_test
 profile_valid: profile
-# means the above command is not executed if profile is not set
-profile_valid${PROFILE}:
+# means the above command is not executed if PROFILE_SCOPE is not set
+profile_valid${PROFILE_SCOPE}:
 
 
 profiling_results/%.png: profiling_results/%.pstats
@@ -105,11 +104,11 @@ profiling_results/%.png: profiling_results/%.pstats
 # should add lint at some point but still has to many failures at the moment
 .PHONY: valid
 valid: pip-install-dev vulture fix test test-report
-	${MAKE} profile_valid PROFILE=${PROFILE}
+	${MAKE} profile_valid PROFILE_SCOPE=${PROFILE_SCOPE}
 
 .PHONY: valid_fast
 valid_fast: pip-install-dev vulture fix unittests test-report
-	${MAKE} profile_valid PROFILE=${PROFILE}
+	${MAKE} profile_valid PROFILE_SCOPE=${PROFILE_SCOPE}
 
 
 clean: ## Cleanup
