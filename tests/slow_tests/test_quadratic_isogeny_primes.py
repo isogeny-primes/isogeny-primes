@@ -59,6 +59,7 @@ def test_interval(D):
         superset = get_isogeny_primes(K, **TEST_SETTINGS)
         # test that we are not to many primes left over
         todo = set(superset).difference(EC_Q_ISOGENY_PRIMES)
+        assert len(todo) == 0 or max(todo) <= 59
         assert len(todo) <= 2 or max(todo) <= 31
 
 
@@ -81,12 +82,12 @@ def test_interval(D):
 @pytest.mark.parametrize(
     "D, extra_isogeny, appendix_bound, potenial_isogenies",
     [
-        (-31, 73, 1000, {31}),
-        (-127, 73, 1000, {31, 61}),
-        (5 * 577, 103, 1000, {577}),
-        (-31159, 137, 1000, {23, 29, 61, 79, 109, 157, 31159}),
-        (61 * 229 * 145757, 191, 0, {31, 229, 241, 145757}),
-        (11 * 17 * 9011 * 23629, 311, 0, {71, 9011, 23629}),
+        (-31, 73, 1000, set()),
+        (-127, 73, 1000, {61}),
+        (5 * 577, 103, 1000, set()),
+        (-31159, 137, 1000, {23, 29, 61, 157}),
+        (61 * 229 * 145757, 191, 0, {31, 229}),
+        (11 * 17 * 9011 * 23629, 311, 0, {71}),
     ],
 )
 def test_from_literature(D, extra_isogeny, appendix_bound, potenial_isogenies):
@@ -95,5 +96,5 @@ def test_from_literature(D, extra_isogeny, appendix_bound, potenial_isogenies):
     superset = get_isogeny_primes(K, appendix_bound=appendix_bound, **TEST_SETTINGS)
     assert set(EC_Q_ISOGENY_PRIMES).difference(superset) == set()
     assert extra_isogeny in superset
-    assert set(superset.difference(upperbound)) == set()
-    assert set(upperbound.difference(superset)) == set()
+    assert set(superset.difference(upperbound)) == set(), "We got worse at filtering"
+    assert set(upperbound.difference(superset)) == set(), "We got better at filtering"

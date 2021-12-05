@@ -310,6 +310,14 @@ def get_AB_integers(
     return output_dict_AB
 
 
+def alpha_eps_beta_bound(alpha_eps, beta, nm_q):
+    beta_one = beta.parent()(1)
+    alpha_one = alpha_eps.parent()(1)
+    C_mat = alpha_eps.tensor_product(beta_one) - alpha_one.tensor_product(beta)
+    N = ZZ(C_mat.det())
+    return N
+
+
 def get_C_integers(
     K,
     embeddings,
@@ -319,6 +327,7 @@ def get_C_integers(
     frob_polys_to_loop,
     multiplicative_bounds={},
 ):
+    nm_q = frak_q.absolute_norm()
 
     # Initialise output dict to empty sets
     output_dict_C = {}
@@ -331,13 +340,10 @@ def get_C_integers(
 
     for frob_poly in frob_polys_to_loop:
         beta = matrix.companion(frob_poly) ** (12 * q_class_group_order)
-        beta_one = beta.parent()(1)
 
         for eps in epsilons:
             alpha_eps = eps_exp(alpha, eps, embeddings).matrix(QQ)
-            alpha_one = alpha_eps.parent()(1)
-            C_mat = alpha_eps.tensor_product(beta_one) - alpha_one.tensor_product(beta)
-            N = ZZ(C_mat.det())
+            N = alpha_eps_beta_bound(alpha_eps, beta, nm_q)
             if multiplicative_bounds.get(eps):
                 N = gcd(N, multiplicative_bounds[eps])
             else:

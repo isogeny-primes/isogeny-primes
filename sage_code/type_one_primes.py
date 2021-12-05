@@ -29,7 +29,6 @@ import json
 import logging
 from typing import Set
 
-from sage.all import Integer  # pylint: disable=no-name-in-module
 from sage.all import (
     ZZ,
     Gamma0,
@@ -42,6 +41,7 @@ from sage.all import (
     prime_divisors,
     prime_range,
 )
+from sage.rings.finite_rings.finite_field_constructor import GF
 
 from .common_utils import R, get_weil_polys
 from .config import FORMAL_IMMERSION_DATA_AT_2_PATH, BAD_FORMAL_IMMERSION_DATA_PATH
@@ -249,21 +249,43 @@ def apply_formal_immersion_at_2(
     return output
 
 
-def get_N(frob_poly, residue_field_card, exponent):
+def get_N(frob_poly, nm_q, exponent):
     """Helper method for computing Type 1 primes"""
+    beta = Matrix.companion(frob_poly) ** exponent
+    N = ZZ(1 - beta.trace() + nm_q ** exponent)
+    return N
 
-    if frob_poly.is_irreducible():
-        frob_poly_root_field = frob_poly.root_field("a")
-    else:
-        frob_poly_root_field = ZZ
-    roots_of_frob = frob_poly.roots(frob_poly_root_field)
-    if len(roots_of_frob) == 1:
-        assert roots_of_frob[0][1] == 2
-        beta = roots_of_frob[0][0]
-        return 1 + residue_field_card ** exponent - 2 * beta ** exponent
 
-    beta, beta_bar = [r for r, e in roots_of_frob]
-    return 1 + residue_field_card ** exponent - beta ** exponent - beta_bar ** exponent
+def get_C_integer_type1(K, q, bad_aux_prime_dict, C_K, bound_so_far, loop_curves):
+    running_primes = q
+    if str(q) in bad_aux_prime_dict:
+        running_primes = lcm(running_primes, bad_aux_prime_dict[str(q)])
+
+    norms_clexp = {
+        (frak_q.absolute_norm(), C_K(frak_q).multiplicative_order())
+        for frak_q in K.primes_above(q)
+    }
+    for nm_q, frak_q_class_group_order in norms_clexp:
+
+        exponent = 12 * frak_q_class_group_order
+
+        N_cusp = ZZ(nm_q) ** exponent - 1
+        N_cusp = gcd(N_cusp, bound_so_far)
+        running_primes = lcm(running_primes, N_cusp)
+
+        if loop_curves:
+            weil_polys = get_weil_polys(GF(nm_q))
+        else:
+            weil_polys = R.weil_polynomials(2, nm_q)
+
+        for wp in weil_polys:
+            N = get_N(wp, nm_q, exponent)
+            N = gcd(N, bound_so_far)
+            assert N != 0
+
+            running_primes = lcm(running_primes, N)
+
+    return running_primes
 
 
 def get_type_1_primes(K, C_K, norm_bound=50, loop_curves=False):
@@ -313,44 +335,20 @@ def get_type_1_primes(K, C_K, norm_bound=50, loop_curves=False):
             with open(BAD_FORMAL_IMMERSION_DATA_PATH, "w") as fp:
                 json.dump(bfi_dat, fp, indent=4)
 
-    aux_primes = prime_range(norm_bound)
-    running_prime_dict = {}
+    aux_primes = prime_range(3, norm_bound + 1)
+    bound_so_far = 0
 
     for q in aux_primes:
-        frak_q = K.primes_above(q)[0]
-        residue_field = frak_q.residue_field(names="z")
-        residue_field_card = residue_field.cardinality()
-        frak_q_class_group_order = C_K(frak_q).multiplicative_order()
-        exponent = 12 * frak_q_class_group_order
+        bound_so_far = get_C_integer_type1(
+            K, q, bad_aux_prime_dict, C_K, bound_so_far, loop_curves
+        )
 
-        running_primes = q
-        if loop_curves:
-            weil_polys = get_weil_polys(residue_field)
-        else:
-            weil_polys = R.weil_polynomials(2, residue_field_card)
+    bound_at_2 = get_C_integer_type1(
+        K, 2, bad_aux_prime_dict, C_K, bound_so_far, loop_curves
+    )
 
-        for wp in weil_polys:
-            N = get_N(wp, residue_field_card, exponent)
-            N = Integer(N)
-            if N != 0:
-                # else we can ignore since it doesn't arise from an elliptic curve
-                running_primes = lcm(running_primes, N)
-
-        if str(q) in bad_aux_prime_dict:
-            running_primes = lcm(running_primes, bad_aux_prime_dict[str(q)])
-
-        running_prime_dict[q] = running_primes
-
-    running_prime_dict_2 = running_prime_dict.pop(2)
-
-    output = gcd(list(running_prime_dict.values()))
-    output = set(output.prime_divisors())
-    output = apply_formal_immersion_at_2(output, running_prime_dict_2, K.degree())
+    output = set(bound_so_far.prime_divisors())
+    output = apply_formal_immersion_at_2(output, bound_at_2, K.degree())
     output = output.union(set(bad_formal_immersion_list))
-    Delta_K = K.discriminant().abs()
-    output = output.union(set(Delta_K.prime_divisors()))
-    third_set = [1 + d for d in (12 * h_K).divisors()]  # p : (p-1)|12h_K
-    output = output.union(set([p for p in third_set if p.is_prime()]))
-    output = list(output)
-    output.sort()
-    return output
+
+    return sorted(output)
