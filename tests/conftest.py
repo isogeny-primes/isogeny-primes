@@ -31,7 +31,7 @@ def profile_module(request):
     except FileExistsError:
         pass
 
-    pr.dump_stats(test_dir.joinpath(f"{module}.pstats"))
+    pr.dump_stats(test_dir.joinpath(f"module_tests.pstats"))
 
 
 @fixture(autouse=True)

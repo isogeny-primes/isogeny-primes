@@ -3,7 +3,6 @@
 #                        PRE TYPE ONE TWO PRIMES                       #
 #                                                                      #
 ########################################################################
-
 import logging
 from itertools import product
 
@@ -310,10 +309,8 @@ def get_AB_integers(
     return output_dict_AB
 
 
-def alpha_eps_beta_bound(alpha_eps, beta, nm_q):
-    beta_one = beta.parent()(1)
-    alpha_one = alpha_eps.parent()(1)
-    C_mat = alpha_eps.tensor_product(beta_one) - alpha_one.tensor_product(beta)
+def alpha_eps_beta_bound(alpha_eps, beta, nm_q_pow_12hq):
+    C_mat = alpha_eps ** 2 - alpha_eps * beta.trace() + nm_q_pow_12hq
     N = ZZ(C_mat.det())
     return N
 
@@ -327,7 +324,7 @@ def get_C_integers(
     frob_polys_to_loop,
     multiplicative_bounds={},
 ):
-    nm_q = frak_q.absolute_norm()
+    nm_q = ZZ(frak_q.absolute_norm())
 
     # Initialise output dict to empty sets
     output_dict_C = {}
@@ -338,12 +335,17 @@ def get_C_integers(
     assert len(alphas) == 1, "q^q_class_group_order not principal, which is very bad"
     alpha = alphas[0]
 
+    alpha_eps_dict = {
+        eps: eps_exp(alpha, eps, embeddings).matrix(QQ) for eps in epsilons
+    }
+
+    nm_q_pow_12hq = nm_q ** (12 * q_class_group_order)
     for frob_poly in frob_polys_to_loop:
         beta = matrix.companion(frob_poly) ** (12 * q_class_group_order)
 
         for eps in epsilons:
-            alpha_eps = eps_exp(alpha, eps, embeddings).matrix(QQ)
-            N = alpha_eps_beta_bound(alpha_eps, beta, nm_q)
+            alpha_eps = alpha_eps_dict[eps]
+            N = alpha_eps_beta_bound(alpha_eps, beta, nm_q_pow_12hq)
             if multiplicative_bounds.get(eps):
                 N = gcd(N, multiplicative_bounds[eps])
             else:
@@ -532,11 +534,11 @@ def get_pre_type_one_two_primes(
 
     for q in aux_primes:
         q_class_group_order = C_K(q).multiplicative_order()
-        residue_field = q.residue_field(names="z")
+        nm_q = q.absolute_norm()
         if loop_curves:
-            frob_polys = get_weil_polys(residue_field)
+            frob_polys = get_weil_polys(GF(nm_q))
         else:
-            frob_polys = R.weil_polynomials(2, residue_field.cardinality())
+            frob_polys = R.weil_polynomials(2, nm_q)
         frob_polys_dict[q] = frob_polys
         # these will be dicts with keys the epsilons, values sets of primes
         AB_integers_dict = get_AB_integers(
@@ -552,10 +554,18 @@ def get_pre_type_one_two_primes(
             unified_dict[eps] = lcm(
                 [q_char_eps, AB_integers_dict[eps], C_integers_dict[eps]]
             )
-        tracking_dict[q] = unified_dict
         bound_dict = unified_dict
 
-    logger.debug(f"Computed bound dict: \n{bound_dict}")
+    logger.debug(f"bound dict before enumeration filter: \n{bound_dict}")
+    # Barinder you probably don't want me to compute this cause of prime_divisor
+    # however I really want to log this from time to time
+    # bound_dict_factored = {
+    #     str(eps): str(bound.prime_divisors()) for eps, bound in bound_dict.items()
+    # }
+    # logger.info(
+    #     "bound dict before enumeration filter:\n"
+    #     f"{json.dumps(bound_dict_factored, indent=2)}"
+    # )
 
     # Optionally use the principal ideal lattice for further filtering
 
@@ -593,6 +603,4 @@ def get_pre_type_one_two_primes(
     # Take union of all primes over all epsilons, sort, and return
 
     output = set.union(*(val for val in final_split_dict.values()))
-    output = list(output)
-    output.sort()
-    return output
+    return sorted(output)

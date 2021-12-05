@@ -285,7 +285,7 @@ def get_C_integer_type1(K, q, bad_aux_prime_dict, C_K, bound_so_far, loop_curves
 
             running_primes = lcm(running_primes, N)
 
-    return running_primes
+    return gcd(running_primes, bound_so_far)
 
 
 def get_type_1_primes(K, C_K, norm_bound=50, loop_curves=False):
