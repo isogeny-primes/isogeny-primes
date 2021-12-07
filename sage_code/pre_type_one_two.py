@@ -321,7 +321,7 @@ def get_C_integers(
     frak_q,
     epsilons,
     q_class_group_order,
-    frob_polys_to_loop,
+    frob_polys,
     multiplicative_bounds={},
 ):
     nm_q = ZZ(frak_q.absolute_norm())
@@ -335,22 +335,30 @@ def get_C_integers(
     assert len(alphas) == 1, "q^q_class_group_order not principal, which is very bad"
     alpha = alphas[0]
 
-    alpha_eps_dict = {
-        eps: eps_exp(alpha, eps, embeddings).matrix(QQ) for eps in epsilons
-    }
+    alpha_eps_dict = {}
+    for eps in epsilons:
+        alpha_eps = eps_exp(alpha, eps, embeddings)
+        alpha_eps = matrix.companion(alpha_eps.charpoly()).change_ring(ZZ)
+        alpha_eps_dict[eps] = alpha_eps
 
     nm_q_pow_12hq = nm_q ** (12 * q_class_group_order)
-    for frob_poly in frob_polys_to_loop:
-        beta = matrix.companion(frob_poly) ** (12 * q_class_group_order)
+    betas = [
+        matrix.companion(frob_poly) ** (12 * q_class_group_order)
+        for frob_poly in frob_polys
+    ]
 
-        for eps in epsilons:
-            alpha_eps = alpha_eps_dict[eps]
+    for eps in epsilons:
+        alpha_eps = alpha_eps_dict[eps]
+        multiplicative_bound = multiplicative_bounds.get(eps)
+        for beta in betas:
             N = alpha_eps_beta_bound(alpha_eps, beta, nm_q_pow_12hq)
-            if multiplicative_bounds.get(eps):
-                N = gcd(N, multiplicative_bounds[eps])
+            if multiplicative_bound:
+                N = gcd(N, multiplicative_bound)
             else:
                 N = N.abs().perfect_power()[0]
             output_dict_C[eps] = lcm(output_dict_C[eps], N)
+            if output_dict_C[eps] == multiplicative_bound:
+                break
     return output_dict_C
 
 
