@@ -412,5 +412,15 @@
         "bad_aux_prime_dict": {
             "3": 307
         }
+    },
+    "1": {
+        "bad_formal_immersion_list": [
+            2,
+            3,
+            5,
+            7,
+            13
+        ],
+        "bad_aux_prime_dict": {}
     }
 }

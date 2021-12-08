@@ -39,7 +39,7 @@ from isogeny_primes import get_isogeny_primes
 from sage_code.common_utils import CLASS_NUMBER_ONE_DISCS, EC_Q_ISOGENY_PRIMES
 
 TEST_SETTINGS = {
-    "norm_bound": 20,
+    "norm_bound": 50,
     "bound": 1000,
     "loop_curves": False,
     "heavy_filter": True,
@@ -86,7 +86,7 @@ def test_interval(D):
         (-127, 73, 1000, {61}),
         (5 * 577, 103, 1000, set()),
         (-31159, 137, 1000, {23, 29, 61, 157}),
-        (61 * 229 * 145757, 191, 0, {31, 229}),
+        (61 * 229 * 145757, 191, 0, {31}),
         (11 * 17 * 9011 * 23629, 311, 0, {71}),
     ],
 )
