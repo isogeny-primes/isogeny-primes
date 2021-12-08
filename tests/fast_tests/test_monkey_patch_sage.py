@@ -1,7 +1,7 @@
 from sage.misc.misc_c import prod
 from sage.rings.number_field.number_field import QuadraticField
 
-from sage_code import ideal_log_relation
+from sage_code.monkey_patch_sage import ideal_log_relation
 
 
 def test_ideal_log_relation():
