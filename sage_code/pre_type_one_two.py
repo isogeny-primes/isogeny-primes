@@ -567,13 +567,17 @@ def get_pre_type_one_two_primes(
     logger.debug(f"bound dict before enumeration filter: \n{bound_dict}")
     # Barinder you probably don't want me to compute this cause of prime_divisor
     # however I really want to log this from time to time
-    # bound_dict_factored = {
-    #     str(eps): str(bound.prime_divisors()) for eps, bound in bound_dict.items()
-    # }
-    # logger.info(
-    #     "bound dict before enumeration filter:\n"
-    #     f"{json.dumps(bound_dict_factored, indent=2)}"
-    # )
+    """
+    import json
+
+    bound_dict_factored = {
+        str(eps): str(bound.prime_divisors()) for eps, bound in bound_dict.items()
+    }
+    logger.info(
+        "bound dict before enumeration filter:\n"
+        f"{json.dumps(bound_dict_factored, indent=2)}"
+    )
+    """
 
     # Optionally use the principal ideal lattice for further filtering
 

@@ -257,9 +257,11 @@ def get_N(frob_poly, nm_q, exponent):
 
 
 def get_C_integer_type1(K, q, bad_aux_prime_dict, C_K, bound_so_far, loop_curves):
-    running_primes = q
+    running_primes = gcd(q, bound_so_far)
     if str(q) in bad_aux_prime_dict:
-        running_primes = lcm(running_primes, bad_aux_prime_dict[str(q)])
+        running_primes = lcm(
+            running_primes, gcd(bad_aux_prime_dict[str(q)], bound_so_far)
+        )
 
     norms_clexp = {
         (frak_q.absolute_norm(), C_K(frak_q).multiplicative_order())
@@ -280,10 +282,12 @@ def get_C_integer_type1(K, q, bad_aux_prime_dict, C_K, bound_so_far, loop_curves
 
         for wp in weil_polys:
             N = get_N(wp, nm_q, exponent)
-            N = gcd(N, bound_so_far)
             assert N != 0
+            N = gcd(N, bound_so_far)
 
             running_primes = lcm(running_primes, N)
+            if running_primes == bound_so_far:
+                break
 
     return gcd(running_primes, bound_so_far)
 
