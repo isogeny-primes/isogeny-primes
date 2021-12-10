@@ -8,7 +8,6 @@ from itertools import product
 
 from sage.all import (
     ZZ,
-    QQ,
     Integer,
     gcd,
     lcm,
@@ -341,6 +340,14 @@ def get_C_integers(
         alpha_eps = matrix.companion(alpha_eps.charpoly()).change_ring(ZZ)
         alpha_eps_dict[eps] = alpha_eps
 
+        A = ZZ((alpha_eps - 1).det())
+        B = ZZ((alpha_eps - (nm_q ** (12 * q_class_group_order))).det())
+        multiplicative_bound = multiplicative_bounds.get(eps)
+        if multiplicative_bound:
+            A = gcd(A, multiplicative_bound)
+            B = gcd(B, multiplicative_bound)
+        output_dict_C[eps] = lcm([output_dict_C[eps], A, B])
+
     nm_q_pow_12hq = nm_q ** (12 * q_class_group_order)
     betas = [
         matrix.companion(frob_poly) ** (12 * q_class_group_order)
@@ -548,10 +555,6 @@ def get_pre_type_one_two_primes(
         else:
             frob_polys = R.weil_polynomials(2, nm_q)
         frob_polys_dict[q] = frob_polys
-        # these will be dicts with keys the epsilons, values sets of primes
-        AB_integers_dict = get_AB_integers(
-            embeddings, q, epsilons, q_class_group_order, bound_dict
-        )
         C_integers_dict = get_C_integers(
             Kgal, embeddings, q, epsilons, q_class_group_order, frob_polys, bound_dict
         )
@@ -560,7 +563,7 @@ def get_pre_type_one_two_primes(
         for eps in epsilons:
             q_char_eps = gcd(q_char, bound_dict[eps])
             unified_dict[eps] = lcm(
-                [q_char_eps, AB_integers_dict[eps], C_integers_dict[eps]]
+                [q_char_eps, C_integers_dict[eps]]
             )
         bound_dict = unified_dict
 
