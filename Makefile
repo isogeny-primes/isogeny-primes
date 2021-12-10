@@ -104,7 +104,7 @@ profile_valid${PROFILE_SCOPE}:
 
 
 profiling_results/%.png: profiling_results/%.pstats
-	gprof2dot -f pstats $< | dot -Tpng -o $@
+	gprof2dot -f pstats $< | sed '/->/s/label=/xlabel=/g' | dot -Tpng -Gsplines="ortho" -Gnodesep="0.25" -Granksep="0.75" -o $@
 
 # should add lint at some point but still has to many failures at the moment
 .PHONY: valid
