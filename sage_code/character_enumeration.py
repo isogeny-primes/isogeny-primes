@@ -130,7 +130,7 @@ def final_filter(
 ):
     """The possible isogeny prime p is assumed coprime to the prime ideals in
     my_gens_ideals at this point."""
-    frak_p0 = Kgal.primes_above(p)[0]  # choice of p_0
+    frak_p0 = Kgal.prime_above(p)  # choice of p_0
     residue_field = frak_p0.residue_field(names="z")
     prime_field = GF(p)
 

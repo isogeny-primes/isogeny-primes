@@ -26,6 +26,8 @@
 """
 
 from sage.all import PolynomialRing, Rationals, prod
+from sage.combinat.permutation import Permutation
+from sage.groups.perm_gps.permgroup import PermutationGroup
 
 R = PolynomialRing(Rationals(), "x")
 x = R.gen()
@@ -77,3 +79,20 @@ def eps_exp(alpha, eps, Sigma):
 
 def gal_act_eps(eps, sigma):
     return tuple(eps[i - 1] for i in sigma)
+
+
+def galois_action_on_embeddings(G_K):
+    K = G_K.number_field()
+    Kgal = G_K.splitting_field()
+    embeddings = K.embeddings(Kgal)
+    permutations = []
+    for g in G_K.gens():
+        phi = g.as_hom()
+        g_perm = Permutation(
+            [embeddings.index(phi * emb) + 1 for emb in embeddings]
+        ).inverse()
+        permutations.append(g_perm)
+    G_K_emb = PermutationGroup(permutations)
+    to_emb = G_K.hom(G_K_emb.gens())
+    from_emb = G_K_emb.hom(G_K.gens())
+    return G_K_emb, to_emb, from_emb, Kgal, embeddings

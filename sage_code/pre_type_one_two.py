@@ -23,6 +23,7 @@ from .common_utils import (
     gal_act_eps,
     eps_exp,
     CLASS_NUMBER_ONE_DISCS,
+    galois_action_on_embeddings,
 )
 
 logger = logging.getLogger(__name__)
@@ -306,7 +307,6 @@ def alpha_eps_beta_bound(alpha_eps, beta, nm_q_pow_12hq):
 
 
 def get_C_integers(
-    K,
     embeddings,
     frak_q,
     epsilons,
@@ -393,21 +393,21 @@ def get_pre_type_one_two_primes(
 
     # Set up important objects to be used throughout
 
-    Kgal = K.galois_closure("b")
     C_K = K.class_group()
     h_K = C_K.order()
-    aux_primes = get_aux_primes(K, norm_bound, C_K, h_K, contains_imaginary_quadratic)
-    embeddings = K.embeddings(Kgal)
 
     # Generate the epsilons
 
     if K.is_galois():
         G_K = K.galois_group()
+        G_K_emb, _, _, Kgal, embeddings = galois_action_on_embeddings(G_K)
         epsilons = get_pre_type_one_two_epsilons(
-            K.degree(), galgp=G_K, heavy_filter=heavy_filter
+            K.degree(), galgp=G_K_emb, heavy_filter=heavy_filter
         )
     else:
         epsilons = get_pre_type_one_two_epsilons(K.degree(), heavy_filter=heavy_filter)
+        Kgal = K.galois_closure("b")
+        embeddings = K.embeddings(Kgal)
 
     # Now start with the divisibilities. Do the unit computation first
 
@@ -416,11 +416,11 @@ def get_pre_type_one_two_primes(
 
     # Next do the computation of A,B and C integers
 
-    tracking_dict = {}
     frob_polys_dict = {}
 
     bound_dict = U_integers_dict
 
+    aux_primes = get_aux_primes(K, norm_bound, C_K, h_K, contains_imaginary_quadratic)
     for q in aux_primes:
         q_class_group_order = C_K(q).multiplicative_order()
         nm_q = q.absolute_norm()
@@ -430,7 +430,7 @@ def get_pre_type_one_two_primes(
             frob_polys = R.weil_polynomials(2, nm_q)
         frob_polys_dict[q] = frob_polys
         C_integers_dict = get_C_integers(
-            Kgal, embeddings, q, epsilons, q_class_group_order, frob_polys, bound_dict
+            embeddings, q, epsilons, q_class_group_order, frob_polys, bound_dict
         )
         unified_dict = {}
         q_char = q.smallest_integer()
