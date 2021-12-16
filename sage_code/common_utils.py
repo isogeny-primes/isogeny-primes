@@ -182,16 +182,37 @@ def split_embeddings(phi, embeddings):
     return set(split1), set(split2)
 
 
-def split_primes_iter(K):
-    for p in primes(1, oo):
-        F = (K * p).factor()
-        is_split = True
-        for pp, e in F:
-            if e != 1 or pp.absolute_norm() != p:
-                is_split = False
-                break
-        if not is_split:
+def split_primes_iter(K, bound=oo, cache=True):
+    if cache and not hasattr(K, "_prime_factorizations_cache"):
+        K._prime_factorizations_cache = {}
+
+    for p in primes(1, bound):
+        if cache and p in K._prime_factorizations_cache:
+            F = K._prime_factorizations_cache[p]
+        else:
+            F = (K * p).factor()
+            if cache:
+                K._prime_factorizations_cache[p] = F
+
+        if not len(F) == K.absolute_degree():
             continue
 
         for pp, _ in F:
             yield pp
+
+
+def primes_iter(K, bound=oo, cache=True):
+    if cache and not hasattr(K, "_prime_factorizations_cache"):
+        K._prime_factorizations_cache = {}
+
+    for p in primes(1, bound):
+        if cache and p in K._prime_factorizations_cache:
+            F = K._prime_factorizations_cache[p]
+        else:
+            F = (K * p).factor()
+            if cache:
+                K._prime_factorizations_cache[p] = F
+
+        for pp, _ in F:
+            if pp.absolute_norm() < bound:
+                yield pp

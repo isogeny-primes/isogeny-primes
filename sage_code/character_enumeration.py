@@ -5,8 +5,7 @@ from sage.all import GF, ZZ, prod
 import logging
 
 
-from .common_utils import x, weil_polynomial_is_elliptic, eps_exp
-
+from .common_utils import x, weil_polynomial_is_elliptic, eps_exp, primes_iter
 
 logger = logging.getLogger(__name__)
 
@@ -223,8 +222,17 @@ def final_filter(
 
 
 def character_enumeration_filter(
-    K, C_K, Kgal, tracking_dict_inv_collapsed, epsilons, aux_primes, embeddings
+    K,
+    C_K,
+    Kgal,
+    tracking_dict_inv_collapsed,
+    epsilons,
+    aux_primes,
+    embeddings,
+    stop_strategy="auto",
 ):
+    if stop_strategy == "auto":
+        enumeration_bound = aux_primes
     OK_star_gens = K.unit_group().gens_values()
     my_gens_ideals = get_prime_gens(C_K)
     gens_info = {}
@@ -254,7 +262,16 @@ def character_enumeration_filter(
         for p in eps_prime_dict[eps]:
             if p in prime_support_my_gens_ideals:
                 survived_primes.append(p)
-            elif final_filter(
+                continue
+            if stop_strategy == "auto":
+                # stop condition:
+                # 4sqrt(Nm(q)) > 2p
+                # Nm(q) > (p/2)**2
+                stop = (p ** 2 // 4) + 1
+                if enumeration_bound:
+                    stop = min(stop, enumeration_bound)
+                aux_primes = primes_iter(K, stop)
+            if final_filter(
                 C_K,
                 Kgal,
                 OK_star_gens,

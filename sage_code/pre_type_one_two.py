@@ -396,6 +396,7 @@ def get_pre_type_one_two_primes(
     heavy_filter=False,
     stop_strategy="auto",
     repeat_bound=4,
+    character_enumeration_bound=1000,
 ):
     """Pre type 1-2 primes are the finitely many primes outside of which
     the isogeny character is necessarily of type 2 (or 3, which is not relevant
@@ -442,13 +443,15 @@ def get_pre_type_one_two_primes(
 
     bound_dict = U_integers_dict
 
-    aux_primes = get_aux_primes(K, norm_bound, C_K, h_K, contains_imaginary_quadratic)
     if stop_strategy == "auto":
         aux_primes_iter = split_primes_iter(K)
         class_group_maps = pre_type_3_class_group_maps(K, embeddings)
         epsilon_repeats = {eps: repeat_bound for eps in epsilons}
 
     else:
+        aux_primes = get_aux_primes(
+            K, norm_bound, C_K, h_K, contains_imaginary_quadratic
+        )
         aux_primes_iter = aux_primes
 
     for q in aux_primes_iter:
@@ -503,6 +506,10 @@ def get_pre_type_one_two_primes(
 
     if use_PIL and h_K > 1:
         logger.debug("Using PIL")
+        if stop_strategy == "auto":
+            aux_primes = get_aux_primes(
+                K, norm_bound, C_K, h_K, contains_imaginary_quadratic
+            )
         PIL_integers_dict = get_PIL_integers(
             aux_primes, frob_polys_dict, Kgal, epsilons, embeddings, C_K
         )
@@ -512,9 +519,22 @@ def get_pre_type_one_two_primes(
     # Split according to epsilon type, get prime divisors, and filter
 
     if heavy_filter:
+        if stop_strategy == "auto":
+            aux_primes = character_enumeration_bound
+        else:
+            aux_primes = get_aux_primes(
+                K, norm_bound, C_K, h_K, contains_imaginary_quadratic
+            )
         logger.debug("Using Heavy filtering")
         output = character_enumeration_filter(
-            K, C_K, Kgal, bound_dict, epsilons, aux_primes, embeddings
+            K,
+            C_K,
+            Kgal,
+            bound_dict,
+            epsilons,
+            aux_primes,
+            embeddings,
+            stop_strategy=stop_strategy,
         )
         return output
 
