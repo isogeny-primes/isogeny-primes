@@ -24,6 +24,9 @@ from .common_utils import (
     eps_exp,
     CLASS_NUMBER_ONE_DISCS,
     galois_action_on_embeddings,
+    split_primes_iter,
+    split_embeddings,
+    class_group_norm_map,
 )
 
 logger = logging.getLogger(__name__)
@@ -372,8 +375,27 @@ def get_U_integers(K, epsilons, embeddings):
     }
 
 
+def pre_type_3_class_group_maps(K, embeddings):
+    class_group_maps = {}
+    for L, phi, _ in K.subfields(degree=2, name="b"):
+        if L.discriminant() > 0:
+            continue
+        split1, split2 = split_embeddings(phi, embeddings)
+        epsilon1 = tuple(0 if embedding in split1 else 12 for embedding in embeddings)
+        epsilon2 = tuple(12 - a for a in epsilon1)
+        norm_map = class_group_norm_map(phi, to_C_L=False)
+        class_group_maps[epsilon1] = class_group_maps[epsilon2] = norm_map
+    return class_group_maps
+
+
 def get_pre_type_one_two_primes(
-    K, norm_bound=50, loop_curves=False, use_PIL=False, heavy_filter=False
+    K,
+    norm_bound=50,
+    loop_curves=False,
+    use_PIL=False,
+    heavy_filter=False,
+    stop_strategy="auto",
+    repeat_bound=4,
 ):
     """Pre type 1-2 primes are the finitely many primes outside of which
     the isogeny character is necessarily of type 2 (or 3, which is not relevant
@@ -421,7 +443,16 @@ def get_pre_type_one_two_primes(
     bound_dict = U_integers_dict
 
     aux_primes = get_aux_primes(K, norm_bound, C_K, h_K, contains_imaginary_quadratic)
-    for q in aux_primes:
+    if stop_strategy == "auto":
+        aux_primes_iter = split_primes_iter(K)
+        class_group_maps = pre_type_3_class_group_maps(K, embeddings)
+        epsilon_repeats = {eps: repeat_bound for eps in epsilons}
+
+    else:
+        aux_primes_iter = aux_primes
+
+    for q in aux_primes_iter:
+        epsilons_todo = set(epsilon_repeats) if stop_strategy == "auto" else epsilons
         q_class_group_order = C_K(q).multiplicative_order()
         nm_q = q.absolute_norm()
         if loop_curves:
@@ -430,14 +461,28 @@ def get_pre_type_one_two_primes(
             frob_polys = R.weil_polynomials(2, nm_q)
         frob_polys_dict[q] = frob_polys
         C_integers_dict = get_C_integers(
-            embeddings, q, epsilons, q_class_group_order, frob_polys, bound_dict
+            embeddings, q, epsilons_todo, q_class_group_order, frob_polys, bound_dict
         )
         unified_dict = {}
         q_char = q.smallest_integer()
-        for eps in epsilons:
+        for eps in epsilons_todo:
             q_char_eps = gcd(q_char, bound_dict[eps])
             unified_dict[eps] = lcm([q_char_eps, C_integers_dict[eps]])
-        bound_dict = unified_dict
+            if stop_strategy == "auto":
+                if unified_dict[eps] == bound_dict[eps]:
+                    if eps in class_group_maps:
+                        if class_group_maps[eps](q) != 0:
+                            epsilon_repeats[eps] -= 1
+                    else:
+                        epsilon_repeats[eps] -= 1
+                else:
+                    epsilon_repeats[eps] = repeat_bound
+                if epsilon_repeats[eps] == 0:
+                    del epsilon_repeats[eps]
+
+        bound_dict = {**bound_dict, **unified_dict}
+        if stop_strategy == "auto" and not epsilon_repeats:
+            break
 
     logger.debug(f"bound dict before enumeration filter: \n{bound_dict}")
     # Barinder you probably don't want me to compute this cause of prime_divisor

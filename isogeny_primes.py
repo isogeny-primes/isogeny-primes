@@ -83,6 +83,7 @@ def get_isogeny_primes(
     use_PIL=False,
     heavy_filter=False,
     appendix_bound=1000,
+    stop_strategy="auto",
 ):
 
     # Start with some helpful user info
@@ -98,6 +99,7 @@ def get_isogeny_primes(
         loop_curves=loop_curves,
         use_PIL=use_PIL,
         heavy_filter=heavy_filter,
+        stop_strategy=stop_strategy,
     )
 
     logging.info("pre_type_1_2_primes = {}".format(pre_type_one_two_primes))

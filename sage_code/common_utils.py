@@ -25,8 +25,10 @@
 
 """
 
-from sage.all import PolynomialRing, Rationals, prod
+from sage.all import PolynomialRing, Rationals, prod, oo
+from sage.arith.misc import primes
 from sage.combinat.permutation import Permutation
+from sage.groups.additive_abelian.additive_abelian_group import AdditiveAbelianGroup
 from sage.groups.perm_gps.permgroup import PermutationGroup
 
 R = PolynomialRing(Rationals(), "x")
@@ -96,3 +98,100 @@ def galois_action_on_embeddings(G_K):
     to_emb = G_K.hom(G_K_emb.gens())
     from_emb = G_K_emb.hom(G_K.gens())
     return G_K_emb, to_emb, from_emb, Kgal, embeddings
+
+
+def class_group_as_additive_abelian_group(C_K):
+    A = AdditiveAbelianGroup(C_K.gens_orders())
+
+    def to_A(g):
+        assert g in C_K
+        return A(g.exponents())
+
+    def from_A(a):
+        assert a in A
+        return C_K.prod(gi ** ei for gi, ei in zip(C_K.gens(), a))
+
+    return A, to_A, from_A
+
+
+def ideal_push_forward(f, I):
+    K = f.codomain()
+    return K.ideal([f(i) for i in I.gens()])
+
+
+def _class_group_norm_map_internal(phi):
+    """
+    If phi: L -> K is an embedding of number fields then this function returns
+    the norm map from Cl_K to Cl_L induced by the relative norm from K to L.
+    """
+    L = phi.domain()
+    K = phi.codomain()
+    C_L = L.class_group()
+    # currently only needed cause sage is really bad in doing
+    # group morphisms of class groups
+    A_L, to_A_L, from_A_L = class_group_as_additive_abelian_group(C_L)
+    C_K = K.class_group()
+    A_K, to_A_K, from_A_K = class_group_as_additive_abelian_group(C_K)
+
+    Krel = K.relativize(phi, "z")
+    to_K, from_K = Krel.structure()
+    images = []
+    for I in C_K.gens_ideals():
+        I = ideal_push_forward(from_K, I)
+        Nm_I = I.relative_norm()
+        images.append(to_A_L(C_L(Nm_I)))
+    norm_hom = A_K.hom(images)
+
+    return norm_hom, to_A_K, from_A_L
+
+
+def class_group_norm_map(phi, to_C_L=True):
+    """
+    If phi: L -> K is an embedding of number fields then this function returns
+    the norm map from Cl_K to Cl_L induced by the relative norm from K to L.
+    """
+    norm_hom, to_A_K, from_A_L = _class_group_norm_map_internal(phi)
+    C_K = phi.codomain().class_group()
+    if to_C_L:
+
+        def norm_map(I):
+            I = C_K(I)
+            return from_A_L(norm_hom(to_A_K(I)))
+
+    else:
+
+        def norm_map(I):
+            I = C_K(I)
+            return norm_hom(to_A_K(I))
+
+    return norm_map
+
+
+def split_embeddings(phi, embeddings):
+    L = phi.domain()
+    assert L.absolute_degree() == 2
+    phi0 = phi(L.gen(0))
+    im0 = embeddings[0](phi0)
+    split1 = []
+    split2 = []
+    for embedding in embeddings:
+        if embedding(phi0) == im0:
+            split1.append(embedding)
+        else:
+            split2.append(embedding)
+    return set(split1), set(split2)
+
+
+def split_primes_iter(K):
+    for p in primes(1, oo):
+        F = (K * p).factor()
+        is_split = True
+        for pp, e in F:
+            if e != 1 or pp.absolute_norm() != p:
+                is_split = False
+                break
+        if not is_split:
+            continue
+
+        for pp, _ in F:
+            yield pp
