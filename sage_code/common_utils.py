@@ -30,6 +30,7 @@ from sage.arith.misc import primes
 from sage.combinat.permutation import Permutation
 from sage.groups.additive_abelian.additive_abelian_group import AdditiveAbelianGroup
 from sage.groups.perm_gps.permgroup import PermutationGroup
+from sage.groups.perm_gps.permgroup_named import TransitiveGroup, SymmetricGroup
 
 R = PolynomialRing(Rationals(), "x")
 x = R.gen()
@@ -87,6 +88,16 @@ def galois_action_on_embeddings(G_K):
     K = G_K.number_field()
     Kgal = G_K.splitting_field()
     embeddings = K.embeddings(Kgal)
+    # first a shortcut in the case where G_K is normal in S_d since then it doesn't
+    # matter for our application since we only care about the image
+    # of the galois group in S_d
+    d = K.absolute_degree()
+    G_K_roots = TransitiveGroup(d, G_K.transitive_number())
+    if G_K_roots.is_normal(SymmetricGroup(d)):
+        id_G_K = G_K.Hom(G_K).identity()
+        return G_K, id_G_K, id_G_K, Kgal, embeddings
+
+    # now for the actual computation
     permutations = []
     for g in G_K.gens():
         phi = g.as_hom()
