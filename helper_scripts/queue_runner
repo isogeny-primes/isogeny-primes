@@ -1,0 +1,6 @@
+#!/bin/bash
+SCRIPT_DIR=$(dirname "${BASH_SOURCE[0]}")
+IMPORT_DIR=$(dirname ${SCRIPT_DIR})
+source ${SCRIPT_DIR}/bash_sage_init.sh
+export PYTHONPATH=${IMPORT_DIR}:PYTHONPATH
+python3 ${SCRIPT_DIR}/queue_runner.py "$@"
