@@ -90,9 +90,8 @@ def lifts_in_hasse_range(fq, res_class):
 
 def get_prime_gens(C_K, norm_bound=800):
     gens = list(C_K.gens())
-    gen_ideals = list(C_K.gens_ideals())
 
-    it = C_K.number_field().primes_of_bounded_norm_iter(norm_bound)
+    it = primes_iter(C_K.number_field())
 
     prime_gens = [None] * len(gens)
     gens_todo = set(gens)
