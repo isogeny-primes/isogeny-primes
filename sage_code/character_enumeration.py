@@ -242,7 +242,7 @@ def character_enumeration_filter(
         alpha = alphas[0]
         gens_info[q] = (q_order, alpha)
     logger.debug(f"Kgal: {Kgal}, C_K: {C_K}")
-    logger.debug(f"gen_ideals: {my_gens_ideals}, gen_info: {gens_info}")
+    logger.debug("gen_ideals: %s, gen_info: %s", my_gens_ideals, gens_info)
     eps_prime_dict = {
         eps: tracking_dict_inv_collapsed[eps].prime_divisors() for eps in epsilons
     }
