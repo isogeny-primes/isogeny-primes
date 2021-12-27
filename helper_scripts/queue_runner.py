@@ -15,3 +15,5 @@ if __name__ == "__main__":
         runner.run_function(sys.argv[2], "sage_code.lmfdb_isogeny_primes", "isogeny_primes")
     elif command == "dump":
         runner.dump(*sys.argv[2:4])
+    elif command == "queue_errors":
+        runner.fill_queue_from_errors(sys.argv[2])

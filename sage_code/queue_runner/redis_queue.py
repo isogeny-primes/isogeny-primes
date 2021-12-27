@@ -76,14 +76,21 @@ class BaseFifoQueue:
         result = self._range(name, start, stop)
         return [json.loads(r.decode()) for r in result]
 
-    def dump(self, name, file_name, block_size: int = 1000):
+    def dump_json(self, name, block_size: int = 1000):
         result = []
         for block in range(0, self.len(name), block_size):
             result.extend(self.range(name, block, block + block_size))
+        return result
+
+    def dump_str(self, name, block_size: int = 1000):
+        result = self.dump_json(name, block_size)
         result_str = ",\n".join(
             json.dumps(r, separators=(",", ":"), sort_keys=True) for r in result
         )
-        result_str = f"[\n{result_str}\n]"
+        return f"[\n{result_str}\n]"
+
+    def dump(self, name, file_name, block_size: int = 1000):
+        result_str = self.dump_str(name, block_size)
         with open(file_name, "w") as file:
             file.write(result_str)
 

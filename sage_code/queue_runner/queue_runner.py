@@ -17,6 +17,14 @@ class QueueRunner:
     def fill_queue(self, queue_name, file_name):
         self._backend.push_file(queue_name, file_name)
 
+    def fill_queue_from_errors(self, queue_name, err_queue_name=None):
+        if not err_queue_name:
+            err_queue_name = f"{queue_name}_err"
+        errors = self._backend.dump_json(err_queue_name)
+        errors = [error["arguments"] for error in errors]
+        self._backend.push(queue_name, *errors)
+
+
     def clear_queue(self, queue_name):
         self._backend.clear(queue_name)
 
