@@ -64,9 +64,15 @@ def tuple_exp(tup, exp_tup):
 
 
 def lifts_in_hasse_range(fq, res_class):
-    # N = 2 * sqrt(fq)
-    # low_run >=-N
-    # low_run ** 2 = (-low_run) ** 2 <= N**2 = 4*fq
+    """Gets lifts of res class in the Hasse range according to fq
+
+    Args:
+        fq : prime ideal
+        res_class : a residue class
+
+    Returns:
+        [list]: the lifts
+    """
     fq4 = 4 * fq
 
     output = []
