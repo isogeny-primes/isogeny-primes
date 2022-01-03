@@ -24,7 +24,6 @@ class QueueRunner:
         errors = [error["arguments"] for error in errors]
         self._backend.push(queue_name, *errors)
 
-
     def clear_queue(self, queue_name):
         self._backend.clear(queue_name)
 
