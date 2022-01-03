@@ -284,25 +284,6 @@ def get_aux_primes(K, norm_bound, C_K, h_K, contains_imaginary_quadratic):
     return aux_primes
 
 
-def get_AB_integers(
-    embeddings, frak_q, epsilons, q_class_group_order, multiplicative_bounds={}
-):
-
-    output_dict_AB = {}
-    alphas = (frak_q ** q_class_group_order).gens_reduced()
-    assert len(alphas) == 1, "q^q_class_group_order not principal, which is very bad"
-    alpha = alphas[0]
-    nm_q = ZZ(frak_q.norm())
-    for eps in epsilons:
-        alpha_to_eps = eps_exp(alpha, eps, embeddings)
-        A = ZZ((alpha_to_eps - 1).norm())
-        B = ZZ((alpha_to_eps - (nm_q ** (12 * q_class_group_order))).norm())
-        output_dict_AB[eps] = lcm(A, B)
-        if multiplicative_bounds.get(eps):
-            output_dict_AB[eps] = gcd(output_dict_AB[eps], multiplicative_bounds[eps])
-    return output_dict_AB
-
-
 def alpha_eps_beta_bound(alpha_eps, beta, nm_q_pow_12hq):
     C_mat = alpha_eps ** 2 - alpha_eps * beta.trace() + nm_q_pow_12hq
     N = ZZ(C_mat.det())
@@ -315,8 +296,12 @@ def get_C_integers(
     epsilons,
     q_class_group_order,
     frob_polys,
-    multiplicative_bounds={},
+    multiplicative_bounds=None,
 ):
+
+    if multiplicative_bounds is None:
+        multiplicative_bounds = {}
+
     nm_q = ZZ(frak_q.absolute_norm())
 
     # Initialise output dict to empty sets
