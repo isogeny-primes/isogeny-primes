@@ -52,7 +52,7 @@ def semistable_ramification(local_data, p=None):
 
 
 def semi_stable_frobenius_polynomial(
-    E: EllipticCurve_number_field, q: NumberFieldFractionalIdeal
+    E: EllipticCurve_number_field, q: NumberFieldFractionalIdeal, t=1
 ):
     """
     Input:
@@ -71,17 +71,18 @@ def semi_stable_frobenius_polynomial(
     purely ramified extension that is chosen. So E' is and hence the frobenius
     polynomial is only defined up to twists.
     """
+    K = E.base_ring()
+    assert not K(t) in q
 
     local_data = E.local_data(q)
 
     if local_data.has_good_reduction():
         Ebar = E.reduction(q)
     elif E.j_invariant().valuation(q) >= 0:
-        K = E.base_ring()
         x = polygen(K)
         u = uniformizer(q)
         e = semistable_ramification(local_data)
-        L = K.extension(x ** e - u, "a")
+        L = K.extension(x ** e - t * u, "a")
         EL = E.change_ring(L)
         qL = L.primes_above(q)[0]
         Ebar = reduction(EL, qL)

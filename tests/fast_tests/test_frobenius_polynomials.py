@@ -1,9 +1,7 @@
 import pytest
-from sage.all import (
-    QuadraticField,
-    EllipticCurve_from_j,
-    GF,
-)
+from sage.all import EllipticCurve_from_j, GF, QQ, QuadraticField
+from sage.rings.polynomial.polynomial_ring import polygen
+from sage.schemes.elliptic_curves.constructor import EllipticCurve
 
 from sage_code.frobenius_polynomials import (
     semi_stable_frobenius_polynomial,
@@ -24,6 +22,19 @@ def test_semi_stable_frobenius_polynomial():
         for pp, e in (p * K).factor():
             f = semi_stable_frobenius_polynomial(E, pp)
             assert not f.change_ring(GF(73)).is_irreducible()
+
+
+def test_semi_stable_frobenius_polynomial_t():
+    # an example where the frobenius polynomial depends on the purely ramified extension
+    # we make
+    x = polygen(QQ)
+    K = QQ.extension(x - 1, "one")
+    E = EllipticCurve(K, [49, 343])
+    assert E.discriminant() == -(2 ** 4) * 31 * 7 ** 6
+    assert E.j_invariant() == K(2 ** 8 * 3 ** 3) / 31
+    f1 = semi_stable_frobenius_polynomial(E, K * 7, 1)
+    f2 = semi_stable_frobenius_polynomial(E, K * 7, -1)(x=-x)
+    assert f1 == f2
 
 
 @pytest.mark.parametrize(
