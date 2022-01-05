@@ -113,7 +113,7 @@ end function;
 function print_eps_type_info(t, p)
   phi,OK := quadratic_isogeny(t,p);
   K := NumberField(OK);
-  print t,K;
+  print t, ClassNumber(K), K;
   E := Domain(phi);
   j := jInvariant(E);
   j2 := jInvariant(Codomain(phi));

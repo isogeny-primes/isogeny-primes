@@ -43,7 +43,7 @@ from sage.all import (
     prime_range,
 )  # pylint: disable=no-name-in-module
 
-from .common_utils import EC_Q_ISOGENY_PRIMES, SMALL_GONALITIES, R
+from .common_utils import EC_Q_ISOGENY_PRIMES, SMALL_GONALITIES
 from .config import QUADRATIC_POINTS_DATA_PATH
 
 logger = logging.getLogger(__name__)
@@ -57,31 +57,17 @@ logger = logging.getLogger(__name__)
 
 
 def oezman_sieve(p, N):
-    """Returns True iff p is in S_N. Only makes sense if p ramifies in K"""
+    """If p is unramified in Q(sqrt(-N)) this always returns True.
+    Otherwise returns True iff p is in S_N or . Only makes sense if p ramifies in K"""
 
     M = QuadraticField(-N)
-    h_M = M.class_number()
-    H = M.hilbert_class_field("b")
-    primes_above_p = M.primes_above(p)
+    if p.divides(M.discriminant()):
+        return True
 
-    primes_tot_split_in_hcf = []
-
-    for P in primes_above_p:
-        if len(H.primes_above(P)) == h_M:
-            primes_tot_split_in_hcf.append(P)
-
-    if not primes_tot_split_in_hcf:
-        return False
-
-    f = R(hilbert_class_polynomial(M.discriminant()))
-    B = NumberField(f, name="t")
-    assert B.degree() == h_M
-
-    possible_nus = B.primes_above(p)
-
-    for nu in possible_nus:
-        if nu.residue_class_degree() == 1:
-            return True
+    pp = (M * p).factor()[0][0]
+    C_M = M.class_group()
+    if C_M(pp).order() == 1:
+        return True
 
     return False
 
