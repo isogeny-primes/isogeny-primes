@@ -58,6 +58,8 @@ def semi_stable_frobenius_polynomial(
     Input:
         E - an elliptic curve over a number field K
         q - a prime of the number field K
+        t - an element of t coprime to q, used to change the purely
+            ramified extension that is chosen
 
     Output:
         A frobenius polymial of an elliptic curve E' over O_K/q that
