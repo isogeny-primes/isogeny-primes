@@ -63,7 +63,11 @@ def test_interval(D):
         assert len(todo) <= 2 or max(todo) <= 31
 
 
-# The first case comes from Box's determination of quadratic points
+# The first example was found by using:
+# print_eps_type_info(-3, 29)
+# from the EpsilonTypes.m magma script
+
+# The second case comes from Box's determination of quadratic points
 # on X_0(73). From his table, we find that D = -31 should yield a
 # 73 isogeny. The other values in his table have either been checked
 # Gonzaléz, Lario, and Quer or are class number one Ds.
@@ -82,11 +86,12 @@ def test_interval(D):
 @pytest.mark.parametrize(
     "D, extra_isogeny, appendix_bound, potenial_isogenies",
     [
+        (179, 29, 1000, set()),
         (-31, 73, 1000, set()),
         (-127, 73, 1000, {61}),
         (5 * 577, 103, 1000, set()),
         (-31159, 137, 1000, {23, 29, 61, 157}),
-        (61 * 229 * 145757, 191, 0, {31}),
+        (61 * 229 * 145757, 191, 0, {29, 31}),
         (11 * 17 * 9011 * 23629, 311, 0, {71}),
     ],
 )

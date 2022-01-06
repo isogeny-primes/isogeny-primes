@@ -49,7 +49,8 @@ def get_possible_vals_at_gens(gens_info, eps, embeddings, residue_field, prime_f
             c_power_12h = prime_field(alpha_to_eps_mod_p0)
         except TypeError:
             # means alpha_to_eps_mod_p0 is not in GF(p) so can ignore p and move on
-            return {}
+            output[class_gp_gen] = []
+            return output
         possible_values = c_power_12h.nth_root(12 * class_gp_order, all=True)
         q = class_gp_gen.smallest_integer()
         e = class_gp_gen.residue_class_degree()
@@ -94,7 +95,7 @@ def lifts_in_hasse_range(fq, res_class):
     return output
 
 
-def get_prime_gens(C_K, norm_bound=800):
+def get_prime_gens(C_K):
     gens = list(C_K.gens())
 
     it = primes_iter(C_K.number_field())
@@ -143,14 +144,14 @@ def final_filter(
     survived = character_unit_filter(OK_star_gens, residue_field, eps, embeddings)
     if not survived:
         logger.debug(f"Prime {p} for eps {eps} removed using unit filter")
-        return survived
+        return False
 
     # Step 1
     possible_vals_at_gens = get_possible_vals_at_gens(
         gens_info, eps, embeddings, residue_field, prime_field
     )
 
-    if (not possible_vals_at_gens) or (not all(possible_vals_at_gens.values())):
+    if not all(possible_vals_at_gens.values()):
         logger.debug(f"Prime {p} for eps {eps} filtered in Step 1 of Heavy filter")
         logger.debug(f"Possible vals at gens: {possible_vals_at_gens}")
         return False
@@ -294,4 +295,5 @@ def character_enumeration_filter(
     output = set.union(*(val for val in eps_prime_filt_dict.values()))
     removed = sorted(pre_type_one_two.difference(output))
     logger.info(f"Pre type one two candidates removed by filtering: {removed}")
+    logger.debug(f"Class number: {C_K.cardinality()}")
     return sorted(output)
