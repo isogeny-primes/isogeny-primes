@@ -521,7 +521,7 @@ def get_pre_type_one_two_primes(
             embeddings,
             stop_strategy=stop_strategy,
         )
-        return output
+        return embeddings, output
 
     # Split according to epsilon type, get prime divisors, and filter
 
@@ -540,4 +540,4 @@ def get_pre_type_one_two_primes(
     # Take union of all primes over all epsilons, sort, and return
 
     output = set.union(*(val for val in final_split_dict.values()))
-    return sorted(output)
+    return embeddings, sorted(output)

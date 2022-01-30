@@ -93,7 +93,7 @@ def get_isogeny_primes(
 
     # Get and show PreTypeOneTwoPrimes
 
-    pre_type_one_two_primes = get_pre_type_one_two_primes(
+    embeddings, pre_type_one_two_primes = get_pre_type_one_two_primes(
         K,
         norm_bound=norm_bound,
         loop_curves=loop_curves,
@@ -115,7 +115,7 @@ def get_isogeny_primes(
 
     # Get and show TypeTwoPrimes
 
-    type_2_primes = get_type_2_primes(K, bound=bound)
+    type_2_primes = get_type_2_primes(K, embeddings, bound=bound)
     logging.info("type_2_primes = {}".format(type_2_primes))
 
     # Put them all together

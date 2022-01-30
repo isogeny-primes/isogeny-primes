@@ -12,9 +12,9 @@
 
     ====================================================================
 
-    This file is part of Quadratic Isogeny Primes.
+    This file is part of Isogeny Primes.
 
-    Copyright (C) 2021 Barinder Singh Banwait
+    Copyright (C) 2022 Barinder S. Banwait and Maarten Derickx
 
     Quadratic Isogeny Primes is free software: you can redistribute it and/or
     modify it under the terms of the GNU General Public License as published
@@ -29,26 +29,47 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-    The author can be reached at: barinder.s.banwait@gmail.com
+    The authors can be reached at: barinder.s.banwait@gmail.com
 
     ====================================================================
 
 */
 
-\\ 80 billion is the bound for all |D| <= 10
 
-D=-5;  \\ change this to desired value
-export(D)
+f=x^3 - x^2 - 2*x + 1;  \\ change this to desired polynomial
+K = nfinit(f);
+export(K)
+
+typeTwoBound = 4.1e11;
+
+odd_residue_class_degs(q) =
+{
+  my(L,P);
+  L = List();
+  P = idealprimedec(K,q);
+  foreach(P,p,
+    my(the_exp);
+    the_exp = p[4];
+    if(the_exp%2 == 1,
+      listput(~L,the_exp);
+      );
+  );
+  return(Set(L));
+}
+export(odd_residue_class_degs)
 
 \\check if condition CC is satisfied
-satisfiesCC(p) =
+satisfiesCC(p,q_start) =
 {
-  forprime(q = 7,p/4,
-    if((q^2 + q + 1) % p != 0,
-      if(kronecker(D,q) != -1,
-        \\ don't memoize the next call
-        if(kronecker(q,p) == 1,
-          return(0)
+  forprime(q = q_start,p/4,
+    my(odd_fs);
+    odd_fs = odd_residue_class_degs(q);
+    foreach(odd_fs,f,
+      if(q^f < p/4,
+        if((q^(2*f) + q^f + 1) % p != 0,
+          if(kronecker(q,p) == 1,
+            return(0);
+          );
         );
       );
     );
@@ -58,106 +79,47 @@ satisfiesCC(p) =
 export(satisfiesCC)
 
 \\print to stdout if p satisfies condition CC
-print_satisfiesCC(p) =
+print_satisfiesCC(p, q_init) =
 {
-  if(satisfiesCC(p),
+  if(satisfiesCC(p,q_init),
     print(p," is a type 2 prime")
   );
 }
 export(print_satisfiesCC)
 
-\\for D=3,7
-congruence_condition_37(p) =
-{
-    if(p%24 == 19,
-      return(1);
-      return(0);
-    );
-}
-export(congruence_condition_37)
-
-\\ for D=-6,-5,6,10
-congruence_condition_main(p) =
-{
-    if(p%24 == 19,
-      my(x='x);
-      x=p%5;
-      if((x==2)||(x==3),
-        return(1);
-      return(0);
-      );
-    return(0);
-    );
-}
-export(congruence_condition_main)
-
-\\ for D=5
-congruence_condition_5(p) =
-{
-    if(p%4 == 3,
-      x=p%5;
-      if((x==2)||(x==3),
-        return(1);
-      return(0);
-      );
-    return(0);
-    );
-}
-export(congruence_condition_5)
-
-\\ for D=-10
-congruence_condition_m10(p) =
-{
-    if(p%8 == 3,
-      x=p%5;
-      if((x==2)||(x==3),
-        return(1);
-      return(0);
-      );
-    return(0);
-    );
-}
-export(congruence_condition_m10)
-
-\\for D=2
-congruence_condition_2(p) =
-{
-    if(p%8 == 3,
-      return(1);
-      return(0);
-    );
-}
-export(congruence_condition_2)
-
-custom_congruence_condition(p,D) =
-{
-    if (D == -10, congruence_condition_m10(p),
-        D == -6, congruence_condition_main(p),
-        D == -5, congruence_condition_main(p),
-        D == 2, congruence_condition_2(p),
-        D == 3, congruence_condition_37(p),
-        D == 5, congruence_condition_5(p),
-        D == 6, congruence_condition_main(p),
-        D == 7, congruence_condition_37(p),
-        D == 10, congruence_condition_main(p),
-        congruence_condition_main(p));
-}
-export(custom_congruence_condition)
-
+\\[p | p <- idealprimedec(K,q), p.f % 2]
 blockSize=100000;
-export(blockSize);
+export(blockSize)
 
-doWork(pBeg) =
+
+initialCheck(pBeg) =
 {
-    my(p,cond);
-    forprime(p = pBeg*blockSize, (pBeg+1)*blockSize-1,
-             cond=custom_congruence_condition(p,D);
-             if(cond,print_satisfiesCC(p)));
+    my(p);
+    forprimestep(p = pBeg*blockSize, (pBeg+1)*blockSize-1, Mod(3,4),
+                print_satisfiesCC(p,2));
 }
-export(doWork);
+export(initialCheck)
 
-howMany=floor(1000000000/blockSize);
+switch=7^(2*poldegree(f)) + 7^(poldegree(f)) + 1;
+howManyInitial = floor(switch/blockSize);
+
+\\ parapply(initialCheck,[0..howManyInitial+1]);
+
+my_res_classes = [667,67,547,163,403,43];
+export(my_res_classes)
+
+mainCheck(pBeg) =
+{
+    my(p);
+    foreach(my_res_classes,r,
+      forprimestep(p = pBeg*blockSize, (pBeg+1)*blockSize-1,Mod(r,840),
+                  print_satisfiesCC(p,11));
+    );
+}
+export(mainCheck)
+
+howMany=floor(1e8/blockSize);
 
 \\ Takes about 27 seconds up to a billion!
 
-\\ parapply(doWork,[0..howMany]);
+\\ parapply(mainCheck,[howManyInitial..howMany]);

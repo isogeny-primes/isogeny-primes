@@ -35,8 +35,6 @@
 
 */
 
-\\ 80 billion is the bound for all |D| <= 10
-
 \\check if condition CC is satisfied
 satisfiesCCunif(p) =
 {

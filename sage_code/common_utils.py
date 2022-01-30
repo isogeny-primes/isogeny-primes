@@ -31,12 +31,14 @@ from sage.combinat.permutation import Permutation
 from sage.groups.additive_abelian.additive_abelian_group import AdditiveAbelianGroup
 from sage.groups.perm_gps.permgroup import PermutationGroup
 from sage.groups.perm_gps.permgroup_named import TransitiveGroup, SymmetricGroup
+import functools
 
 R = PolynomialRing(Rationals(), "x")
 x = R.gen()
 EC_Q_ISOGENY_PRIMES = {2, 3, 5, 7, 11, 13, 17, 19, 37, 43, 67, 163}
 CLASS_NUMBER_ONE_DISCS = {-3, -4, -7, -8, -11, -19, -43, -67, -163}
 SMALL_GONALITIES = {2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 47, 59, 71}
+
 # Global methods
 
 
@@ -74,6 +76,12 @@ def get_weil_polys(F):
     a = F.degree()
     weil_polys = R.weil_polynomials(2, q ** a)
     return [f for f in weil_polys if weil_polynomial_is_elliptic(f, q, a)]
+
+
+@functools.cache
+def get_ordinary_weil_polys_from_values(q, a):
+    weil_polys = R.weil_polynomials(2, q ** a)
+    return [f for f in weil_polys if f[1] % q != 0]
 
 
 def eps_exp(alpha, eps, Sigma):
