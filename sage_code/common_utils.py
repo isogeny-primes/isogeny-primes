@@ -105,7 +105,7 @@ def galois_action_on_embeddings(G_K):
             [embeddings.index(phi * emb) + 1 for emb in embeddings]
         ).inverse()
         permutations.append(g_perm)
-    G_K_emb = PermutationGroup(permutations)
+    G_K_emb = PermutationGroup(permutations, canonicalize=False)
     to_emb = G_K.hom(G_K_emb.gens())
     from_emb = G_K_emb.hom(G_K.gens())
     return G_K_emb, to_emb, from_emb, Kgal, embeddings
