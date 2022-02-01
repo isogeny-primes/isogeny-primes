@@ -235,3 +235,33 @@ def primes_iter(K, bound=oo, cache=True):
         for pp, _ in F:
             if pp.absolute_norm() < bound:
                 yield pp
+
+
+def one_aux_gen_list(C_K, class_group_gens, it):
+    """Compute one Gen set"""
+    running_class_group_gens = class_group_gens.copy()
+    gen_list = []
+    while running_class_group_gens:
+        candidate = next(it)
+        if candidate.smallest_integer() == 2:
+            continue
+        candidate_class = C_K(candidate)
+        if candidate_class in running_class_group_gens:
+            gen_list.append(candidate)
+            running_class_group_gens.remove(candidate_class)
+    return gen_list
+
+
+def auxgens(K, auxgen_count=5):
+    """Compute a list AuxGen of Gen sets"""
+
+    C_K = K.class_group()
+    class_group_gens = list(C_K.gens())
+
+    it = K.primes_of_bounded_norm_iter(B=500)
+
+    aux_gen_list = [
+        one_aux_gen_list(C_K, class_group_gens, it) for _ in range(auxgen_count)
+    ]
+
+    return aux_gen_list

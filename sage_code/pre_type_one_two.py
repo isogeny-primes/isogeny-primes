@@ -1,20 +1,40 @@
-########################################################################
-#                                                                      #
-#                        PRE TYPE ONE TWO PRIMES                       #
-#                                                                      #
-########################################################################
+"""generic.py
+
+    Deals with the generic signatures.
+
+    ====================================================================
+
+    This file is part of Isogeny Primes.
+
+    Copyright (C) 2021 Barinder Singh Banwait and Maarten Derickx
+
+    Isogeny Primes is free software: you can redistribute it and/or
+    modify it under the terms of the GNU General Public License as
+    published by the Free Software Foundation, either version 3 of the
+    License, or any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+    ====================================================================
+
+"""
+
 import logging
 from itertools import product
 
 from sage.all import (
     ZZ,
     GF,
-    Integer,
     gcd,
     lcm,
     matrix,
 )  # pylint: disable=no-name-in-module
-from sage_code.pil_integers import get_PIL_integers
 
 from .character_enumeration import character_enumeration_filter
 from .common_utils import (
@@ -89,9 +109,8 @@ def remove_redundant_epsilons(epsilons, galois_group=None):
     return epsilons_output
 
 
-def get_pre_type_one_two_epsilons(d, galgp=None, heavy_filter=False):
-    """This method computes the epsilon group ring characters of Lemma 1 and
-    Remark 1 of Momose. The three epsilons of type 1 and 2 are excluded.
+def get_generic_epsilons(d, strong_type_3_epsilons=None, galgp=None, ice_filter=False):
+    """Return the generic and weak Type 3 signatures.
 
     Args:
         d ([int]): Degree of the number field
@@ -101,19 +120,20 @@ def get_pre_type_one_two_epsilons(d, galgp=None, heavy_filter=False):
         the type of that epsilon
     """
 
-    epsilons_dict = {}
-
     epsilons_keys = set(product([0, 4, 6, 8, 12], repeat=d))
 
     epsilons_keys -= {(0,) * d, (6,) * d, (12,) * d}  # remove types 1 and 2 epsilons
 
     logger.debug("epsilons before filtering: {}".format(len(epsilons_keys)))
 
-    if not heavy_filter:
+    if not ice_filter:
         epsilons_keys = remove_redundant_epsilons(epsilons_keys, galois_group=galgp)
         logger.debug("epsilons after filtering: {}".format(len(epsilons_keys)))
     else:
-        logger.debug("Heavy filtering is on, so no epsilon filtering for now.")
+        logger.debug("ICE filter is on, so no epsilon filtering.")
+
+    if strong_type_3_epsilons is not None:
+        epsilons_keys -= strong_type_3_epsilons  # remove strong type 3 epsilons
 
     epsilons_dict = {eps: get_eps_type(eps) for eps in epsilons_keys}
 
@@ -144,17 +164,7 @@ def contains_imaginary_quadratic_field(K):
         L for L, _, _ in quadratic_subfields if L.is_totally_imaginary()
     ]
 
-    contains_hilbert_class_field_of_imag_quad = False
-
-    for L in imag_quad_subfields:
-        HL = L.hilbert_class_field("c")
-        if HL.absolute_degree().divides(K.absolute_degree()):
-            K_HL_composite = K.composite_fields(HL)[0]
-            if K_HL_composite.absolute_degree() == K_deg_abs:
-                contains_hilbert_class_field_of_imag_quad = True
-                break
-
-    return (bool(imag_quad_subfields), contains_hilbert_class_field_of_imag_quad)
+    return bool(imag_quad_subfields)
 
 
 def get_compositum(nf_list, maps=False):
@@ -290,13 +300,14 @@ def alpha_eps_beta_bound(alpha_eps, beta, nm_q_pow_12hq):
     return N
 
 
-def get_C_integers(
+def ABC_integers(
     embeddings,
     frak_q,
     epsilons,
     q_class_group_order,
     frob_polys,
     multiplicative_bounds=None,
+    ensure_C_nonzero=False,
 ):
 
     if multiplicative_bounds is None:
@@ -304,10 +315,8 @@ def get_C_integers(
 
     nm_q = ZZ(frak_q.absolute_norm())
 
-    # Initialise output dict to empty sets
-    output_dict_C = {}
-    for eps in epsilons:
-        output_dict_C[eps] = 1
+    # Initialise output dict to norm of q
+    output_dict_C = {eps: ZZ(frak_q.smallest_integer()) for eps in epsilons}
 
     alphas = (frak_q ** q_class_group_order).gens_reduced()
     assert len(alphas) == 1, "q^q_class_group_order not principal, which is very bad"
@@ -342,7 +351,11 @@ def get_C_integers(
                 N = gcd(N, multiplicative_bound)
             else:
                 N = N.abs().perfect_power()[0]
-            output_dict_C[eps] = lcm(output_dict_C[eps], N)
+            if ensure_C_nonzero:
+                if N != 0:
+                    output_dict_C[eps] = lcm(output_dict_C[eps], N)
+            else:
+                output_dict_C[eps] = lcm(output_dict_C[eps], N)
             if output_dict_C[eps] == multiplicative_bound:
                 break
     return output_dict_C
@@ -365,7 +378,7 @@ def pre_type_3_class_group_maps(K, embeddings):
     for L, phi, _ in K.subfields(degree=2, name="b"):
         if L.discriminant() > 0:
             continue
-        split1, split2 = split_embeddings(phi, embeddings)
+        split1, _ = split_embeddings(phi, embeddings)
         epsilon1 = tuple(0 if embedding in split1 else 12 for embedding in embeddings)
         epsilon2 = tuple(12 - a for a in epsilon1)
         norm_map = class_group_norm_map(phi, to_C_L=False)
@@ -373,12 +386,30 @@ def pre_type_3_class_group_maps(K, embeddings):
     return class_group_maps
 
 
+def get_strong_type_3_epsilons(K, embeddings):
+
+    list_of_gens = list(K.class_group().gens())
+
+    strong_type_3_epsilons = set()
+    for L, phi, _ in K.subfields(degree=2, name="b"):
+        if L.discriminant() > 0:
+            continue
+        norm_map = class_group_norm_map(phi, to_C_L=False)
+        if all(norm_map(cl) == 0 for cl in list_of_gens):
+            split1, _ = split_embeddings(phi, embeddings)
+            epsilon1 = tuple(
+                0 if embedding in split1 else 12 for embedding in embeddings
+            )
+            epsilon2 = tuple(12 - a for a in epsilon1)
+            strong_type_3_epsilons.add(epsilon1)
+            strong_type_3_epsilons.add(epsilon2)
+    return strong_type_3_epsilons
+
+
 def get_pre_type_one_two_primes(
     K,
     norm_bound=50,
-    loop_curves=False,
-    use_PIL=False,
-    heavy_filter=False,
+    ice_filter=False,
     stop_strategy="auto",
     repeat_bound=4,
     character_enumeration_bound=1000,
@@ -387,17 +418,7 @@ def get_pre_type_one_two_primes(
     the isogeny character is necessarily of type 2 (or 3, which is not relevant
     for us)."""
 
-    (
-        contains_imaginary_quadratic,
-        contains_hilbert_class_field,
-    ) = contains_imaginary_quadratic_field(K)
-
-    if contains_hilbert_class_field:
-        raise ValueError(
-            "The number field you entered contains the Hilbert "
-            "Class field of an imaginary quadratic field. The set "
-            "of isogeny primes in this case is therefore infinite."
-        )
+    contains_imaginary_quadratic = contains_imaginary_quadratic_field(K)
 
     # Set up important objects to be used throughout
 
@@ -409,13 +430,22 @@ def get_pre_type_one_two_primes(
     if K.is_galois():
         G_K = K.galois_group()
         G_K_emb, _, _, Kgal, embeddings = galois_action_on_embeddings(G_K)
-        epsilons = get_pre_type_one_two_epsilons(
-            K.degree(), galgp=G_K_emb, heavy_filter=heavy_filter
+        strong_type_3_epsilons = get_strong_type_3_epsilons(K, embeddings)
+        epsilons = get_generic_epsilons(
+            K.degree(),
+            strong_type_3_epsilons=strong_type_3_epsilons,
+            galgp=G_K_emb,
+            ice_filter=ice_filter,
         )
     else:
-        epsilons = get_pre_type_one_two_epsilons(K.degree(), heavy_filter=heavy_filter)
         Kgal = K.galois_closure("b")
         embeddings = K.embeddings(Kgal)
+        strong_type_3_epsilons = get_strong_type_3_epsilons(K, embeddings)
+        epsilons = get_generic_epsilons(
+            K.degree(),
+            strong_type_3_epsilons=strong_type_3_epsilons,
+            ice_filter=ice_filter,
+        )
 
     # Now start with the divisibilities. Do the unit computation first
 
@@ -432,7 +462,6 @@ def get_pre_type_one_two_primes(
         aux_primes_iter = split_primes_iter(K)
         class_group_maps = pre_type_3_class_group_maps(K, embeddings)
         epsilon_repeats = {eps: repeat_bound for eps in epsilons}
-
     else:
         aux_primes = get_aux_primes(
             K, norm_bound, C_K, h_K, contains_imaginary_quadratic
@@ -443,19 +472,22 @@ def get_pre_type_one_two_primes(
         epsilons_todo = set(epsilon_repeats) if stop_strategy == "auto" else epsilons
         q_class_group_order = C_K(q).multiplicative_order()
         nm_q = q.absolute_norm()
-        if loop_curves:
-            frob_polys = get_weil_polys(GF(nm_q))
-        else:
-            frob_polys = R.weil_polynomials(2, nm_q)
+        frob_polys = get_weil_polys(GF(nm_q))
         frob_polys_dict[q] = frob_polys
-        C_integers_dict = get_C_integers(
-            embeddings, q, epsilons_todo, q_class_group_order, frob_polys, bound_dict
+        ABC_integers_dict = ABC_integers(
+            embeddings,
+            q,
+            epsilons_todo,
+            q_class_group_order,
+            frob_polys,
+            bound_dict,
+            ensure_C_nonzero=False,
         )
         unified_dict = {}
         q_char = q.smallest_integer()
         for eps in epsilons_todo:
             q_char_eps = gcd(q_char, bound_dict[eps])
-            unified_dict[eps] = lcm([q_char_eps, C_integers_dict[eps]])
+            unified_dict[eps] = lcm([q_char_eps, ABC_integers_dict[eps]])
             if stop_strategy == "auto":
                 if unified_dict[eps] == bound_dict[eps]:
                     if eps in class_group_maps:
@@ -473,6 +505,7 @@ def get_pre_type_one_two_primes(
             break
 
     logger.debug(f"bound dict before enumeration filter: \n{bound_dict}")
+
     # Barinder you probably don't want me to compute this cause of prime_divisor
     # however I really want to log this from time to time
     """
@@ -487,30 +520,16 @@ def get_pre_type_one_two_primes(
     )
     """
 
-    # Optionally use the principal ideal lattice for further filtering
+    # Optionally use Isogeny Character Enumeration (ICE) filter
 
-    if use_PIL and h_K > 1:
-        logger.debug("Using PIL")
-        if stop_strategy == "auto":
-            aux_primes = get_aux_primes(
-                K, norm_bound, C_K, h_K, contains_imaginary_quadratic
-            )
-        PIL_integers_dict = get_PIL_integers(
-            aux_primes, frob_polys_dict, Kgal, epsilons, embeddings, C_K
-        )
-        for eps in epsilons:
-            bound_dict[eps] = ZZ(gcd(bound_dict[eps], PIL_integers_dict[eps]))
-
-    # Split according to epsilon type, get prime divisors, and filter
-
-    if heavy_filter:
+    if ice_filter:
         if stop_strategy == "auto":
             aux_primes = character_enumeration_bound
         else:
             aux_primes = get_aux_primes(
                 K, norm_bound, C_K, h_K, contains_imaginary_quadratic
             )
-        logger.debug("Using Heavy filtering")
+        logger.debug("Using ICE filter")
         output = character_enumeration_filter(
             K,
             C_K,
@@ -540,4 +559,4 @@ def get_pre_type_one_two_primes(
     # Take union of all primes over all epsilons, sort, and return
 
     output = set.union(*(val for val in final_split_dict.values()))
-    return embeddings, sorted(output)
+    return strong_type_3_epsilons, embeddings, sorted(output)

@@ -55,6 +55,11 @@ URL_TRUNK = (
     "is_galois=true&_fields=label,disc_abs,disc_sign,coeffs"
 )
 
+URL_TRUNK = (
+    "https://www.lmfdb.org/api/nf_fields/?_format=json&degree={}&"
+    "_fields=label,disc_abs,disc_sign,coeffs"
+)
+
 R = PolynomialRing(QQ, "x")
 
 

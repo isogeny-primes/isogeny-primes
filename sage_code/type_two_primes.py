@@ -1,4 +1,4 @@
-"""type_one_primes.py
+"""type_two.py
 
     Deals with the Type two primes.
 
@@ -42,8 +42,8 @@ from sage.all import (
     lcm,
 )  # pylint: disable=no-name-in-module
 
-from .common_utils import x, get_ordinary_weil_polys_from_values
-from .pre_type_one_two import get_C_integers
+from .common_utils import x, get_ordinary_weil_polys_from_values, auxgens
+from .pre_type_one_two import ABC_integers
 
 logger = logging.getLogger(__name__)
 
@@ -143,19 +143,6 @@ def satisfies_condition_CC_uniform(possible_odd_f, p):
     return True
 
 
-def get_one_aux_gen_list(C_K, class_group_gens, it):
-
-    running_class_group_gens = class_group_gens.copy()
-    gen_list = []
-    while running_class_group_gens:
-        candidate = next(it)
-        candidate_class = C_K(candidate)
-        if candidate_class in running_class_group_gens:
-            gen_list.append(candidate)
-            running_class_group_gens.remove(candidate_class)
-    return gen_list
-
-
 def get_the_lcm(C_K, embeddings, d, gen_list):
 
     type_2_eps = (6,) * d
@@ -169,14 +156,14 @@ def get_the_lcm(C_K, embeddings, d, gen_list):
 
         q_class_group_order = C_K(frak_q).multiplicative_order()
         ordinary_frob_polys = get_ordinary_weil_polys_from_values(q, a)
-        ABCo_lcm = get_C_integers(
+        ABCo_lcm = ABC_integers(
             embeddings, frak_q, epsilons, q_class_group_order, ordinary_frob_polys
         )[type_2_eps]
         running_lcm = lcm([running_lcm, ABCo_lcm, ZZ(nm_q)])
     return running_lcm
 
 
-def get_type_2_not_momose(K, embeddings, auxgen_count):
+def get_type_2_not_momose(K, embeddings):
     """Compute a superset of TypeTwoNotMomosePrimes"""
 
     C_K = K.class_group()
@@ -186,13 +173,7 @@ def get_type_2_not_momose(K, embeddings, auxgen_count):
     if h_K == 1:
         return set()
 
-    class_group_gens = list(C_K.gens())
-
-    it = K.primes_of_bounded_norm_iter()
-
-    aux_gen_list = [
-        get_one_aux_gen_list(C_K, class_group_gens, it) for _ in range(auxgen_count)
-    ]
+    aux_gen_list = auxgens(K)
 
     running_gcd = 0
     for gen_list in aux_gen_list:
@@ -202,12 +183,12 @@ def get_type_2_not_momose(K, embeddings, auxgen_count):
     return set(ZZ(running_gcd).prime_divisors())
 
 
-def get_type_2_primes(K, embeddings, bound=None, auxgen_count=5):
+def get_type_2_primes(K, embeddings, bound=None):
     """Compute a list containing the type 2 primes"""
 
     # First compute the superset of type 2 primes which are not of Momose Type 2
 
-    output = get_type_2_not_momose(K, embeddings, auxgen_count)
+    output = get_type_2_not_momose(K, embeddings)
 
     # Now deal with Momose Type 2
 

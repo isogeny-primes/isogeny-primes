@@ -256,7 +256,7 @@ def get_N(frob_poly, nm_q, exponent):
     return N
 
 
-def get_C_integer_type1(K, q, bad_aux_prime_dict, C_K, bound_so_far, loop_curves):
+def get_C_integer_type1(K, q, bad_aux_prime_dict, C_K, bound_so_far):
     running_primes = gcd(q, bound_so_far)
     if str(q) in bad_aux_prime_dict:
         running_primes = lcm(
@@ -274,12 +274,7 @@ def get_C_integer_type1(K, q, bad_aux_prime_dict, C_K, bound_so_far, loop_curves
         N_cusp = ZZ(nm_q) ** exponent - 1
         N_cusp = gcd(N_cusp, bound_so_far)
         running_primes = lcm(running_primes, N_cusp)
-
-        if loop_curves:
-            weil_polys = get_weil_polys(GF(nm_q))
-        else:
-            weil_polys = R.weil_polynomials(2, nm_q)
-
+        weil_polys = get_weil_polys(GF(nm_q))
         for wp in weil_polys:
             N = get_N(wp, nm_q, exponent)
             assert N != 0
@@ -292,7 +287,7 @@ def get_C_integer_type1(K, q, bad_aux_prime_dict, C_K, bound_so_far, loop_curves
     return gcd(running_primes, bound_so_far)
 
 
-def get_type_1_primes(K, C_K, norm_bound=50, loop_curves=False):
+def get_type_1_primes(K, C_K, norm_bound=50):
     """Compute the type 1 primes"""
 
     h_K = C_K.order()
@@ -343,13 +338,9 @@ def get_type_1_primes(K, C_K, norm_bound=50, loop_curves=False):
     bound_so_far = 0
 
     for q in aux_primes:
-        bound_so_far = get_C_integer_type1(
-            K, q, bad_aux_prime_dict, C_K, bound_so_far, loop_curves
-        )
+        bound_so_far = get_C_integer_type1(K, q, bad_aux_prime_dict, C_K, bound_so_far)
 
-    bound_at_2 = get_C_integer_type1(
-        K, 2, bad_aux_prime_dict, C_K, bound_so_far, loop_curves
-    )
+    bound_at_2 = get_C_integer_type1(K, 2, bad_aux_prime_dict, C_K, bound_so_far)
 
     output = set(bound_so_far.prime_divisors())
     output = apply_formal_immersion_at_2(output, bound_at_2, K.degree())
