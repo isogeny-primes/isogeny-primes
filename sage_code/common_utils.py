@@ -258,10 +258,106 @@ def auxgens(K, auxgen_count=5):
     C_K = K.class_group()
     class_group_gens = list(C_K.gens())
 
-    it = K.primes_of_bounded_norm_iter(B=500)
+    it = K.primes_of_bounded_norm_iter(B=3000)
 
     aux_gen_list = [
         one_aux_gen_list(C_K, class_group_gens, it) for _ in range(auxgen_count)
     ]
 
     return aux_gen_list
+
+
+def get_eps_type(eps):
+    """Returns the type of an epsilon (quadratic, quartic, sextic), where
+    an epsilon is considered as a tuple
+    """
+
+    if 6 in eps:
+        if any(t in eps for t in [4, 8]):
+            return "mixed"
+        if len(set(eps)) == 1:
+            # means it's all 6s
+            return "type-2"
+        return "quartic-non-constant"
+    if any(t in eps for t in [4, 8]):
+        if len(set(eps)) == 1:
+            # means it's all 4s or all 8s
+            return "sextic-constant"
+        return "sextic-non-constant"
+    if len(set(eps)) == 1:
+        return "type-1"
+    return "quadratic-non-constant"
+
+
+def filter_ABC_primes(K, prime_list, eps_type):
+    """Apply congruence and splitting conditions to primes in prime
+    list, depending on the type of epsilon
+
+    Args:
+        K ([NumberField]): our number field
+        prime_list ([list]): list of primes to filter
+        eps_type ([str]): one of the possible epsilon types
+    """
+
+    if eps_type == "type-1":
+        # no conditions
+        return prime_list
+
+    if eps_type == "quadratic-non-constant":
+        # prime must split or ramify in K
+        output_list = []
+
+        for p in prime_list:
+            if not K.ideal(p).is_prime():
+                output_list.append(p)
+        return output_list
+
+    if eps_type == "sextic-non-constant":
+        # prime must split or ramify in K, and be congruent to 2 mod 3
+        output_list = []
+
+        for p in prime_list:
+            if p % 3 == 2:
+                if not K.ideal(p).is_prime():
+                    output_list.append(p)
+        return output_list
+
+    if eps_type == "sextic-constant":
+        # prime must be congruent to 2 mod 3
+        output_list = []
+
+        for p in prime_list:
+            if p % 3 == 2:
+                output_list.append(p)
+        return output_list
+
+    if eps_type == "type-2":
+        # prime must be congruent to 3 mod 4
+        output_list = []
+
+        for p in prime_list:
+            if p % 4 == 3:
+                output_list.append(p)
+        return output_list
+
+    if eps_type == "quartic-non-constant":
+        # prime must split or ramify in K, and be congruent to 3 mod 4
+        output_list = []
+
+        for p in prime_list:
+            if p % 4 == 3:
+                if not K.ideal(p).is_prime():
+                    output_list.append(p)
+        return output_list
+
+    if eps_type == "mixed":
+        # prime must split or ramify in K, and be congruent to 1 mod 12
+        output_list = []
+
+        for p in prime_list:
+            if p % 12 == 1:
+                if not K.ideal(p).is_prime():
+                    output_list.append(p)
+        return output_list
+
+    raise ValueError("given type {} not a vaid epsilon type".format(eps_type))

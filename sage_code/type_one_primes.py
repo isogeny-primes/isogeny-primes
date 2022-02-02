@@ -43,7 +43,7 @@ from sage.all import (
 )
 from sage.rings.finite_rings.finite_field_constructor import GF
 
-from .common_utils import R, get_weil_polys
+from .common_utils import get_weil_polys
 from .config import FORMAL_IMMERSION_DATA_AT_2_PATH, BAD_FORMAL_IMMERSION_DATA_PATH
 
 logger = logging.getLogger(__name__)
@@ -335,6 +335,12 @@ def get_type_1_primes(K, C_K, norm_bound=50):
                 json.dump(bfi_dat, fp, indent=4)
 
     aux_primes = prime_range(3, norm_bound + 1)
+
+    if not aux_primes:
+        # i.e. the user has inserted a silly value of norm_bound, so we add
+        # one aux prime as in the generic case
+        aux_primes = [3]
+
     bound_so_far = 0
 
     for q in aux_primes:

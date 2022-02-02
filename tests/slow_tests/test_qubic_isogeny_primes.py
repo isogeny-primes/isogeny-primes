@@ -42,7 +42,6 @@ TEST_SETTINGS = {
     "norm_bound": 50,
     "bound": 1000,
     "appendix_bound": 200,
-    "loop_curves": False,
     "heavy_filter": True,
 }
 

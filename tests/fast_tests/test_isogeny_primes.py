@@ -6,11 +6,9 @@ from sage.rings.polynomial.polynomial_ring_constructor import PolynomialRing
 TEST_SETTINGS = {
     "norm_bound": 50,
     "bound": 1000,
-    "loop_curves": False,
-    "use_PIL": False,
-    "heavy_filter": True,
-    "appendix_bound": 1000,
-    "stop_strategy": "auto",
+    "ice_filter": True,
+    "appendix_bound": 100,
+    "auto_stop_strategy": True,
 }
 
 R = PolynomialRing(QQ, "x")

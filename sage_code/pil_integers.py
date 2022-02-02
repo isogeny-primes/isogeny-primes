@@ -1,4 +1,5 @@
 import logging
+from itertools import product
 
 from sage.all import (
     ZZ,

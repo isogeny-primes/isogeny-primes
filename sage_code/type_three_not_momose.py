@@ -59,13 +59,21 @@ def type_three_not_momose(K, embeddings, strong_type_3_epsilons):
     """Compute a superset of TypeThreeNotMomosePrimes"""
 
     if len(strong_type_3_epsilons) == 0:
-        return []
+        return [], []
 
     C_K = K.class_group()
     h_K = C_K.order()
 
+    # Since the data in strong_type_3_epsilons also contains the
+    # IQF L, we need to extract only the epsilons for the actual
+    # computation. On the other hand, we also want to report the Ls
+    # higher up the stack, so we get those as well
+
+    actual_type_3_epsilons = {eps[0] for eps in strong_type_3_epsilons}
+    type_3_fields = {eps[1] for eps in strong_type_3_epsilons}
+
     if h_K == 1:
-        return []
+        return [], type_3_fields
 
     aux_gen_list = auxgens(K)
 
@@ -73,11 +81,11 @@ def type_three_not_momose(K, embeddings, strong_type_3_epsilons):
 
     for gen_list in aux_gen_list:
         eps_lcm_dict = get_eps_lcm_dict(
-            C_K, strong_type_3_epsilons, embeddings, gen_list
+            C_K, actual_type_3_epsilons, embeddings, gen_list
         )
         for eps in strong_type_3_epsilons:
             bound_dict[eps] = gcd(bound_dict[eps], eps_lcm_dict[eps])
 
     type_three_not_momose_bound = ZZ(lcm(list(bound_dict.values())))
 
-    return type_three_not_momose_bound.prime_divisors()
+    return type_three_not_momose_bound.prime_divisors(), type_3_fields

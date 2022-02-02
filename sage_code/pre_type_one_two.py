@@ -38,7 +38,6 @@ from sage.all import (
 
 from .character_enumeration import character_enumeration_filter
 from .common_utils import (
-    R,
     get_weil_polys,
     gal_act_eps,
     eps_exp,
@@ -47,26 +46,11 @@ from .common_utils import (
     split_primes_iter,
     split_embeddings,
     class_group_norm_map,
+    get_eps_type,
+    filter_ABC_primes,
 )
 
 logger = logging.getLogger(__name__)
-
-
-def get_eps_type(eps):
-    """Returns the type of an epsilon (quadratic, quartic, sextic), where
-    an epsilon is considered as a tuple
-    """
-
-    if 6 in eps:
-        if any(t in eps for t in [4, 8]):
-            return "mixed"
-        return "sextic"
-    if any(t in eps for t in [4, 8]):
-        if len(set(eps)) == 1:
-            # means it's all 4s or all 8s
-            return "quartic-diagonal"
-        return "quartic-nondiagonal"
-    return "quadratic"
 
 
 def get_redundant_epsilons(eps, galois_group=None):
@@ -133,7 +117,10 @@ def get_generic_epsilons(d, strong_type_3_epsilons=None, galgp=None, ice_filter=
         logger.debug("ICE filter is on, so no epsilon filtering.")
 
     if strong_type_3_epsilons is not None:
-        epsilons_keys -= strong_type_3_epsilons  # remove strong type 3 epsilons
+        actual_type_3_epsilons = {eps[0] for eps in strong_type_3_epsilons}
+        epsilons_keys = epsilons_keys.difference(
+            actual_type_3_epsilons
+        )  # remove strong type 3 epsilons
 
     epsilons_dict = {eps: get_eps_type(eps) for eps in epsilons_keys}
 
@@ -195,72 +182,18 @@ def get_compositum(nf_list, maps=False):
     return running_compositum
 
 
-def filter_ABC_primes(K, prime_list, eps_type):
-    """Apply congruence and splitting conditions to primes in prime
-    list, depending on the type of epsilon
-
-    Args:
-        K ([NumberField]): our number field, assumed Galois
-        prime_list ([list]): list of primes to filter
-        eps_type ([str]): one of 'quadratic', 'quartic', or 'sextic'
-    """
-
-    if eps_type == "quadratic":
-        # prime must split or ramify in K
-        output_list = []
-
-        for p in prime_list:
-            if not K.ideal(p).is_prime():
-                output_list.append(p)
-        return output_list
-
-    if eps_type == "quartic-nondiagonal":
-        # prime must split or ramify in K, and be congruent to 2 mod 3
-        output_list = []
-
-        for p in prime_list:
-            if p % 3 == 2:
-                if not K.ideal(p).is_prime():
-                    output_list.append(p)
-        return output_list
-
-    if eps_type == "quartic-diagonal":
-        # prime must be congruent to 2 mod 3
-        output_list = []
-
-        for p in prime_list:
-            if p % 3 == 2:
-                output_list.append(p)
-        return output_list
-
-    if eps_type == "sextic":
-        # prime must split or ramify in K, and be congruent to 3 mod 4
-        output_list = []
-
-        for p in prime_list:
-            if p % 4 == 3:
-                if not K.ideal(p).is_prime():
-                    output_list.append(p)
-        return output_list
-
-    if eps_type == "mixed":
-        # prime must split or ramify in K, and be congruent to 1 mod 12
-        output_list = []
-
-        for p in prime_list:
-            if p % 12 == 1:
-                if not K.ideal(p).is_prime():
-                    output_list.append(p)
-        return output_list
-
-    raise ValueError("type must be quadratic, quartic, sextic, or mixed")
-
-
 def get_aux_primes(K, norm_bound, C_K, h_K, contains_imaginary_quadratic):
     """Get the auxiliary primes, including the emergency aux primes"""
 
     aux_primes = K.primes_of_bounded_norm(norm_bound)
     completely_split_rat_primes = K.completely_split_primes(B=500)
+
+    a_good_prime = completely_split_rat_primes[0]
+    candidate = K.primes_above(a_good_prime)[0]
+    if a_good_prime > norm_bound:
+        aux_primes.append(candidate)
+        logger.debug("Emergency aux prime added: {}".format(candidate))
+
     if contains_imaginary_quadratic:
 
         good_primes = [p for p in completely_split_rat_primes if gcd(p, 6 * h_K) == 1]
@@ -284,12 +217,6 @@ def get_aux_primes(K, norm_bound, C_K, h_K, contains_imaginary_quadratic):
                 "We have been unable to add enough emergency "
                 "auxiliary primes. Try increasing the `B` parameter above."
             )
-    else:
-        a_good_prime = completely_split_rat_primes[0]
-        candidate = K.primes_above(a_good_prime)[0]
-        if a_good_prime > norm_bound:
-            aux_primes.append(candidate)
-            logger.debug("Emergency aux prime added: {}".format(candidate))
 
     return aux_primes
 
@@ -309,56 +236,79 @@ def ABC_integers(
     multiplicative_bounds=None,
     ensure_C_nonzero=False,
 ):
+    """Computes the ABC integers.
+
+    Args:
+        embeddings ([list]): embeddings of K into Kgal
+        frak_q ([prime ideal]): the auxiliary prime
+        epsilons ([type]): [description]
+        q_class_group_order ([Integer]): order of frak_q in C_K
+        frob_polys ([list]): Frobenius polynomials to loop over for C
+        multiplicative_bounds ([dict], optional): Existing record of
+                   multiplicative bounds for each eps. Defaults to None.
+        ensure_C_nonzero (bool, optional): Whether to ensure the C integer
+         we are building must be nonzero. Used in type_three_not_momose.py.
+         Defaults to False.
+
+    Returns:
+        [dict]: Dictionary with keys eps, value ABC(eps, frak_q)
+    """
+
+    # Some initial setup and precomputation before the main loop
 
     if multiplicative_bounds is None:
         multiplicative_bounds = {}
 
     nm_q = ZZ(frak_q.absolute_norm())
-
-    # Initialise output dict to norm of q
-    output_dict_C = {eps: ZZ(frak_q.smallest_integer()) for eps in epsilons}
-
     alphas = (frak_q ** q_class_group_order).gens_reduced()
     assert len(alphas) == 1, "q^q_class_group_order not principal, which is very bad"
     alpha = alphas[0]
-
-    alpha_eps_dict = {}
-    for eps in epsilons:
-        alpha_eps = eps_exp(alpha, eps, embeddings)
-        alpha_eps = matrix.companion(alpha_eps.charpoly()).change_ring(ZZ)
-        alpha_eps_dict[eps] = alpha_eps
-
-        A = ZZ((alpha_eps - 1).det())
-        B = ZZ((alpha_eps - (nm_q ** (12 * q_class_group_order))).det())
-        multiplicative_bound = multiplicative_bounds.get(eps)
-        if multiplicative_bound:
-            A = gcd(A, multiplicative_bound)
-            B = gcd(B, multiplicative_bound)
-        output_dict_C[eps] = lcm([output_dict_C[eps], A, B])
-
+    output_dict = {}
     nm_q_pow_12hq = nm_q ** (12 * q_class_group_order)
     betas = [
         matrix.companion(frob_poly) ** (12 * q_class_group_order)
         for frob_poly in frob_polys
     ]
 
+    # The main loop
+
     for eps in epsilons:
-        alpha_eps = alpha_eps_dict[eps]
-        multiplicative_bound = multiplicative_bounds.get(eps)
+
+        # Initialise output dict to norm of q
+
+        multiplicative_bound = multiplicative_bounds.get(eps, 0)
+        output_dict[eps] = gcd(multiplicative_bound, ZZ(frak_q.smallest_integer()))
+
+        # Compute twisted norm of alpha w.r.t. epsilon
+
+        alpha_eps = eps_exp(alpha, eps, embeddings)
+        alpha_eps = matrix.companion(alpha_eps.charpoly()).change_ring(ZZ)
+
+        # Compute A and B integers and add to the LCM after gcd with
+        # existing bound
+
+        A = ZZ((alpha_eps - 1).det())
+        B = ZZ((alpha_eps - (nm_q ** (12 * q_class_group_order))).det())
+
+        A = gcd(A, multiplicative_bound)
+        B = gcd(B, multiplicative_bound)
+
+        output_dict[eps] = lcm([output_dict[eps], A, B])
+
+        # Compute the C integer from Frobenius roots beta
+
         for beta in betas:
-            N = alpha_eps_beta_bound(alpha_eps, beta, nm_q_pow_12hq)
-            if multiplicative_bound:
-                N = gcd(N, multiplicative_bound)
-            else:
-                N = N.abs().perfect_power()[0]
+            C = alpha_eps_beta_bound(alpha_eps, beta, nm_q_pow_12hq)
+            C = gcd(C, multiplicative_bound)
+            C = C.abs().perfect_power()[0]
             if ensure_C_nonzero:
-                if N != 0:
-                    output_dict_C[eps] = lcm(output_dict_C[eps], N)
+                if C != 0:
+                    output_dict[eps] = lcm(output_dict[eps], C)
             else:
-                output_dict_C[eps] = lcm(output_dict_C[eps], N)
-            if output_dict_C[eps] == multiplicative_bound:
+                output_dict[eps] = lcm(output_dict[eps], C)
+            if output_dict[eps] == multiplicative_bound:
                 break
-    return output_dict_C
+    return output_dict
 
 
 def get_U_integers(K, epsilons, embeddings):
@@ -396,13 +346,14 @@ def get_strong_type_3_epsilons(K, embeddings):
             continue
         norm_map = class_group_norm_map(phi, to_C_L=False)
         if all(norm_map(cl) == 0 for cl in list_of_gens):
+            # means K contains HCF of L
             split1, _ = split_embeddings(phi, embeddings)
             epsilon1 = tuple(
                 0 if embedding in split1 else 12 for embedding in embeddings
             )
             epsilon2 = tuple(12 - a for a in epsilon1)
-            strong_type_3_epsilons.add(epsilon1)
-            strong_type_3_epsilons.add(epsilon2)
+            strong_type_3_epsilons.add((epsilon1, L))
+            strong_type_3_epsilons.add((epsilon2, L))
     return strong_type_3_epsilons
 
 
@@ -410,7 +361,7 @@ def get_pre_type_one_two_primes(
     K,
     norm_bound=50,
     ice_filter=False,
-    stop_strategy="auto",
+    auto_stop_strategy=True,
     repeat_bound=4,
     character_enumeration_bound=1000,
 ):
@@ -458,7 +409,7 @@ def get_pre_type_one_two_primes(
 
     bound_dict = U_integers_dict
 
-    if stop_strategy == "auto":
+    if auto_stop_strategy:
         aux_primes_iter = split_primes_iter(K)
         class_group_maps = pre_type_3_class_group_maps(K, embeddings)
         epsilon_repeats = {eps: repeat_bound for eps in epsilons}
@@ -469,7 +420,7 @@ def get_pre_type_one_two_primes(
         aux_primes_iter = aux_primes
 
     for q in aux_primes_iter:
-        epsilons_todo = set(epsilon_repeats) if stop_strategy == "auto" else epsilons
+        epsilons_todo = set(epsilon_repeats) if auto_stop_strategy else epsilons
         q_class_group_order = C_K(q).multiplicative_order()
         nm_q = q.absolute_norm()
         frob_polys = get_weil_polys(GF(nm_q))
@@ -483,13 +434,9 @@ def get_pre_type_one_two_primes(
             bound_dict,
             ensure_C_nonzero=False,
         )
-        unified_dict = {}
-        q_char = q.smallest_integer()
-        for eps in epsilons_todo:
-            q_char_eps = gcd(q_char, bound_dict[eps])
-            unified_dict[eps] = lcm([q_char_eps, ABC_integers_dict[eps]])
-            if stop_strategy == "auto":
-                if unified_dict[eps] == bound_dict[eps]:
+        if auto_stop_strategy:
+            for eps in epsilons_todo:
+                if ABC_integers_dict[eps] == bound_dict[eps]:
                     if eps in class_group_maps:
                         if class_group_maps[eps](q) != 0:
                             epsilon_repeats[eps] -= 1
@@ -500,10 +447,11 @@ def get_pre_type_one_two_primes(
                 if epsilon_repeats[eps] == 0:
                     del epsilon_repeats[eps]
 
-        bound_dict = {**bound_dict, **unified_dict}
-        if stop_strategy == "auto" and not epsilon_repeats:
+        bound_dict = {**bound_dict, **ABC_integers_dict}
+        if auto_stop_strategy and not epsilon_repeats:
             break
 
+    logger.debug(f"Computed generic ABC integers.")
     logger.debug(f"bound dict before enumeration filter: \n{bound_dict}")
 
     # Barinder you probably don't want me to compute this cause of prime_divisor
@@ -520,10 +468,10 @@ def get_pre_type_one_two_primes(
     )
     """
 
-    # Optionally use Isogeny Character Enumeration (ICE) filter
+    # Filtering stage
 
     if ice_filter:
-        if stop_strategy == "auto":
+        if auto_stop_strategy:
             aux_primes = character_enumeration_bound
         else:
             aux_primes = get_aux_primes(
@@ -538,25 +486,25 @@ def get_pre_type_one_two_primes(
             epsilons,
             aux_primes,
             embeddings,
-            stop_strategy=stop_strategy,
+            auto_stop_strategy=auto_stop_strategy,
         )
-        return embeddings, output
 
-    # Split according to epsilon type, get prime divisors, and filter
+    else:
+        final_split_dict = {}
+        for eps_type in set(epsilons.values()):
+            eps_type_tracking_dict_inv = {
+                eps: ZZ(bound_dict[eps])
+                for eps in epsilons
+                if epsilons[eps] == eps_type
+            }
+            eps_type_output = lcm(list(eps_type_tracking_dict_inv.values()))
+            if eps_type_output.is_perfect_power():
+                eps_type_output = eps_type_output.perfect_power()[0]
+            eps_type_output = eps_type_output.prime_divisors()
+            eps_type_output = filter_ABC_primes(K, eps_type_output, eps_type)
+            final_split_dict[eps_type] = set(eps_type_output)
 
-    final_split_dict = {}
-    for eps_type in set(epsilons.values()):
-        eps_type_tracking_dict_inv = {
-            eps: ZZ(bound_dict[eps]) for eps in epsilons if epsilons[eps] == eps_type
-        }
-        eps_type_output = lcm(list(eps_type_tracking_dict_inv.values()))
-        if eps_type_output.is_perfect_power():
-            eps_type_output = eps_type_output.perfect_power()[0]
-        eps_type_output = eps_type_output.prime_divisors()
-        eps_type_output = filter_ABC_primes(Kgal, eps_type_output, eps_type)
-        final_split_dict[eps_type] = set(eps_type_output)
+        # Take union of all primes over all epsilons
+        output = set.union(*(val for val in final_split_dict.values()))
 
-    # Take union of all primes over all epsilons, sort, and return
-
-    output = set.union(*(val for val in final_split_dict.values()))
     return strong_type_3_epsilons, embeddings, sorted(output)

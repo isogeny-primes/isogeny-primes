@@ -78,11 +78,11 @@ def DLMV(K):
 
 def get_isogeny_primes(
     K,
-    norm_bound,
     bound=1000,
     ice_filter=False,
     appendix_bound=1000,
-    stop_strategy="auto",
+    norm_bound=50,
+    auto_stop_strategy=True,
 ):
 
     # Start with some helpful user info
@@ -96,7 +96,7 @@ def get_isogeny_primes(
         K,
         norm_bound=norm_bound,
         ice_filter=ice_filter,
-        stop_strategy=stop_strategy,
+        auto_stop_strategy=auto_stop_strategy,
     )
 
     logging.info("generic_primes = {}".format(generic_primes))
@@ -176,12 +176,21 @@ def cli_handler(args):  # pylint: disable=redefined-outer-name
             "Only checking Type 2 primes up to {}. "
             "To check all, use the PARI/GP script.".format(args.bound)
         )
+
+        if args.norm_bound:
+            norm_bound = args.norm_bound
+            auto_stop_strategy = False
+        else:
+            norm_bound = 50  # still needed for Type 1
+            auto_stop_strategy = True
+
         superset, type_3_fields = get_isogeny_primes(
             K,
-            args.norm_bound,
             args.bound,
             args.ice_filter,
             args.appendix_bound,
+            norm_bound=norm_bound,
+            auto_stop_strategy=auto_stop_strategy,
         )
 
         superset_list = list(superset)
@@ -214,7 +223,6 @@ if __name__ == "__main__":
         "--norm_bound",
         type=int,
         help="bound on norm of aux primes in PreTypeOneTwo case",
-        default=50,
     )
     parser.add_argument("--dlmv", action="store_true", help="get only DLMV bound")
     parser.add_argument(

@@ -1,11 +1,14 @@
 from itertools import product
-
 from sage.all import GF, ZZ, prod
-
 import logging
 
-
-from .common_utils import x, weil_polynomial_is_elliptic, eps_exp, primes_iter
+from .common_utils import (
+    x,
+    weil_polynomial_is_elliptic,
+    eps_exp,
+    primes_iter,
+    filter_ABC_primes,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -235,9 +238,9 @@ def character_enumeration_filter(
     epsilons,
     aux_primes,
     embeddings,
-    stop_strategy="auto",
+    auto_stop_strategy=True,
 ):
-    if stop_strategy == "auto":
+    if auto_stop_strategy:
         enumeration_bound = aux_primes
     OK_star_gens = K.unit_group().gens_values()
     my_gens_ideals = get_prime_gens(C_K)
@@ -263,13 +266,13 @@ def character_enumeration_filter(
     eps_prime_filt_dict = {}
 
     alpha_cache = {}
-    for eps in epsilons:
+    for eps, eps_type in epsilons.items():
         survived_primes = []
         for p in eps_prime_dict[eps]:
             if p in prime_support_my_gens_ideals:
                 survived_primes.append(p)
                 continue
-            if stop_strategy == "auto":
+            if auto_stop_strategy:
                 # stop condition:
                 # 4sqrt(Nm(q)) > 2p
                 # Nm(q) > (p/2)**2
@@ -290,10 +293,11 @@ def character_enumeration_filter(
                 alpha_cache,
             ):
                 survived_primes.append(p)
+        survived_primes = filter_ABC_primes(K, survived_primes, eps_type)
         eps_prime_filt_dict[eps] = set(survived_primes)
 
     output = set.union(*(val for val in eps_prime_filt_dict.values()))
     removed = sorted(pre_type_one_two.difference(output))
     logger.info(f"Pre type one two candidates removed by filtering: {removed}")
     logger.debug(f"Class number: {C_K.cardinality()}")
-    return sorted(output)
+    return output
