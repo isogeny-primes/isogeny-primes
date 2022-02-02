@@ -78,7 +78,6 @@ def get_weil_polys(F):
     return [f for f in weil_polys if weil_polynomial_is_elliptic(f, q, a)]
 
 
-@functools.cache
 def get_ordinary_weil_polys_from_values(q, a):
     weil_polys = R.weil_polynomials(2, q ** a)
     return [f for f in weil_polys if f[1] % q != 0]

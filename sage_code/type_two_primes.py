@@ -150,9 +150,7 @@ def get_the_lcm(C_K, embeddings, d, gen_list):
     running_lcm = 1
     for frak_q in gen_list:
         nm_q = frak_q.absolute_norm()
-        residue_field = GF(nm_q)
-        q = residue_field.characteristic()
-        a = residue_field.degree()
+        q, a = nm_q.perfect_power()
 
         q_class_group_order = C_K(frak_q).multiplicative_order()
         ordinary_frob_polys = get_ordinary_weil_polys_from_values(q, a)
