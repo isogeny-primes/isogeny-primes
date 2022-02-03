@@ -31,7 +31,6 @@ from sage.combinat.permutation import Permutation
 from sage.groups.additive_abelian.additive_abelian_group import AdditiveAbelianGroup
 from sage.groups.perm_gps.permgroup import PermutationGroup
 from sage.groups.perm_gps.permgroup_named import TransitiveGroup, SymmetricGroup
-import functools
 
 R = PolynomialRing(Rationals(), "x")
 x = R.gen()
@@ -257,7 +256,7 @@ def auxgens(K, auxgen_count=5):
     C_K = K.class_group()
     class_group_gens = list(C_K.gens())
 
-    it = K.primes_of_bounded_norm_iter(B=3000)
+    it = K.primes_of_bounded_norm_iter(B=5000)
 
     aux_gen_list = [
         one_aux_gen_list(C_K, class_group_gens, it) for _ in range(auxgen_count)

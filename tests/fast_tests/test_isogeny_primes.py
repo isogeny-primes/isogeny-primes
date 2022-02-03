@@ -19,4 +19,4 @@ test_cases = [[1361, 0, 1]]
 def test_get_isogeny_primes(coeffs):
     f = R(coeffs)
     K = QQ.extension(f, "a")
-    _ = get_isogeny_primes(K, **TEST_SETTINGS)
+    _, _ = get_isogeny_primes(K, **TEST_SETTINGS)

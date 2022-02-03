@@ -77,13 +77,13 @@ def type_three_not_momose(K, embeddings, strong_type_3_epsilons):
 
     aux_gen_list = auxgens(K)
 
-    bound_dict = {eps: 0 for eps in strong_type_3_epsilons}
+    bound_dict = {eps: 0 for eps in actual_type_3_epsilons}
 
     for gen_list in aux_gen_list:
         eps_lcm_dict = get_eps_lcm_dict(
             C_K, actual_type_3_epsilons, embeddings, gen_list
         )
-        for eps in strong_type_3_epsilons:
+        for eps in actual_type_3_epsilons:
             bound_dict[eps] = gcd(bound_dict[eps], eps_lcm_dict[eps])
 
     type_three_not_momose_bound = ZZ(lcm(list(bound_dict.values())))

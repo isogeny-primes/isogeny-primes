@@ -38,7 +38,6 @@ from sage.all import (
     prime_range,
     ZZ,
     gcd,
-    GF,
     lcm,
 )  # pylint: disable=no-name-in-module
 
@@ -149,7 +148,7 @@ def get_the_lcm(C_K, embeddings, d, gen_list):
     epsilons = {type_2_eps: "type-2"}
     running_lcm = 1
     for frak_q in gen_list:
-        nm_q = frak_q.absolute_norm()
+        nm_q = ZZ(frak_q.absolute_norm())
         q, a = nm_q.perfect_power()
 
         q_class_group_order = C_K(frak_q).multiplicative_order()

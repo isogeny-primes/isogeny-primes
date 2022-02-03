@@ -186,7 +186,7 @@ def get_aux_primes(K, norm_bound, C_K, h_K, contains_imaginary_quadratic):
     """Get the auxiliary primes, including the emergency aux primes"""
 
     aux_primes = K.primes_of_bounded_norm(norm_bound)
-    completely_split_rat_primes = K.completely_split_primes(B=500)
+    completely_split_rat_primes = K.completely_split_primes(B=3000)
 
     a_good_prime = completely_split_rat_primes[0]
     candidate = K.primes_above(a_good_prime)[0]

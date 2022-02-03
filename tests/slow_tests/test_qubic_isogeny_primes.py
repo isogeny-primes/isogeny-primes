@@ -42,7 +42,7 @@ TEST_SETTINGS = {
     "norm_bound": 50,
     "bound": 1000,
     "appendix_bound": 200,
-    "heavy_filter": True,
+    "ice_filter": True,
 }
 
 """
@@ -85,7 +85,7 @@ bad_cubic_formal_immersion_primes = {2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37,
 def test_cm_type_2(f, extra_isogenies, potenial_isogenies):
     K = NumberField(f, "a")
 
-    superset = get_isogeny_primes(K, **TEST_SETTINGS)
+    superset, _ = get_isogeny_primes(K, **TEST_SETTINGS)
     assert set(EC_Q_ISOGENY_PRIMES).difference(superset) == set()
     assert (
         extra_isogenies.difference(superset) == set()
