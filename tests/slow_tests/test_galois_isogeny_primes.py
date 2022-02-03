@@ -42,8 +42,7 @@ TEST_SETTINGS = {
     "norm_bound": 50,
     "bound": 1000,
     "appendix_bound": 0,
-    "loop_curves": False,
-    "heavy_filter": False,
+    "ice_filter": False,
     "repeat_bound": 6,
 }
 
@@ -104,7 +103,7 @@ test_cases = [
 def test_galois(f, extra_isogenies, potenial_isogenies):
     K = NumberField(f, "a")
 
-    superset = get_isogeny_primes(K, **TEST_SETTINGS)
+    superset, _ = get_isogeny_primes(K, **TEST_SETTINGS)
     assert set(EC_Q_ISOGENY_PRIMES).difference(superset) == set()
     assert (
         extra_isogenies.difference(superset) == set()
