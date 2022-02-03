@@ -42,6 +42,7 @@ from sage.all import (
     prime_range,
 )
 from sage.rings.finite_rings.finite_field_constructor import GF
+from sage_code.queue_runner.sage_json_converter import sage_converter
 
 from .common_utils import get_weil_polys
 from .config import FORMAL_IMMERSION_DATA_AT_2_PATH, BAD_FORMAL_IMMERSION_DATA_PATH
@@ -161,10 +162,38 @@ def is_formall_immersion_fast(d, p):
     return False
 
 
-def is_formall_immersion(d, p):
+def is_formall_immersion_medium(d, p):
+    """If this function returns 0 then we don't have a formal immersion.
+    If it returns a nonzero integer n then we have a formal immersion at all primes
+    not dividing n. However we could still have a formal immersion at some primes
+    dividing n.
+    """
     D = R_dp(d, p).elementary_divisors()
     if D and D[-1]:
-        return int(D[-1].prime_to_m_part(2))
+        return D[-1].prime_to_m_part(2)
+    return 0
+
+
+def is_formall_immersion(d, p):
+    """This funtion returns an integer n such that we have a formall immersion in
+    characteristic q != 2,p if and only if q does not divide n.
+    """
+    G = Gamma0(p)
+    M = ModularSymbols(G, 2)
+    S = M.cuspidal_subspace()
+    I2 = M.hecke_operator(2) - 3
+    if I2.matrix().rank() != S.dimension():
+        raise RuntimeError(
+            f"Formall immersion for d={d} p={p} failed"
+            "because I2 is not of the expected rank."
+        )
+    Te = R_dp(G.sturm_bound(), p).row_module()
+    R = (R_dp(d, p).restrict_codomain(Te)).change_ring(ZZ)
+    if R.rank() < d:
+        return 0
+    D = R.elementary_divisors()
+    if D and D[-1]:
+        return D[-1].prime_to_m_part(2)
     return 0
 
 
@@ -173,12 +202,12 @@ def get_bad_formal_immersion_data(d):
     This is the Oesterlé for type 1 primes with modular symbols main routine.
     The computation is actually a two step rocket. First Proposition 6.8 of
     Derickx-Kamienny-Stein-Stoll is used to replace Parents polynomial of
-    degree 6 bound by something reasonable, and then Corollary 6.4 is used
+    degree 6 bound by something reasonable, and then Proposition 6.3 is used
     to go from something reasonable to the exact list.
     """
     assert d > 0
 
-    p_todo = [int(p) for p in prime_range(11)]
+    p_bad = prime_range(11)
     p_done = {}
     q_to_bad_p = {}
 
@@ -188,19 +217,22 @@ def get_bad_formal_immersion_data(d):
         # first do a relatively cheap test
         if is_formall_immersion_fast(d, p):
             continue
-        # this is more expensive
+        # this is less cheap but still quite fast
+        if is_formall_immersion_medium(d, p) == 1:
+            continue
+        # this is the most expensive but give the correct answer
         is_formall = is_formall_immersion(d, p)
         if is_formall:
             if is_formall > 1:
-                p_done[int(p)] = is_formall
+                p_done[p] = is_formall
         else:
-            p_todo.append(int(p))
+            p_bad.append(p)
 
     for p, q_prod in p_done.items():
         for q in prime_divisors(q_prod):
-            q_to_bad_p[int(q)] = int(q_to_bad_p.get(q, 1) * p)
+            q_to_bad_p[q] = q_to_bad_p.get(q, 1) * p
 
-    return p_todo, q_to_bad_p
+    return p_bad, q_to_bad_p
 
 
 def apply_formal_immersion_at_2(
@@ -287,26 +319,19 @@ def get_C_integer_type1(K, q, bad_aux_prime_dict, C_K, bound_so_far):
     return gcd(running_primes, bound_so_far)
 
 
-def get_type_1_primes(K, C_K, norm_bound=50):
-    """Compute the type 1 primes"""
-
-    h_K = C_K.order()
-
-    # Get bad formal immersion data
-
+def cached_bad_formal_immersion_data(d):
     if not BAD_FORMAL_IMMERSION_DATA_PATH.is_file():
         logger.debug("No bad formal immersion data found. Computing and adding ...")
-        bad_formal_immersion_list, bad_aux_prime_dict = get_bad_formal_immersion_data(
-            K.degree()
-        )
+
+        bad_formal_immersion_list, bad_aux_prime_dict = get_bad_formal_immersion_data(d)
         data_for_json_export = {
-            int(K.degree()): {
+            d: {
                 "bad_formal_immersion_list": bad_formal_immersion_list,
                 "bad_aux_prime_dict": bad_aux_prime_dict,
             }
         }
         with open(BAD_FORMAL_IMMERSION_DATA_PATH, "w") as fp:
-            json.dump(data_for_json_export, fp, indent=4)
+            json.dump(data_for_json_export, fp, default=sage_converter, indent=4)
         logger.debug("Data added")
     else:
         logger.debug(
@@ -315,24 +340,33 @@ def get_type_1_primes(K, C_K, norm_bound=50):
         with open(BAD_FORMAL_IMMERSION_DATA_PATH, "r") as bfi_dat_file:
             bfi_dat = json.load(bfi_dat_file)
 
-        if str(K.degree()) in bfi_dat:
+        if str(d) in bfi_dat:
             logger.debug("Reading pre-existing data ...")
-            bad_formal_immersion_list = bfi_dat[str(K.degree())][
-                "bad_formal_immersion_list"
-            ]
-            bad_aux_prime_dict = bfi_dat[str(K.degree())]["bad_aux_prime_dict"]
+            bad_formal_immersion_list = bfi_dat[str(d)]["bad_formal_immersion_list"]
+            bad_aux_prime_dict = bfi_dat[str(d)]["bad_aux_prime_dict"]
         else:
             logger.debug("Data not found. Computing new record ...")
             (
                 bad_formal_immersion_list,
                 bad_aux_prime_dict,
-            ) = get_bad_formal_immersion_data(K.degree())
-            bfi_dat[str(K.degree())] = {
+            ) = get_bad_formal_immersion_data(d)
+            bfi_dat[str(d)] = {
                 "bad_formal_immersion_list": bad_formal_immersion_list,
                 "bad_aux_prime_dict": bad_aux_prime_dict,
             }
             with open(BAD_FORMAL_IMMERSION_DATA_PATH, "w") as fp:
-                json.dump(bfi_dat, fp, indent=4)
+                json.dump(bfi_dat, fp, default=sage_converter, indent=4)
+    return bad_formal_immersion_list, bad_aux_prime_dict
+
+
+def get_type_1_primes(K, C_K, norm_bound=50):
+    """Compute the type 1 primes"""
+
+    # Get bad formal immersion data
+
+    bad_formal_immersion_list, bad_aux_prime_dict = cached_bad_formal_immersion_data(
+        K.degree()
+    )
 
     aux_primes = prime_range(3, norm_bound + 1)
 

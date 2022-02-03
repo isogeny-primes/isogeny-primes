@@ -1,4 +1,28 @@
 {
+    "1": {
+        "bad_formal_immersion_list": [
+            2,
+            3,
+            5,
+            7,
+            13
+        ],
+        "bad_aux_prime_dict": {}
+    },
+    "2": {
+        "bad_formal_immersion_list": [
+            2,
+            3,
+            5,
+            7,
+            11,
+            13,
+            17,
+            19,
+            37
+        ],
+        "bad_aux_prime_dict": {}
+    },
     "3": {
         "bad_formal_immersion_list": [
             2,
@@ -40,22 +64,6 @@
             73,
             97
         ],
-        "bad_aux_prime_dict": {
-            "3": 109
-        }
-    },
-    "2": {
-        "bad_formal_immersion_list": [
-            2,
-            3,
-            5,
-            7,
-            11,
-            13,
-            17,
-            19,
-            37
-        ],
         "bad_aux_prime_dict": {}
     },
     "5": {
@@ -81,9 +89,7 @@
             73,
             97
         ],
-        "bad_aux_prime_dict": {
-            "3": 12317
-        }
+        "bad_aux_prime_dict": {}
     },
     "6": {
         "bad_formal_immersion_list": [
@@ -114,9 +120,7 @@
             109,
             113
         ],
-        "bad_aux_prime_dict": {
-            "3": 71
-        }
+        "bad_aux_prime_dict": {}
     },
     "7": {
         "bad_formal_immersion_list": [
@@ -153,9 +157,7 @@
             137,
             157
         ],
-        "bad_aux_prime_dict": {
-            "5": 163
-        }
+        "bad_aux_prime_dict": {}
     },
     "8": {
         "bad_formal_immersion_list": [
@@ -196,9 +198,7 @@
             163,
             193
         ],
-        "bad_aux_prime_dict": {
-            "5": 151
-        }
+        "bad_aux_prime_dict": {}
     },
     "9": {
         "bad_formal_immersion_list": [
@@ -242,9 +242,7 @@
             181,
             193
         ],
-        "bad_aux_prime_dict": {
-            "7": 173
-        }
+        "bad_aux_prime_dict": {}
     },
     "10": {
         "bad_formal_immersion_list": [
@@ -292,10 +290,7 @@
             211,
             241
         ],
-        "bad_aux_prime_dict": {
-            "7": 173,
-            "3": 307
-        }
+        "bad_aux_prime_dict": {}
     },
     "11": {
         "bad_formal_immersion_list": [
@@ -347,11 +342,7 @@
             233,
             241
         ],
-        "bad_aux_prime_dict": {
-            "3": 10202531,
-            "5": 229,
-            "13": 277
-        }
+        "bad_aux_prime_dict": {}
     },
     "12": {
         "bad_formal_immersion_list": [
@@ -408,18 +399,6 @@
             241,
             257,
             277
-        ],
-        "bad_aux_prime_dict": {
-            "3": 307
-        }
-    },
-    "1": {
-        "bad_formal_immersion_list": [
-            2,
-            3,
-            5,
-            7,
-            13
         ],
         "bad_aux_prime_dict": {}
     }
