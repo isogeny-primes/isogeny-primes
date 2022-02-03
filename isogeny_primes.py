@@ -83,6 +83,7 @@ def get_isogeny_primes(
     appendix_bound=1000,
     norm_bound=50,
     auto_stop_strategy=True,
+    repeat_bound=4,
 ):
 
     # Start with some helpful user info
@@ -97,6 +98,7 @@ def get_isogeny_primes(
         norm_bound=norm_bound,
         ice_filter=ice_filter,
         auto_stop_strategy=auto_stop_strategy,
+        repeat_bound=repeat_bound,
     )
 
     logging.info("generic_primes = {}".format(generic_primes))
