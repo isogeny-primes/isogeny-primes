@@ -14,7 +14,8 @@ log_level = INFO
 # make venv sage_python=/path/to/sagemath/local/bin/python3
 venv:
 	${env} && ${sage_python} -m venv --system-site-packages venv
-	. venv/bin/activate && ${env} pip install -U pip pip-tools
+	# pip<22 only needed for https://github.com/jazzband/pip-tools/issues/1558
+	. venv/bin/activate && ${env} pip install -U pip-tools 'pip<22'
 
 requirements.txt: venv requirements.in
 	. venv/bin/activate && ${env} ${sage_python} -m piptools compile requirements.in
