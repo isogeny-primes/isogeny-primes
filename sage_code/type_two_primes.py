@@ -43,6 +43,7 @@ from sage.all import (
 
 from .common_utils import x, get_ordinary_weil_polys_from_values, auxgens
 from .pre_type_one_two import ABC_integers
+from .character_enumeration import character_enumeration_filter
 
 logger = logging.getLogger(__name__)
 
@@ -177,7 +178,27 @@ def get_type_2_not_momose(K, embeddings):
         the_lcm = get_the_lcm(C_K, embeddings, d, gen_list)
         running_gcd = gcd(the_lcm, running_gcd)
 
-    return set(ZZ(running_gcd).prime_divisors())
+    pre_ice_mult_bound = ZZ(running_gcd)
+
+    type_2_eps = (6,) * d
+    epsilons = {type_2_eps: "type-2"}
+
+    bound_dict = {type_2_eps: pre_ice_mult_bound}
+
+    Kgal = embeddings[0].codomain()
+
+    output = character_enumeration_filter(
+        K,
+        C_K,
+        Kgal,
+        bound_dict,
+        epsilons,
+        1000,
+        embeddings,
+        auto_stop_strategy=True,
+    )
+
+    return output
 
 
 def get_type_2_primes(K, embeddings, bound=None):

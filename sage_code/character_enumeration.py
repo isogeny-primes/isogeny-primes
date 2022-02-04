@@ -133,6 +133,7 @@ def final_filter(
     gens_info,
     p,
     eps,
+    eps_type,
     embeddings,
     alpha_cache={},
 ):
@@ -165,6 +166,14 @@ def final_filter(
     possible_vals_cart_prod = list(
         product(*[possible_vals_at_gens[q] for q in my_gens_ideals])
     )
+
+    if eps_type == "type-2":
+
+        vals_at_chi_6 = tuple([q.absolute_norm() ** 6 for q in my_gens_ideals])
+
+        possible_vals_cart_prod = [
+            x for x in possible_vals_cart_prod if x is not vals_at_chi_6
+        ]
 
     # Step 3
 
@@ -289,6 +298,7 @@ def character_enumeration_filter(
                 gens_info,
                 p,
                 eps,
+                eps_type,
                 embeddings,
                 alpha_cache,
             ):
