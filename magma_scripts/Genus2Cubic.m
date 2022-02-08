@@ -5,7 +5,7 @@ function divisors_X_0(N,d)
     ptsX:=Points(X : Bound:=10000);
     P:=Divisor(ptsX[1]);
     Q:=Divisor(ptsX[2]);
-    assert IsPrincipal(tors_order*(P-Q)); 
+    assert IsPrincipal(tors_order*(P-Q));
     divisors := [];
     n := tors_order div 2;
     for a in [-n + ((tors_order+1) mod 2)..n] do
@@ -45,32 +45,67 @@ function MySquarefreePart(f);
   return f_sq;
 end function;
 
-//The folloing computation shows that none of the cubic points on X_0(p) for 
+//The folloing computation shows that none of the cubic points on X_0(p) for
 //p=23, 29, 31 are totally real
 
-for p in [23,29,31] do
-  divisors, cusps := divisors_X_0(p,3);
-  R<x,y> := PolynomialRing(Rationals(),2); 
-  for D in divisors do
-    if Degree(Reduction(D,&+cusps)) lt 3 then
-      //is of the form hyper elliptic + cusp
-      continue;
-    end if;
-    D1,r := Reduction(D,cusps[1]);
-    D1 := D1+r*cusps[1];
-    V,f := RiemannRochSpace(D1);
-    g := f(V.1);
-    assert Degree(g) eq 3;
-    eq_g := MinimalPolynomial(g);
-    A0 := Parent(Coefficients(g)[1]);
-    f := eq_g*(A0 ! LCM([Denominator(c) : c in Coefficients(eq_g)]));
-    P := Parent(f);
-    P0 := Parent(Coefficient(f,0));
-    psi0 := hom< P0 -> R | y>;
-    psi := hom< P -> R | psi0,[x]>;
-    //psi(f) is now an equation for X_0(p) where g, the map of degree 3 is
-    //is just the projection on the x coordinate.
-    _,disc := IsUnivariate(Discriminant(psi(f),y));
-    print p,IsTotallyNegative(MySquarefreePart(disc)),psi(f);
+
+S<z> := PolynomialRing(Rationals());
+
+main:=function(PrimesToCheck, twistD);
+  badCurves := [];
+  for p in PrimesToCheck do
+    divisors, cusps := divisors_X_0(p,3);
+    R<x,y> := PolynomialRing(Rationals(),2);
+    for D in divisors do
+      if Degree(Reduction(D,&+cusps)) lt 3 then
+        //is of the form hyper elliptic + cusp
+        continue;
+      end if;
+      D1,r := Reduction(D,cusps[1]);
+      D1 := D1+r*cusps[1];
+      V,f := RiemannRochSpace(D1);
+      g := f(V.1);
+      assert Degree(g) eq 3;
+      eq_g := MinimalPolynomial(g);
+      A0 := Parent(Coefficients(g)[1]);
+      f := eq_g*(A0 ! LCM([Denominator(c) : c in Coefficients(eq_g)]));
+      P := Parent(f);
+      P0 := Parent(Coefficient(f,0));
+      psi0 := hom< P0 -> R | y>;
+      psi := hom< P -> R | psi0,[x]>;
+      //psi(f) is now an equation for X_0(p) where g, the map of degree 3 is
+      //is just the projection on the x coordinate.
+      _,disc := IsUnivariate(Discriminant(psi(f),y));
+      f_sq := MySquarefreePart(disc);
+      if twistD eq 0 then
+        print p,IsTotallyNegative(MySquarefreePart(disc)),psi(f);
+      else
+        C := HyperellipticCurve(S!f_sq);
+        Ctwist := QuadraticTwist(C, twistD);
+        PrimesDividingD := [blob[1] : blob in Factorisation(twistD)];
+        LocalPrimesToCheck := PrimesUpTo(1000) cat PrimesDividingD;
+        ELS := true;
+        for myp in LocalPrimesToCheck do
+          if not IsLocallySolvable(Ctwist,myp) then
+            ELS := false;
+            break;
+          end if;
+        end for;
+        if ELS then
+          print "need to check ", Ctwist;
+          Append(~badCurves, Ctwist);
+        end if;
+      end if;
+    end for;
   end for;
-end for;
+  return badCurves;
+end function;
+
+twistD := -673;
+S<z> := PolynomialRing(Rationals());
+PrimesToCheck := [31];
+
+badCurves := main(PrimesToCheck, twistD);
+
+[#RationalPoints(C : Bound:=50000) : C in badCurves];
+[RankBound(Jacobian(C)) : C in badCurves];
