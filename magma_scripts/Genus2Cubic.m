@@ -48,6 +48,16 @@ end function;
 //The folloing computation shows that none of the cubic points on X_0(p) for
 //p=23, 29, 31 are totally real
 
+function IsELS(C);
+  LocalPrimesToCheck := [blob[1] : blob in Factorisation(Integers()!Discriminant(C))] cat PrimesUpTo(Genus(C)^2);
+  for myp in LocalPrimesToCheck do
+    if not IsLocallySolvable(C,myp) then
+      return false;
+    end if;
+  end for;
+  return true;
+end function;
+
 
 S<z> := PolynomialRing(Rationals());
 
@@ -78,21 +88,28 @@ main:=function(PrimesToCheck, twistD);
       _,disc := IsUnivariate(Discriminant(psi(f),y));
       f_sq := MySquarefreePart(disc);
       if twistD eq 0 then
-        print p,IsTotallyNegative(MySquarefreePart(disc)),psi(f);
+        C := HyperellipticCurve(S!f_sq);
+        print "genus of C is", Genus(C);
+        // print p,IsTotallyNegative(MySquarefreePart(disc)),psi(f);
       else
         C := HyperellipticCurve(S!f_sq);
         Ctwist := QuadraticTwist(C, twistD);
-        PrimesDividingD := [blob[1] : blob in Factorisation(twistD)];
-        LocalPrimesToCheck := PrimesUpTo(1000) cat PrimesDividingD;
-        ELS := true;
-        for myp in LocalPrimesToCheck do
-          if not IsLocallySolvable(Ctwist,myp) then
-            ELS := false;
-            break;
+        if IsELS(Ctwist) then
+          // print "need to check ", Ctwist;
+          // print "original: ", C;
+          rats := RationalPoints(Ctwist : Bound:=50000);
+          if #rats gt 0 then
+            for my_point in rats do
+              theXCoord := my_point[1];
+              thing := Evaluate(psi(f),1,theXCoord);
+              sillyMap := hom< R -> S |0,z>;
+              thing2 := sillyMap(thing);
+              // print thing, Coefficients(thing);
+              NF<tre>:=NumberField(thing2);
+              theDisc := Discriminant(NF);
+              print thing, theDisc, Factorisation(theDisc);
+            end for;
           end if;
-        end for;
-        if ELS then
-          print "need to check ", Ctwist;
           Append(~badCurves, Ctwist);
         end if;
       end if;
@@ -101,11 +118,18 @@ main:=function(PrimesToCheck, twistD);
   return badCurves;
 end function;
 
-twistD := -673;
+twistD := -59;
 S<z> := PolynomialRing(Rationals());
-PrimesToCheck := [31];
+PrimesToCheck := [29];
 
 badCurves := main(PrimesToCheck, twistD);
 
-[#RationalPoints(C : Bound:=50000) : C in badCurves];
-[RankBound(Jacobian(C)) : C in badCurves];
+// for C in badCurves do
+
+// end for;
+
+
+
+
+// [#RationalPoints(C : Bound:=50000) : C in badCurves];
+// [RankBound(Jacobian(C)) : C in badCurves];
