@@ -100,7 +100,7 @@ main:=function(PrimesToCheck, twistD);
           rats := RationalPoints(Ctwist : Bound:=50000);
           if #rats gt 0 then
             for my_point in rats do
-              theXCoord := my_point[1];
+              theXCoord := my_point[1]/my_point[3];
               thing := Evaluate(psi(f),1,theXCoord);
               sillyMap := hom< R -> S |0,z>;
               thing2 := sillyMap(thing);
