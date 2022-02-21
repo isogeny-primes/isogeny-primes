@@ -204,10 +204,12 @@ def get_type_2_not_momose(K, embeddings):
 def get_type_2_primes(K, embeddings, bound=None):
     """Compute a list containing the type 2 primes"""
 
+    logger.debug("Starting Type 2 computation ...")
+
     # First compute the superset of type 2 primes which are not of Momose Type 2
 
     output = get_type_2_not_momose(K, embeddings)
-
+    logger.debug("Type 2 not Momose = {}".format(sorted(output)))
     # Now deal with Momose Type 2
 
     # First get the bound

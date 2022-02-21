@@ -1,3 +1,33 @@
+/* Genus2Cubic.m
+
+  Code which does the computations in the final section of the paper.
+
+    ====================================================================
+
+    This file is part of Isogeny Primes.
+
+    Copyright (C) 2022 Barinder S. Banwait and Maarten Derickx
+
+    Isogeny Primes is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+    The authors can be reached at: barinder.s.banwait@gmail.com and
+    maarten@mderickx.nl.
+
+    ====================================================================
+
+*/
+
 function divisors_X_0(N,d)
     assert IsPrime(N);
     tors_order := Numerator((N-1)/12);
@@ -45,23 +75,27 @@ function MySquarefreePart(f);
   return f_sq;
 end function;
 
-//The folloing computation shows that none of the cubic points on X_0(p) for
-//p=23, 29, 31 are totally real
 
 function IsELS(C);
-  LocalPrimesToCheck := [blob[1] : blob in Factorisation(Integers()!Discriminant(C))] cat PrimesUpTo(Genus(C)^2);
+  LocalPrimesToCheck := [factorData[1] : factorData in Factorisation(Integers()!Discriminant(C))] cat PrimesUpTo(4*Genus(C)^2);
   for myp in LocalPrimesToCheck do
     if not IsLocallySolvable(C,myp) then
       return false;
     end if;
   end for;
+
+  f,h := HyperellipticPolynomials(SimplifiedModel(C));
+  assert h eq 0;
+  if IsTotallyNegative(f) then
+    return false;
+  end if;
   return true;
 end function;
 
 
 S<z> := PolynomialRing(Rationals());
 
-main:=function(PrimesToCheck, twistD);
+main:=function(PrimesToCheck : twistD := 0);
   badCurves := [];
   for p in PrimesToCheck do
     divisors, cusps := divisors_X_0(p,3);
@@ -87,30 +121,30 @@ main:=function(PrimesToCheck, twistD);
       //is just the projection on the x coordinate.
       _,disc := IsUnivariate(Discriminant(psi(f),y));
       f_sq := MySquarefreePart(disc);
+      C := HyperellipticCurve(S!f_sq);
       if twistD eq 0 then
-        C := HyperellipticCurve(S!f_sq);
         print "genus of C is", Genus(C);
-        // print p,IsTotallyNegative(MySquarefreePart(disc)),psi(f);
+        print p,IsTotallyNegative(f_sq),psi(f);
       else
-        C := HyperellipticCurve(S!f_sq);
-        Ctwist := QuadraticTwist(C, twistD);
+        twistDSQFree,_ := Squarefree(twistD);
+        Ctwist := QuadraticTwist(C, twistDSQFree);
         if IsELS(Ctwist) then
-          // print "need to check ", Ctwist;
-          // print "original: ", C;
+          Append(~badCurves, Ctwist);
+          // try to determine the dscriminants. The code in the rest of this block
+          // is not currently being used in the main verification for the paper,
+          // but could help others doing similar computations.
           rats := RationalPoints(Ctwist : Bound:=50000);
           if #rats gt 0 then
             for my_point in rats do
               theXCoord := my_point[1]/my_point[3];
-              thing := Evaluate(psi(f),1,theXCoord);
-              sillyMap := hom< R -> S |0,z>;
-              thing2 := sillyMap(thing);
-              // print thing, Coefficients(thing);
-              NF<tre>:=NumberField(thing2);
+              psiFX := Evaluate(psi(f),1,theXCoord);
+              projZ := hom< R -> S |0,z>;
+              defPoly := projZ(psiFX);
+              NF<tre>:=NumberField(defPoly);
               theDisc := Discriminant(NF);
-              print thing, theDisc, Factorisation(theDisc);
+              print psiFX, theDisc, Factorisation(theDisc);
             end for;
           end if;
-          Append(~badCurves, Ctwist);
         end if;
       end if;
     end for;
@@ -118,18 +152,13 @@ main:=function(PrimesToCheck, twistD);
   return badCurves;
 end function;
 
-twistD := -59;
-S<z> := PolynomialRing(Rationals());
-PrimesToCheck := [29];
+//The following computation shows that none of the cubic points on X_0(p) for
+//p=23, 29, 31 are totally real, proving Part (1) of Theorem 8.1.
 
-badCurves := main(PrimesToCheck, twistD);
+main([23,29,31]);
 
-// for C in badCurves do
+//The following computation shows that none of the cubic points on X_0(p) for
+//p=23, 31 are defined over a cubic field of discriminant equal to -59 up to
+// a square. This is required in the proof of Theorem 8.5.
 
-// end for;
-
-
-
-
-// [#RationalPoints(C : Bound:=50000) : C in badCurves];
-// [RankBound(Jacobian(C)) : C in badCurves];
+badCurves := main([23,31] : twistD:=-59); // empty, so done.

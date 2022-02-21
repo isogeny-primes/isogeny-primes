@@ -256,7 +256,7 @@ def auxgens(K, auxgen_count=5):
     C_K = K.class_group()
     class_group_gens = list(C_K.gens())
 
-    it = K.primes_of_bounded_norm_iter(B=5000)
+    it = primes_iter(K)
 
     aux_gen_list = [
         one_aux_gen_list(C_K, class_group_gens, it) for _ in range(auxgen_count)

@@ -6,12 +6,12 @@
 
     This file is part of Isogeny Primes.
 
-    Copyright (C) 2021 Barinder Singh Banwait and Maarten Derickx
+    Copyright (C) 2022 Barinder S. Banwait and Maarten Derickx
 
-    Isogeny Primes is free software: you can redistribute it and/or
-    modify it under the terms of the GNU General Public License as
-    published by the Free Software Foundation, either version 3 of the
-    License, or any later version.
+    Isogeny Primes is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    any later version.
 
     This program is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -20,6 +20,9 @@
 
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+    The authors can be reached at: barinder.s.banwait@gmail.com and
+    maarten@mderickx.nl.
 
     ====================================================================
 
@@ -41,9 +44,9 @@ from .common_utils import (
     get_weil_polys,
     gal_act_eps,
     eps_exp,
-    CLASS_NUMBER_ONE_DISCS,
     galois_action_on_embeddings,
     split_primes_iter,
+    primes_iter,
     split_embeddings,
     class_group_norm_map,
     get_eps_type,
@@ -117,7 +120,7 @@ def get_generic_epsilons(d, strong_type_3_epsilons=None, galgp=None, ice_filter=
         logger.debug("ICE filter is on, so no epsilon filtering.")
 
     if strong_type_3_epsilons is not None:
-        actual_type_3_epsilons = {eps[0] for eps in strong_type_3_epsilons}
+        actual_type_3_epsilons = set(strong_type_3_epsilons.keys())
         epsilons_keys = epsilons_keys.difference(
             actual_type_3_epsilons
         )  # remove strong type 3 epsilons
@@ -127,12 +130,6 @@ def get_generic_epsilons(d, strong_type_3_epsilons=None, galgp=None, ice_filter=
     return epsilons_dict
 
 
-def _contains_imaginary_quadratic_field_deg_2(K):
-    imag_quad = K.is_totally_imaginary()
-    hilbert = K.discriminant() in CLASS_NUMBER_ONE_DISCS
-    return imag_quad, hilbert
-
-
 def contains_imaginary_quadratic_field(K):
     """Choosing auxiliary primes in the PreTypeOneTwoCase requires us to
     choose non-principal primes if K contains an imaginary quadratic field."""
@@ -140,10 +137,10 @@ def contains_imaginary_quadratic_field(K):
     K_deg_abs = K.absolute_degree()
 
     if K_deg_abs % 2 == 1:
-        return False, False
+        return False
 
     if K_deg_abs == 2:
-        return _contains_imaginary_quadratic_field_deg_2(K)
+        return K.is_totally_imaginary()
 
     quadratic_subfields = K.subfields(2)
 
@@ -186,37 +183,28 @@ def get_aux_primes(K, norm_bound, C_K, h_K, contains_imaginary_quadratic):
     """Get the auxiliary primes, including the emergency aux primes"""
 
     aux_primes = K.primes_of_bounded_norm(norm_bound)
-    completely_split_rat_primes = K.completely_split_primes(B=3000)
+    my_split_prime_iter = split_primes_iter(K)
 
-    a_good_prime = completely_split_rat_primes[0]
+    a_good_prime = next(my_split_prime_iter)
     candidate = K.primes_above(a_good_prime)[0]
     if a_good_prime > norm_bound:
         aux_primes.append(candidate)
         logger.debug("Emergency aux prime added: {}".format(candidate))
 
-    if contains_imaginary_quadratic:
+    if contains_imaginary_quadratic and h_K > 1:
 
-        good_primes = [p for p in completely_split_rat_primes if gcd(p, 6 * h_K) == 1]
         list_of_gens = list(C_K.gens())
-        i = 0
-        while list_of_gens and (i < len(good_primes)):
-            a_good_prime = good_primes[i]
-            emergency_prime_candidates = K.primes_above(a_good_prime)
+        my_primes_iter = primes_iter(K)
 
-            for candidate in emergency_prime_candidates:
-                emergency_gen = C_K(candidate)
-                if emergency_gen in list_of_gens:
-                    if a_good_prime > norm_bound:
-                        aux_primes.append(candidate)
-                        logger.debug("Emergency aux prime added: {}".format(candidate))
-                    list_of_gens.remove(emergency_gen)
-            i += 1
+        while list_of_gens:
 
-        if list_of_gens:
-            raise RuntimeError(
-                "We have been unable to add enough emergency "
-                "auxiliary primes. Try increasing the `B` parameter above."
-            )
+            candidate = next(my_primes_iter)
+            candidate_gen = C_K(candidate)
+            if candidate_gen in list_of_gens:
+                if candidate.norm() > norm_bound:
+                    aux_primes.append(candidate)
+                    logger.debug(f"Emergency aux prime added: {candidate}")
+                list_of_gens.remove(candidate_gen)
 
     return aux_primes
 
@@ -340,7 +328,7 @@ def get_strong_type_3_epsilons(K, embeddings):
 
     list_of_gens = list(K.class_group().gens())
 
-    strong_type_3_epsilons = set()
+    strong_type_3_epsilons = {}
     for L, phi, _ in K.subfields(degree=2, name="b"):
         if L.discriminant() > 0:
             continue
@@ -352,8 +340,8 @@ def get_strong_type_3_epsilons(K, embeddings):
                 0 if embedding in split1 else 12 for embedding in embeddings
             )
             epsilon2 = tuple(12 - a for a in epsilon1)
-            strong_type_3_epsilons.add((epsilon1, L))
-            strong_type_3_epsilons.add((epsilon2, L))
+            strong_type_3_epsilons[epsilon1] = L
+            strong_type_3_epsilons[epsilon2] = L
     return strong_type_3_epsilons
 
 

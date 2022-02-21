@@ -6,7 +6,7 @@
 
     This file is part of Isogeny Primes.
 
-    Copyright (C) 2021 Barinder Singh Banwait and Maarten Derickx
+    Copyright (C) 2022 Barinder Singh Banwait and Maarten Derickx
 
     Isogeny Primes is free software: you can redistribute it and/or
     modify it under the terms of the GNU General Public License as
@@ -20,6 +20,9 @@
 
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+    The authors can be reached at: barinder.s.banwait@gmail.com and
+    maarten@mderickx.nl.
 
     ====================================================================
 
@@ -175,8 +178,9 @@ def cli_handler(args):  # pylint: disable=redefined-outer-name
         )
     else:
         logging.warning(
-            "Only checking Type 2 primes up to {}. "
-            "To check all, use the PARI/GP script.".format(args.bound)
+            "Only checking Type 2 primes up to %s. "
+            "To check all, use the PARI/GP script.",
+            args.bound,
         )
 
         if args.norm_bound:
@@ -202,17 +206,13 @@ def cli_handler(args):  # pylint: disable=redefined-outer-name
         possible_new_isog_primes = superset - EC_Q_ISOGENY_PRIMES
         possible_new_isog_primes_list = list(possible_new_isog_primes)
         possible_new_isog_primes_list.sort()
-        logging.info(
-            "Possible new isogeny primes = {}".format(possible_new_isog_primes_list)
-        )
+        logging.info(f"Possible new isogeny primes = {possible_new_isog_primes_list}")
         if type_3_fields:
             how_many_fields = len(type_3_fields)
             logging.info(
-                "Outside of the above set, any isogeny primes must be "
-                "of Type 3 with imaginary quadratic field L, for L one "
-                "of the following {} field(s):\n {}".format(
-                    how_many_fields, type_3_fields
-                )
+                f"Outside of the above set, any isogeny primes must be "
+                f"of Momose Type 3 with imaginary quadratic field L, for L one "
+                f"of the following {how_many_fields} field(s):\n {type_3_fields}"
             )
 
 

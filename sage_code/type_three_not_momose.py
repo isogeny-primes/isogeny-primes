@@ -69,8 +69,8 @@ def type_three_not_momose(K, embeddings, strong_type_3_epsilons):
     # computation. On the other hand, we also want to report the Ls
     # higher up the stack, so we get those as well
 
-    actual_type_3_epsilons = {eps[0] for eps in strong_type_3_epsilons}
-    type_3_fields = {eps[1] for eps in strong_type_3_epsilons}
+    actual_type_3_epsilons = set(strong_type_3_epsilons.keys())
+    type_3_fields = set(strong_type_3_epsilons.values())
 
     if h_K == 1:
         return [], type_3_fields

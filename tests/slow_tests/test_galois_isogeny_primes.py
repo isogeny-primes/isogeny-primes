@@ -6,11 +6,11 @@ make integrationtests
 
     ====================================================================
 
-    This file is part of Quadratic Isogeny Primes.
+    This file is part of Isogeny Primes.
 
-    Copyright (C) 2021 Barinder Singh Banwait
+    Copyright (C) 2022 Barinder S. Banwait and Maarten Derickx
 
-    Quadratic Isogeny Primes is free software: you can redistribute it and/or modify
+    Isogeny Primes is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
     the Free Software Foundation, either version 3 of the License, or
     any later version.
@@ -23,7 +23,8 @@ make integrationtests
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-    The author can be reached at: barinder.s.banwait@gmail.com
+    The authors can be reached at: barinder.s.banwait@gmail.com and
+    maarten@mderickx.nl.
 
     ====================================================================
 
@@ -66,15 +67,15 @@ test_cases = [
         x ** 6 + 13 * x ** 4 + 26 * x ** 2 + 13,
         set(),
         set(
-            [23, 29, 31, 41, 47, 53, 59, 61, 73, 79, 83, 89, 97, 103, 109, 113, 131]
-            + [157, 181, 193, 233, 239, 281, 311, 313, 331, 337, 467, 677, 1747]
+            [23, 29, 31, 41, 47, 53, 59, 61, 73, 79, 83, 97, 103, 109, 113, 131]
+            + [157, 181, 193, 233, 239, 281, 311, 313, 337, 467, 677, 1747]
         ),
     ),
     (
         x ** 6 - 2 * x ** 5 + 6 * x ** 4 + 22 * x ** 3 + 41 * x ** 2 + 48 * x + 36,
         set(),
         set(
-            [23, 29, 31, 41, 47, 53, 59, 61, 71, 73, 79, 83, 97, 103, 109, 113, 127]
+            [23, 29, 31, 41, 47, 53, 59, 61, 71, 73, 79, 83, 97, 103, 109, 113]
             + [181, 191, 233, 251, 433, 499, 643]
         ),
     ),

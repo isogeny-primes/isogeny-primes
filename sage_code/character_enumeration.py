@@ -1,3 +1,32 @@
+"""character_enumeration.py
+
+This implements the ICE filter.
+
+    ====================================================================
+
+    This file is part of Isogeny Primes.
+
+    Copyright (C) 2022 Barinder S. Banwait and Maarten Derickx
+
+    Isogeny Primes is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+    The authors can be reached at: barinder.s.banwait@gmail.com and
+    maarten@mderickx.nl.
+
+    ====================================================================
+"""
+
 from itertools import product
 from sage.all import GF, ZZ, prod
 import logging
@@ -265,9 +294,9 @@ def character_enumeration_filter(
     eps_prime_dict = {
         eps: tracking_dict_inv_collapsed[eps].prime_divisors() for eps in epsilons
     }
-    pre_type_one_two = {p for k in eps_prime_dict for p in eps_prime_dict[k]}
-    logger.info(
-        f"Pre type one two primes before enumeration filter: {sorted(pre_type_one_two)}"
+    possible_isogeny_primes = {p for k in eps_prime_dict for p in eps_prime_dict[k]}
+    logger.debug(
+        f"Possible isogeny primes before ICE filter: {sorted(possible_isogeny_primes)}"
     )
     prime_support_my_gens_ideals = list(
         {a for P in my_gens_ideals for a in ZZ(P.norm()).prime_divisors()}
@@ -307,7 +336,7 @@ def character_enumeration_filter(
         eps_prime_filt_dict[eps] = set(survived_primes)
 
     output = set.union(*(val for val in eps_prime_filt_dict.values()))
-    removed = sorted(pre_type_one_two.difference(output))
-    logger.info(f"Pre type one two candidates removed by filtering: {removed}")
+    removed = sorted(possible_isogeny_primes.difference(output))
+    logger.debug(f"Possible isogeny primes removed by ICE filter: {removed}")
     logger.debug(f"Class number: {C_K.cardinality()}")
     return output

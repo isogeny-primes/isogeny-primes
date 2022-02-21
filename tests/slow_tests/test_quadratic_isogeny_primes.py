@@ -8,9 +8,9 @@ make integrationtests
 
     This file is part of Isogeny Primes.
 
-    Copyright (C) 2021 Barinder Singh Banwait and Maarten Derickx
+    Copyright (C) 2022 Barinder S. Banwait and Maarten Derickx
 
-    Quadratic Isogeny Primes is free software: you can redistribute it and/or modify
+    Isogeny Primes is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
     the Free Software Foundation, either version 3 of the License, or
     any later version.
@@ -23,7 +23,8 @@ make integrationtests
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-    The authors can be reached at: barinder.s.banwait@gmail.com
+    The authors can be reached at: barinder.s.banwait@gmail.com and
+    maarten@mderickx.nl.
 
     ====================================================================
 
@@ -82,16 +83,12 @@ def test_interval(D):
 # since in those cases just simply looping over all integers up to that
 # bound is already taking ages, and even worse. Just list(range(D)) will exaust
 # all memory on most machines.
-@pytest.mark.skip(
-    reason="These tests are of large class number, made before we knew about "
-    "TypeTwoNotMomose, which seems to be large."
-)
 @pytest.mark.parametrize(
     "D, extra_isogeny, appendix_bound, potenial_isogenies",
     [
         (179, 29, 1000, set()),
         (-31, 73, 1000, set()),
-        (-127, 73, 1000, {31, 61, 151}),
+        (-127, 73, 1000, {31, 61}),
         (5 * 577, 103, 1000, set()),
         (-31159, 137, 1000, {23, 29, 61, 157}),
         (61 * 229 * 145757, 191, 0, {29, 31}),

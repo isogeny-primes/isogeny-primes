@@ -6,12 +6,12 @@
 
     This file is part of Isogeny Primes.
 
-    Copyright (C) 2021 Barinder Singh Banwait and Maarten Derickx
+    Copyright (C) 2022 Barinder S. Banwait and Maarten Derickx
 
-    Isogeny Primes is free software: you can redistribute it and/or
-    modify it under the terms of the GNU General Public License as
-    published by the Free Software Foundation, either version 3 of the
-    License, or any later version.
+    Isogeny Primes is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    any later version.
 
     This program is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -20,6 +20,9 @@
 
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+    The authors can be reached at: barinder.s.banwait@gmail.com and
+    maarten@mderickx.nl.
 
     ====================================================================
 
@@ -325,7 +328,7 @@ def cached_bad_formal_immersion_data(d):
 
         bad_formal_immersion_list, bad_aux_prime_dict = get_bad_formal_immersion_data(d)
         data_for_json_export = {
-            d: {
+            int(d): {
                 "bad_formal_immersion_list": bad_formal_immersion_list,
                 "bad_aux_prime_dict": bad_aux_prime_dict,
             }
@@ -383,6 +386,7 @@ def get_type_1_primes(K, C_K, norm_bound=50):
     bound_at_2 = get_C_integer_type1(K, 2, bad_aux_prime_dict, C_K, bound_so_far)
 
     output = set(bound_so_far.prime_divisors())
+    logger.debug("Type 1 primes before BFI data = {}".format(sorted(output)))
     output = apply_formal_immersion_at_2(output, bound_at_2, K.degree())
     output = output.union(set(bad_formal_immersion_list))
 

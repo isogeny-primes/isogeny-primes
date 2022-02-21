@@ -16,9 +16,9 @@
 
     Copyright (C) 2022 Barinder S. Banwait and Maarten Derickx
 
-    Quadratic Isogeny Primes is free software: you can redistribute it and/or
-    modify it under the terms of the GNU General Public License as published
-    by the Free Software Foundation, either version 3 of the License, or
+    Isogeny Primes is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
     any later version.
 
     This program is distributed in the hope that it will be useful,
@@ -29,7 +29,8 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-    The authors can be reached at: barinder.s.banwait@gmail.com
+    The authors can be reached at: barinder.s.banwait@gmail.com and
+    maarten@mderickx.nl.
 
     ====================================================================
 
@@ -42,28 +43,12 @@ export(K)
 
 typeTwoBound = 4.1e11;
 
-odd_residue_class_degs(q) =
-{
-  my(L,P);
-  L = List();
-  P = idealprimedec(K,q);
-  foreach(P,p,
-    my(the_exp);
-    the_exp = p[4];
-    if(the_exp%2 == 1,
-      listput(~L,the_exp);
-      );
-  );
-  return(Set(L));
-}
-export(odd_residue_class_degs)
-
 \\check if condition CC is satisfied
 satisfiesCC(p,q_start) =
 {
   forprime(q = q_start,p/4,
     my(odd_fs);
-    odd_fs = odd_residue_class_degs(q);
+    odd_fs = Set([pqw.f | pqw <- idealprimedec(K,q), pqw.f % 2 == 1]);
     foreach(odd_fs,f,
       if(q^f < p/4,
         if((q^(2*f) + q^f + 1) % p != 0,
@@ -87,7 +72,6 @@ print_satisfiesCC(p, q_init) =
 }
 export(print_satisfiesCC)
 
-\\[p | p <- idealprimedec(K,q), p.f % 2]
 blockSize=100000;
 export(blockSize)
 
@@ -103,7 +87,7 @@ export(initialCheck)
 switch=7^(2*poldegree(f)) + 7^(poldegree(f)) + 1;
 howManyInitial = floor(switch/blockSize);
 
-\\ parapply(initialCheck,[0..howManyInitial+1]);
+parapply(initialCheck,[0..howManyInitial+1]);
 
 my_res_classes = [667,67,547,163,403,43];
 export(my_res_classes)
