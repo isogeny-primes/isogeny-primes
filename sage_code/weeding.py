@@ -33,11 +33,9 @@ import logging
 from sage.all import (
     J0,
     ModularSymbols,
-    NumberField,
     QuadraticField,
     companion_matrix,
     gcd,
-    hilbert_class_polynomial,
     oo,
     parent,
     prime_range,
@@ -206,6 +204,16 @@ def apply_weeding(candidates, K, appendix_bound=1000):
         removed_primes = apply_quadratic_weeding(candidates, K)
 
     if K.degree().is_prime() and K.is_abelian():
+
+        if K.conductor() > 1e6:
+
+            logger.warning(
+                "The conductor of your field is too large "
+                "for method of appendix to work in reasonable time, "
+                "so not doing it."
+            )
+            return removed_primes
+
         for p in candidates - EC_Q_ISOGENY_PRIMES - removed_primes:
             if 20 < p < appendix_bound:
                 logger.debug(f"Attempting method of appendix on prime {p}")

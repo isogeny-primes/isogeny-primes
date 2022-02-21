@@ -6,11 +6,11 @@ make integrationtests
 
     ====================================================================
 
-    This file is part of Quadratic Isogeny Primes.
+    This file is part of Isogeny Primes.
 
-    Copyright (C) 2021 Barinder Singh Banwait
+    Copyright (C) 2022 Barinder S. Banwait and Maarten Derickx
 
-    Quadratic Isogeny Primes is free software: you can redistribute it and/or modify
+    Isogeny Primes is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
     the Free Software Foundation, either version 3 of the License, or
     any later version.
@@ -23,7 +23,8 @@ make integrationtests
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-    The author can be reached at: barinder.s.banwait@gmail.com
+    The authors can be reached at: barinder.s.banwait@gmail.com and
+    maarten@mderickx.nl.
 
     ====================================================================
 
@@ -42,8 +43,7 @@ TEST_SETTINGS = {
     "norm_bound": 50,
     "bound": 1000,
     "appendix_bound": 0,
-    "loop_curves": False,
-    "heavy_filter": False,
+    "ice_filter": False,
     "repeat_bound": 6,
 }
 
@@ -93,7 +93,7 @@ test_cases = [
         set(),
         set(
             [23, 29, 31, 41, 47, 53, 59, 61, 71, 73, 79, 83, 89, 97, 101, 103, 107]
-            + [109, 113, 127, 131, 137, 157, 173, 211, 233, 311, 313, 479, 4493]
+            + [109, 113, 127, 131, 137, 157, 173, 211, 233, 311, 479, 4493]
             + [5849, 19121, 22721]
         ),
     ),
@@ -104,7 +104,7 @@ test_cases = [
 def test_galois(f, extra_isogenies, potenial_isogenies):
     K = NumberField(f, "a")
 
-    superset = get_isogeny_primes(K, **TEST_SETTINGS)
+    superset, _ = get_isogeny_primes(K, **TEST_SETTINGS)
     assert set(EC_Q_ISOGENY_PRIMES).difference(superset) == set()
     assert (
         extra_isogenies.difference(superset) == set()

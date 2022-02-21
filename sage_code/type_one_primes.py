@@ -6,12 +6,12 @@
 
     This file is part of Isogeny Primes.
 
-    Copyright (C) 2021 Barinder Singh Banwait and Maarten Derickx
+    Copyright (C) 2022 Barinder S. Banwait and Maarten Derickx
 
-    Isogeny Primes is free software: you can redistribute it and/or
-    modify it under the terms of the GNU General Public License as
-    published by the Free Software Foundation, either version 3 of the
-    License, or any later version.
+    Isogeny Primes is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    any later version.
 
     This program is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -20,6 +20,9 @@
 
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+    The authors can be reached at: barinder.s.banwait@gmail.com and
+    maarten@mderickx.nl.
 
     ====================================================================
 
@@ -44,7 +47,7 @@ from sage.all import (
 from sage.rings.finite_rings.finite_field_constructor import GF
 from sage_code.queue_runner.sage_json_converter import sage_converter
 
-from .common_utils import R, get_weil_polys
+from .common_utils import get_weil_polys
 from .config import FORMAL_IMMERSION_DATA_AT_2_PATH, BAD_FORMAL_IMMERSION_DATA_PATH
 
 logger = logging.getLogger(__name__)
@@ -288,7 +291,7 @@ def get_N(frob_poly, nm_q, exponent):
     return N
 
 
-def get_C_integer_type1(K, q, bad_aux_prime_dict, C_K, bound_so_far, loop_curves):
+def get_C_integer_type1(K, q, bad_aux_prime_dict, C_K, bound_so_far):
     running_primes = gcd(q, bound_so_far)
     if str(q) in bad_aux_prime_dict:
         running_primes = lcm(
@@ -306,12 +309,7 @@ def get_C_integer_type1(K, q, bad_aux_prime_dict, C_K, bound_so_far, loop_curves
         N_cusp = ZZ(nm_q) ** exponent - 1
         N_cusp = gcd(N_cusp, bound_so_far)
         running_primes = lcm(running_primes, N_cusp)
-
-        if loop_curves:
-            weil_polys = get_weil_polys(GF(nm_q))
-        else:
-            weil_polys = R.weil_polynomials(2, nm_q)
-
+        weil_polys = get_weil_polys(GF(nm_q))
         for wp in weil_polys:
             N = get_N(wp, nm_q, exponent)
             assert N != 0
@@ -330,7 +328,7 @@ def cached_bad_formal_immersion_data(d):
 
         bad_formal_immersion_list, bad_aux_prime_dict = get_bad_formal_immersion_data(d)
         data_for_json_export = {
-            d: {
+            int(d): {
                 "bad_formal_immersion_list": bad_formal_immersion_list,
                 "bad_aux_prime_dict": bad_aux_prime_dict,
             }
@@ -364,7 +362,7 @@ def cached_bad_formal_immersion_data(d):
     return bad_formal_immersion_list, bad_aux_prime_dict
 
 
-def get_type_1_primes(K, C_K, norm_bound=50, loop_curves=False):
+def get_type_1_primes(K, C_K, norm_bound=50):
     """Compute the type 1 primes"""
 
     # Get bad formal immersion data
@@ -374,18 +372,21 @@ def get_type_1_primes(K, C_K, norm_bound=50, loop_curves=False):
     )
 
     aux_primes = prime_range(3, norm_bound + 1)
+
+    if not aux_primes:
+        # i.e. the user has inserted a silly value of norm_bound, so we add
+        # one aux prime as in the generic case
+        aux_primes = [3]
+
     bound_so_far = 0
 
     for q in aux_primes:
-        bound_so_far = get_C_integer_type1(
-            K, q, bad_aux_prime_dict, C_K, bound_so_far, loop_curves
-        )
+        bound_so_far = get_C_integer_type1(K, q, bad_aux_prime_dict, C_K, bound_so_far)
 
-    bound_at_2 = get_C_integer_type1(
-        K, 2, bad_aux_prime_dict, C_K, bound_so_far, loop_curves
-    )
+    bound_at_2 = get_C_integer_type1(K, 2, bad_aux_prime_dict, C_K, bound_so_far)
 
     output = set(bound_so_far.prime_divisors())
+    logger.debug("Type 1 primes before BFI data = {}".format(sorted(output)))
     output = apply_formal_immersion_at_2(output, bound_at_2, K.degree())
     output = output.union(set(bad_formal_immersion_list))
 

@@ -10,8 +10,7 @@ logger = logging.getLogger(__name__)
 TEST_SETTINGS = {
     "norm_bound": 20,
     "bound": 1000,
-    "loop_curves": False,
-    "heavy_filter": True,
+    "ice_filter": True,
 }
 
 
@@ -19,7 +18,7 @@ def test_rational_isogeny_primes():
     x = polygen(QQ)
     K = QQ.extension(x - 1, "D")
 
-    superset = get_isogeny_primes(K, **TEST_SETTINGS)
+    superset, _ = get_isogeny_primes(K, **TEST_SETTINGS)
     improperly_ruled_out = EC_Q_ISOGENY_PRIMES.difference(superset)
     assert improperly_ruled_out == set()
     todo = set(superset).difference(EC_Q_ISOGENY_PRIMES)

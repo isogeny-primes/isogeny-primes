@@ -1,11 +1,43 @@
+"""character_enumeration.py
+
+This implements the ICE filter.
+
+    ====================================================================
+
+    This file is part of Isogeny Primes.
+
+    Copyright (C) 2022 Barinder S. Banwait and Maarten Derickx
+
+    Isogeny Primes is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+    The authors can be reached at: barinder.s.banwait@gmail.com and
+    maarten@mderickx.nl.
+
+    ====================================================================
+"""
+
 from itertools import product
-
 from sage.all import GF, ZZ, prod
-
 import logging
 
-
-from .common_utils import x, weil_polynomial_is_elliptic, eps_exp, primes_iter
+from .common_utils import (
+    x,
+    weil_polynomial_is_elliptic,
+    eps_exp,
+    primes_iter,
+    filter_ABC_primes,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -130,6 +162,7 @@ def final_filter(
     gens_info,
     p,
     eps,
+    eps_type,
     embeddings,
     alpha_cache={},
 ):
@@ -162,6 +195,14 @@ def final_filter(
     possible_vals_cart_prod = list(
         product(*[possible_vals_at_gens[q] for q in my_gens_ideals])
     )
+
+    if eps_type == "type-2":
+
+        vals_at_chi_6 = tuple([q.absolute_norm() ** 6 for q in my_gens_ideals])
+
+        possible_vals_cart_prod = [
+            x for x in possible_vals_cart_prod if x is not vals_at_chi_6
+        ]
 
     # Step 3
 
@@ -235,9 +276,9 @@ def character_enumeration_filter(
     epsilons,
     aux_primes,
     embeddings,
-    stop_strategy="auto",
+    auto_stop_strategy=True,
 ):
-    if stop_strategy == "auto":
+    if auto_stop_strategy:
         enumeration_bound = aux_primes
     OK_star_gens = K.unit_group().gens_values()
     my_gens_ideals = get_prime_gens(C_K)
@@ -253,9 +294,9 @@ def character_enumeration_filter(
     eps_prime_dict = {
         eps: tracking_dict_inv_collapsed[eps].prime_divisors() for eps in epsilons
     }
-    pre_type_one_two = {p for k in eps_prime_dict for p in eps_prime_dict[k]}
-    logger.info(
-        f"Pre type one two primes before enumeration filter: {sorted(pre_type_one_two)}"
+    possible_isogeny_primes = {p for k in eps_prime_dict for p in eps_prime_dict[k]}
+    logger.debug(
+        f"Possible isogeny primes before ICE filter: {sorted(possible_isogeny_primes)}"
     )
     prime_support_my_gens_ideals = list(
         {a for P in my_gens_ideals for a in ZZ(P.norm()).prime_divisors()}
@@ -263,13 +304,13 @@ def character_enumeration_filter(
     eps_prime_filt_dict = {}
 
     alpha_cache = {}
-    for eps in epsilons:
+    for eps, eps_type in epsilons.items():
         survived_primes = []
         for p in eps_prime_dict[eps]:
             if p in prime_support_my_gens_ideals:
                 survived_primes.append(p)
                 continue
-            if stop_strategy == "auto":
+            if auto_stop_strategy:
                 # stop condition:
                 # 4sqrt(Nm(q)) > 2p
                 # Nm(q) > (p/2)**2
@@ -286,14 +327,16 @@ def character_enumeration_filter(
                 gens_info,
                 p,
                 eps,
+                eps_type,
                 embeddings,
                 alpha_cache,
             ):
                 survived_primes.append(p)
+        survived_primes = filter_ABC_primes(K, survived_primes, eps_type)
         eps_prime_filt_dict[eps] = set(survived_primes)
 
     output = set.union(*(val for val in eps_prime_filt_dict.values()))
-    removed = sorted(pre_type_one_two.difference(output))
-    logger.info(f"Pre type one two candidates removed by filtering: {removed}")
+    removed = sorted(possible_isogeny_primes.difference(output))
+    logger.debug(f"Possible isogeny primes removed by ICE filter: {removed}")
     logger.debug(f"Class number: {C_K.cardinality()}")
-    return sorted(output)
+    return output

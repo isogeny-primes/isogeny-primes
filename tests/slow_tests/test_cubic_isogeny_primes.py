@@ -1,4 +1,4 @@
-"""test_qubic_isogeny_primes.py
+"""test_cubic_isogeny_primes.py
 
 To run these tests, enter the following:
 
@@ -41,9 +41,8 @@ from sage_code.common_utils import EC_Q_ISOGENY_PRIMES
 TEST_SETTINGS = {
     "norm_bound": 50,
     "bound": 1000,
-    "appendix_bound": 200,
-    "loop_curves": False,
-    "heavy_filter": True,
+    "appendix_bound": 80,
+    "ice_filter": True,
 }
 
 """
@@ -86,8 +85,12 @@ bad_cubic_formal_immersion_primes = {2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37,
 def test_cm_type_2(f, extra_isogenies, potenial_isogenies):
     K = NumberField(f, "a")
 
-    superset = get_isogeny_primes(K, **TEST_SETTINGS)
+    superset, _ = get_isogeny_primes(K, **TEST_SETTINGS)
     assert set(EC_Q_ISOGENY_PRIMES).difference(superset) == set()
+    # for p in extra_isogenies:
+    #     assert satisfies_condition_CC(K, p), "Not of type 2"
+    pnip = sorted(superset.difference(set(EC_Q_ISOGENY_PRIMES)))
+    print("f = {}  disc = {} pnip = {}".format(f, K.discriminant(), pnip))
     assert (
         extra_isogenies.difference(superset) == set()
     ), "Known CM isogenies are filtered out!"

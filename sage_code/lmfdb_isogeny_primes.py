@@ -7,9 +7,8 @@ R = PolynomialRing(QQ, "x")
 LMFDB_DEFAULTS = {
     "norm_bound": 50,
     "bound": 1000,
-    "loop_curves": False,
     "use_PIL": False,
-    "heavy_filter": True,
+    "ice_filter": True,
     "appendix_bound": 1000,
     "stop_strategy": "auto",
 }
@@ -20,5 +19,5 @@ def isogeny_primes(coeffs, **kwargs):
     f = R(coeffs)
     K = QQ.extension(f, "a")
     kwargs = {**LMFDB_DEFAULTS, **kwargs}
-    primes = get_isogeny_primes(K, **kwargs)
+    primes, _ = get_isogeny_primes(K, **kwargs)
     return sorted(EC_Q_ISOGENY_PRIMES) + sorted(primes.difference(EC_Q_ISOGENY_PRIMES))

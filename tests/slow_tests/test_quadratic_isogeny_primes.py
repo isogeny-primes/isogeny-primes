@@ -6,11 +6,11 @@ make integrationtests
 
     ====================================================================
 
-    This file is part of Quadratic Isogeny Primes.
+    This file is part of Isogeny Primes.
 
-    Copyright (C) 2021 Barinder Singh Banwait
+    Copyright (C) 2022 Barinder S. Banwait and Maarten Derickx
 
-    Quadratic Isogeny Primes is free software: you can redistribute it and/or modify
+    Isogeny Primes is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
     the Free Software Foundation, either version 3 of the License, or
     any later version.
@@ -23,7 +23,8 @@ make integrationtests
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-    The author can be reached at: barinder.s.banwait@gmail.com
+    The authors can be reached at: barinder.s.banwait@gmail.com and
+    maarten@mderickx.nl.
 
     ====================================================================
 
@@ -41,8 +42,7 @@ from sage_code.common_utils import CLASS_NUMBER_ONE_DISCS, EC_Q_ISOGENY_PRIMES
 TEST_SETTINGS = {
     "norm_bound": 50,
     "bound": 1000,
-    "loop_curves": False,
-    "heavy_filter": True,
+    "ice_filter": True,
 }
 
 # total running time of all tests in this file is about 5 minutes
@@ -56,10 +56,10 @@ square_free_D = [D for D in range(-R, R) if Integer(D).is_squarefree() and D != 
 def test_interval(D):
     K = QuadraticField(D)
     if not K.discriminant() in CLASS_NUMBER_ONE_DISCS:
-        superset = get_isogeny_primes(K, **TEST_SETTINGS)
-        # test that we are not to many primes left over
+        superset, _ = get_isogeny_primes(K, **TEST_SETTINGS)
+        # test that there are not too many primes left over
         todo = set(superset).difference(EC_Q_ISOGENY_PRIMES)
-        assert len(todo) == 0 or max(todo) <= 59
+        assert len(todo) == 0 or max(todo) <= 109
         assert len(todo) <= 2 or max(todo) <= 31
 
 
@@ -88,7 +88,7 @@ def test_interval(D):
     [
         (179, 29, 1000, set()),
         (-31, 73, 1000, set()),
-        (-127, 73, 1000, {61}),
+        (-127, 73, 1000, {31, 61}),
         (5 * 577, 103, 1000, set()),
         (-31159, 137, 1000, {23, 29, 61, 157}),
         (61 * 229 * 145757, 191, 0, {29, 31}),
@@ -98,7 +98,7 @@ def test_interval(D):
 def test_from_literature(D, extra_isogeny, appendix_bound, potenial_isogenies):
     K = QuadraticField(D)
     upperbound = potenial_isogenies.union(EC_Q_ISOGENY_PRIMES).union({extra_isogeny})
-    superset = get_isogeny_primes(K, appendix_bound=appendix_bound, **TEST_SETTINGS)
+    superset, _ = get_isogeny_primes(K, appendix_bound=appendix_bound, **TEST_SETTINGS)
     assert set(EC_Q_ISOGENY_PRIMES).difference(superset) == set()
     assert extra_isogeny in superset
     assert set(superset.difference(upperbound)) == set(), "We got worse at filtering"

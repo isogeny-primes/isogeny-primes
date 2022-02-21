@@ -6,11 +6,9 @@ from sage.rings.polynomial.polynomial_ring_constructor import PolynomialRing
 TEST_SETTINGS = {
     "norm_bound": 50,
     "bound": 1000,
-    "loop_curves": False,
-    "use_PIL": False,
-    "heavy_filter": True,
-    "appendix_bound": 1000,
-    "stop_strategy": "auto",
+    "ice_filter": True,
+    "appendix_bound": 100,
+    "auto_stop_strategy": True,
 }
 
 R = PolynomialRing(QQ, "x")
@@ -21,4 +19,4 @@ test_cases = [[1361, 0, 1]]
 def test_get_isogeny_primes(coeffs):
     f = R(coeffs)
     K = QQ.extension(f, "a")
-    _ = get_isogeny_primes(K, **TEST_SETTINGS)
+    _, _ = get_isogeny_primes(K, **TEST_SETTINGS)

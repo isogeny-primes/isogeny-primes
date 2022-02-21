@@ -37,6 +37,7 @@ x = R.gen()
 EC_Q_ISOGENY_PRIMES = {2, 3, 5, 7, 11, 13, 17, 19, 37, 43, 67, 163}
 CLASS_NUMBER_ONE_DISCS = {-3, -4, -7, -8, -11, -19, -43, -67, -163}
 SMALL_GONALITIES = {2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 47, 59, 71}
+
 # Global methods
 
 
@@ -74,6 +75,11 @@ def get_weil_polys(F):
     a = F.degree()
     weil_polys = R.weil_polynomials(2, q ** a)
     return [f for f in weil_polys if weil_polynomial_is_elliptic(f, q, a)]
+
+
+def get_ordinary_weil_polys_from_values(q, a):
+    weil_polys = R.weil_polynomials(2, q ** a)
+    return [f for f in weil_polys if f[1] % q != 0]
 
 
 def eps_exp(alpha, eps, Sigma):
@@ -227,3 +233,129 @@ def primes_iter(K, bound=oo, cache=True):
         for pp, _ in F:
             if pp.absolute_norm() < bound:
                 yield pp
+
+
+def one_aux_gen_list(C_K, class_group_gens, it):
+    """Compute one Gen set"""
+    running_class_group_gens = class_group_gens.copy()
+    gen_list = []
+    while running_class_group_gens:
+        candidate = next(it)
+        if candidate.smallest_integer() == 2:
+            continue
+        candidate_class = C_K(candidate)
+        if candidate_class in running_class_group_gens:
+            gen_list.append(candidate)
+            running_class_group_gens.remove(candidate_class)
+    return gen_list
+
+
+def auxgens(K, auxgen_count=5):
+    """Compute a list AuxGen of Gen sets"""
+
+    C_K = K.class_group()
+    class_group_gens = list(C_K.gens())
+
+    it = primes_iter(K)
+
+    aux_gen_list = [
+        one_aux_gen_list(C_K, class_group_gens, it) for _ in range(auxgen_count)
+    ]
+
+    return aux_gen_list
+
+
+def get_eps_type(eps):
+    """Returns the type of an epsilon (quadratic, quartic, sextic), where
+    an epsilon is considered as a tuple
+    """
+
+    if 6 in eps:
+        if any(t in eps for t in [4, 8]):
+            return "mixed"
+        if len(set(eps)) == 1:
+            # means it's all 6s
+            return "type-2"
+        return "quartic-non-constant"
+    if any(t in eps for t in [4, 8]):
+        if len(set(eps)) == 1:
+            # means it's all 4s or all 8s
+            return "sextic-constant"
+        return "sextic-non-constant"
+    if len(set(eps)) == 1:
+        return "type-1"
+    return "quadratic-non-constant"
+
+
+def filter_ABC_primes(K, prime_list, eps_type):
+    """Apply congruence and splitting conditions to primes in prime
+    list, depending on the type of epsilon
+
+    Args:
+        K ([NumberField]): our number field
+        prime_list ([list]): list of primes to filter
+        eps_type ([str]): one of the possible epsilon types
+    """
+
+    if eps_type == "type-1":
+        # no conditions
+        return prime_list
+
+    if eps_type == "quadratic-non-constant":
+        # prime must split or ramify in K
+        output_list = []
+
+        for p in prime_list:
+            if not K.ideal(p).is_prime():
+                output_list.append(p)
+        return output_list
+
+    if eps_type == "sextic-non-constant":
+        # prime must split or ramify in K, and be congruent to 2 mod 3
+        output_list = []
+
+        for p in prime_list:
+            if p % 3 == 2:
+                if not K.ideal(p).is_prime():
+                    output_list.append(p)
+        return output_list
+
+    if eps_type == "sextic-constant":
+        # prime must be congruent to 2 mod 3
+        output_list = []
+
+        for p in prime_list:
+            if p % 3 == 2:
+                output_list.append(p)
+        return output_list
+
+    if eps_type == "type-2":
+        # prime must be congruent to 3 mod 4
+        output_list = []
+
+        for p in prime_list:
+            if p % 4 == 3:
+                output_list.append(p)
+        return output_list
+
+    if eps_type == "quartic-non-constant":
+        # prime must split or ramify in K, and be congruent to 3 mod 4
+        output_list = []
+
+        for p in prime_list:
+            if p % 4 == 3:
+                if not K.ideal(p).is_prime():
+                    output_list.append(p)
+        return output_list
+
+    if eps_type == "mixed":
+        # prime must split or ramify in K, and be congruent to 1 mod 12
+        output_list = []
+
+        for p in prime_list:
+            if p % 12 == 1:
+                if not K.ideal(p).is_prime():
+                    output_list.append(p)
+        return output_list
+
+    raise ValueError("given type {} not a vaid epsilon type".format(eps_type))
