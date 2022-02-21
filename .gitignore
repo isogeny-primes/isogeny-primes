@@ -1,7 +1,9 @@
 nether_regions.sage
+sandbox.sage
 error.json
 results.json
-gp_scripts/partype2primesuniform.gp
+gp_scripts/partype2primesunif.gp
+plot_stats.py
 # OS files
 .DS_Store
 

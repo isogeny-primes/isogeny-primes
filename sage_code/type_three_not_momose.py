@@ -7,12 +7,12 @@
 
     This file is part of Isogeny Primes.
 
-    Copyright (C) 2021 Barinder Singh Banwait and Maarten Derickx
+    Copyright (C) 2022 Barinder S. Banwait and Maarten Derickx
 
-    Isogeny Primes is free software: you can redistribute it and/or
-    modify it under the terms of the GNU General Public License as
-    published by the Free Software Foundation, either version 3 of the
-    License, or any later version.
+    Isogeny Primes is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    any later version.
 
     This program is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -22,6 +22,9 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+    The authors can be reached at: barinder.s.banwait@gmail.com and
+    maarten@mderickx.nl.
+
     ====================================================================
 
 """
@@ -29,7 +32,7 @@
 from sage.all import ZZ, gcd, lcm, GF  # pylint: disable=no-name-in-module
 
 from .common_utils import auxgens, get_weil_polys
-from .pre_type_one_two import ABC_integers
+from .generic import ABC_integers
 
 
 def get_eps_lcm_dict(C_K, epsilons, embeddings, gen_list):

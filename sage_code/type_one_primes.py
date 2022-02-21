@@ -90,7 +90,7 @@ def R_du(d, u, M, columns=None, a_inv=False):
     )
 
 
-def get_M(d, M_start=None, M_stop=None, positive_char=True):
+def construct_M(d, M_start=None, M_stop=None, positive_char=True):
     """
     Gets an integer M such that R_du is rank d for all u in (Z/MZ)^*.
 
@@ -147,7 +147,7 @@ def R_dp(d, p):
     return Matrix([get_row(i) for i in range(1, d + 1)]).change_ring(ZZ)
 
 
-def is_formall_immersion_fast(d, p):
+def is_formal_immersion_fast(d, p):
     """If this function returns true then we have a formall immersion in all
     characteristics > 2. If it returns false then this means nothing.
     """
@@ -165,7 +165,7 @@ def is_formall_immersion_fast(d, p):
     return False
 
 
-def is_formall_immersion_medium(d, p):
+def is_formal_immersion_medium(d, p):
     """If this function returns 0 then we don't have a formal immersion.
     If it returns a nonzero integer n then we have a formal immersion at all primes
     not dividing n. However we could still have a formal immersion at some primes
@@ -177,7 +177,7 @@ def is_formall_immersion_medium(d, p):
     return 0
 
 
-def is_formall_immersion(d, p):
+def is_formal_immersion(d, p):
     """This funtion returns an integer n such that we have a formall immersion in
     characteristic q != 2,p if and only if q does not divide n.
     """
@@ -200,7 +200,7 @@ def is_formall_immersion(d, p):
     return 0
 
 
-def get_bad_formal_immersion_data(d):
+def bad_formal_immersion_data(d):
     """
     This is the Oesterlé for type 1 primes with modular symbols main routine.
     The computation is actually a two step rocket. First Proposition 6.8 of
@@ -214,20 +214,20 @@ def get_bad_formal_immersion_data(d):
     p_done = {}
     q_to_bad_p = {}
 
-    M = get_M(d)[0]
+    M = construct_M(d)[0]
 
     for p in prime_range(11, 2 * M * d):
         # first do a relatively cheap test
-        if is_formall_immersion_fast(d, p):
+        if is_formal_immersion_fast(d, p):
             continue
         # this is less cheap but still quite fast
-        if is_formall_immersion_medium(d, p) == 1:
+        if is_formal_immersion_medium(d, p) == 1:
             continue
         # this is the most expensive but give the correct answer
-        is_formall = is_formall_immersion(d, p)
-        if is_formall:
-            if is_formall > 1:
-                p_done[p] = is_formall
+        is_formal = is_formal_immersion(d, p)
+        if is_formal:
+            if is_formal > 1:
+                p_done[p] = is_formal
         else:
             p_bad.append(p)
 
@@ -326,7 +326,7 @@ def cached_bad_formal_immersion_data(d):
     if not BAD_FORMAL_IMMERSION_DATA_PATH.is_file():
         logger.debug("No bad formal immersion data found. Computing and adding ...")
 
-        bad_formal_immersion_list, bad_aux_prime_dict = get_bad_formal_immersion_data(d)
+        bad_formal_immersion_list, bad_aux_prime_dict = bad_formal_immersion_data(d)
         data_for_json_export = {
             int(d): {
                 "bad_formal_immersion_list": bad_formal_immersion_list,
@@ -352,7 +352,7 @@ def cached_bad_formal_immersion_data(d):
             (
                 bad_formal_immersion_list,
                 bad_aux_prime_dict,
-            ) = get_bad_formal_immersion_data(d)
+            ) = bad_formal_immersion_data(d)
             bfi_dat[str(d)] = {
                 "bad_formal_immersion_list": bad_formal_immersion_list,
                 "bad_aux_prime_dict": bad_aux_prime_dict,
@@ -362,7 +362,7 @@ def cached_bad_formal_immersion_data(d):
     return bad_formal_immersion_list, bad_aux_prime_dict
 
 
-def get_type_1_primes(K, C_K, norm_bound=50):
+def type_1_primes(K, C_K, norm_bound=50):
     """Compute the type 1 primes"""
 
     # Get bad formal immersion data

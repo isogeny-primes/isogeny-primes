@@ -36,9 +36,9 @@ import logging
 from sage.all import RR, NumberField, exp, log
 
 from sage_code.common_utils import EC_Q_ISOGENY_PRIMES, R
-from sage_code.pre_type_one_two import get_pre_type_one_two_primes
-from sage_code.type_one_primes import get_type_1_primes
-from sage_code.type_two_primes import get_type_2_bound, get_type_2_primes
+from sage_code.generic import generic_primes
+from sage_code.type_one_primes import type_1_primes
+from sage_code.type_two_primes import get_type_2_bound, type_2_primes
 from sage_code.type_three_not_momose import type_three_not_momose
 from sage_code.weeding import apply_weeding
 
@@ -91,12 +91,12 @@ def get_isogeny_primes(
 
     # Start with some helpful user info
 
-    logging.info("Finding isogeny primes for {}.".format(K))
-    logging.info("Bound on auxiliary primes is {}.".format(norm_bound))
+    logging.info(f"Finding isogeny primes for {K}.")
+    logging.info(f"Bound on auxiliary primes is {norm_bound}.")
 
     # Get and show GenericPrimes
 
-    (strong_type_3_epsilons, embeddings, generic_primes) = get_pre_type_one_two_primes(
+    (strong_type_3_epsilons, embeddings, generic_primes_list) = generic_primes(
         K,
         norm_bound=norm_bound,
         ice_filter=ice_filter,
@@ -104,34 +104,34 @@ def get_isogeny_primes(
         repeat_bound=repeat_bound,
     )
 
-    logging.info("generic_primes = {}".format(generic_primes))
+    logging.info(f"generic_primes = {generic_primes_list}")
 
     # Get and show TypeOnePrimes
 
     C_K = K.class_group()
 
-    type_1_primes = get_type_1_primes(K, C_K, norm_bound=norm_bound)
-    logging.info("type_1_primes = {}".format(type_1_primes))
+    type_1_primes_list = type_1_primes(K, C_K, norm_bound=norm_bound)
+    logging.info(f"type_1_primes = {type_1_primes_list}")
 
     # Get and show TypeTwoPrimes
 
-    type_2_primes = get_type_2_primes(K, embeddings, bound=bound)
-    logging.info("type_2_primes = {}".format(type_2_primes))
+    type_2_primes_list = type_2_primes(K, embeddings, bound=bound)
+    logging.info(f"type_2_primes = {type_2_primes_list}")
 
     # Get and show TypeThreeNotMomosePrimes
 
-    type_3_not_momose_primes, list_of_type_3_fields = type_three_not_momose(
+    type_3_not_momose_primes_list, list_of_type_3_fields = type_three_not_momose(
         K, embeddings, strong_type_3_epsilons
     )
-    logging.info("type_3_not_momose_primes = {}".format(type_3_not_momose_primes))
+    logging.info(f"type_3_not_momose_primes = {type_3_not_momose_primes_list}")
 
     # Put them all together
 
     candidates = set.union(
-        set(type_1_primes),
-        set(generic_primes),
-        set(type_2_primes),
-        set(type_3_not_momose_primes),
+        set(type_1_primes_list),
+        set(generic_primes_list),
+        set(type_2_primes_list),
+        set(type_3_not_momose_primes_list),
     )
 
     # Try to remove some of these primes via Bruin-Najman and Box tables,
@@ -141,7 +141,7 @@ def get_isogeny_primes(
 
     if removed_primes:
         candidates -= removed_primes
-        logging.info("Primes removed via weeding = {}".format(removed_primes))
+        logging.info(f"Primes removed via weeding = {removed_primes}")
     else:
         logging.debug("No primes removed via weeding")
 
@@ -193,7 +193,7 @@ def cli_handler(args):  # pylint: disable=redefined-outer-name
         superset, type_3_fields = get_isogeny_primes(
             K,
             args.bound,
-            args.ice_filter,
+            args.ice,
             args.appendix_bound,
             norm_bound=norm_bound,
             auto_stop_strategy=auto_stop_strategy,
@@ -201,7 +201,7 @@ def cli_handler(args):  # pylint: disable=redefined-outer-name
 
         superset_list = list(superset)
         superset_list.sort()
-        logging.info("superset = {}".format(superset_list))
+        logging.info(f"superset = {superset_list}")
 
         possible_new_isog_primes = superset - EC_Q_ISOGENY_PRIMES
         possible_new_isog_primes_list = list(possible_new_isog_primes)
@@ -238,9 +238,11 @@ if __name__ == "__main__":
     )
     parser.add_argument("--verbose", action="store_true", help="get more info printed")
     parser.add_argument(
-        "--ice_filter",
-        action="store_true",
-        help="Use the isogeny character enumeration filter",
+        "--no_ice",
+        dest="ice",
+        action="store_false",
+        help="Turn off the isogeny character enumeration filter",
     )
+    parser.set_defaults(ice=True)
     args = parser.parse_args()
     cli_handler(args)

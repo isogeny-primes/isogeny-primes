@@ -1,7 +1,6 @@
 /*
 The main function in this file is eps_from_isogeny. Which computes epsilon types of isogenies.
-It is inspired by section 1 of:
-    https://www.wstein.org/sage_summer/bsd_comp/Serre-properties_galoisiennes_des_points_dordre_fini_des_courbes_elliptiques.pdf
+It is inspired by section 1 of Serre's `Proprietes Galoisienne' paper.
 
     ====================================================================
 

@@ -1,6 +1,4 @@
-"""test_tensor_product.py
-
-Tests for tensor products.
+"""test_generic.py
 
     ====================================================================
 
@@ -25,38 +23,19 @@ Tests for tensor products.
     maarten@mderickx.nl.
 
     ====================================================================
-
 """
 
-from sage.all import QQ
-from sage.matrix.matrix_space import MatrixSpace
-from sage.matrix.special import block_diagonal_matrix
+import pytest
+from sage.arith.misc import is_squarefree
+from sage.rings.number_field.number_field import QuadraticField
 
-M = MatrixSpace(QQ, 2)
-one = M.one()
-matrices = [M.random_element() for i in range(2000)]
+from sage_code.generic import contains_imaginary_quadratic_field
 
-
-def test_m_tensor_one():
-    for m in matrices:
-        m.tensor_product(one, subdivide=False)
+square_free_D = [D for D in range(-100, 100) if is_squarefree(D) and D != 1]
 
 
-def test_one_tensor_m():
-    for m in matrices:
-        one.tensor_product(m, subdivide=False)
-
-
-def test_m_tensor_one_subdivide():
-    for m in matrices:
-        m.tensor_product(one, subdivide=True)
-
-
-def test_one_tensor_m_subdivide():
-    for m in matrices:
-        one.tensor_product(m, subdivide=True)
-
-
-def test_one_tensor_m_block_diag():
-    for m in matrices:
-        block_diagonal_matrix([m] * one.nrows())
+@pytest.mark.parametrize("D", square_free_D)
+def test_contains_imaginary_quadratic_field(D):
+    K = QuadraticField(D)
+    result = contains_imaginary_quadratic_field(K)
+    assert result == (D < 0)

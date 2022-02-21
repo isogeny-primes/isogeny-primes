@@ -304,7 +304,7 @@ def get_more_fi_data():
 
         if str(d) not in bfi_dat:
             print("Doing d = {}".format(d))
-            bad_formal_immersion_list, bad_aux_prime_dict = get_bad_formal_immersion_data(d)
+            bad_formal_immersion_list, bad_aux_prime_dict = bad_formal_immersion_data(d)
             bfi_dat[str(d)] = {
                                         "bad_formal_immersion_list" : bad_formal_immersion_list,
                                         "bad_aux_prime_dict" : bad_aux_prime_dict

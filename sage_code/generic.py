@@ -96,7 +96,7 @@ def remove_redundant_epsilons(epsilons, galois_group=None):
     return epsilons_output
 
 
-def get_generic_epsilons(d, strong_type_3_epsilons=None, galgp=None, ice_filter=False):
+def generic_signatures(d, strong_type_3_epsilons=None, galgp=None, ice_filter=False):
     """Return the generic and weak Type 3 signatures.
 
     Args:
@@ -345,7 +345,7 @@ def get_strong_type_3_epsilons(K, embeddings):
     return strong_type_3_epsilons
 
 
-def get_pre_type_one_two_primes(
+def generic_primes(
     K,
     norm_bound=50,
     ice_filter=False,
@@ -353,9 +353,8 @@ def get_pre_type_one_two_primes(
     repeat_bound=4,
     character_enumeration_bound=1000,
 ):
-    """Pre type 1-2 primes are the finitely many primes outside of which
-    the isogeny character is necessarily of type 2 (or 3, which is not relevant
-    for us)."""
+    """Generic primes are the finitely many primes outside of which
+    the isogeny character is necessarily of signature type 1, 2 or 3"""
 
     contains_imaginary_quadratic = contains_imaginary_quadratic_field(K)
 
@@ -370,7 +369,7 @@ def get_pre_type_one_two_primes(
         G_K = K.galois_group()
         G_K_emb, _, _, Kgal, embeddings = galois_action_on_embeddings(G_K)
         strong_type_3_epsilons = get_strong_type_3_epsilons(K, embeddings)
-        epsilons = get_generic_epsilons(
+        epsilons = generic_signatures(
             K.degree(),
             strong_type_3_epsilons=strong_type_3_epsilons,
             galgp=G_K_emb,
@@ -380,7 +379,7 @@ def get_pre_type_one_two_primes(
         Kgal = K.galois_closure("b")
         embeddings = K.embeddings(Kgal)
         strong_type_3_epsilons = get_strong_type_3_epsilons(K, embeddings)
-        epsilons = get_generic_epsilons(
+        epsilons = generic_signatures(
             K.degree(),
             strong_type_3_epsilons=strong_type_3_epsilons,
             ice_filter=ice_filter,
