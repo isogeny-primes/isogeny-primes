@@ -1,6 +1,6 @@
 # Isogeny Primes
 
-This is the repository for the program **Isogeny Primes**, and generalizes the algorithms over quadratic fields as explained in the paper [Explicit Isogenies of prime degree over Quadratic fields](https://arxiv.org/abs/2101.02673) to higher degree number fields.
+This is the repository for the program **Isogeny Primes** explained in the paper [Isogenies of prime degree over Number fields](https://arxiv.org/abs/2101.02673).
 
 ### What does it do?
 
@@ -37,6 +37,8 @@ You'll see that you have the following optional arguments:
  ```
 sage isogeny_primes.py 'x^3 - 5' --norm_bound 50
 ```
+
+ - `--dlmv`; returns the DLMV bound for the number field.
 
 ```
 sage isogeny_primes.py 'x^3 - x^2 + 5*x + 14' --dlmv
