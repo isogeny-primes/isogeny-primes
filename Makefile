@@ -29,7 +29,7 @@ SHELL := helper_scripts/bash_sage_shell
 bin = venv/bin
 env = env PATH="${bin}:$$PATH"
 sage_python = python3
-pysrcdirs = sage_code/ tests/ isogeny_primes.py latex_helper.py plot_stats.py
+pysrcdirs = sage_code/ tests/ isogeny_primes.py latex_helper.py
 sage_version = >=9.4
 version_command = "from sagemath.check_version import check_version;\
                    check_version(\"${sage_version}\")"
