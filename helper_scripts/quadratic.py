@@ -58,8 +58,8 @@ def main():
             possible_new_isog_primes = superset - EC_Q_ISOGENY_PRIMES
             possible_new_isog_primes_list = list(possible_new_isog_primes)
             possible_new_isog_primes_list.sort()
-            msg = "D = {} possible isogenies = {}"
-            print(msg.format(D, possible_new_isog_primes_list))
+            if possible_new_isog_primes_list:
+                print(f"D = {D} possible isogenies = {possible_new_isog_primes_list}")
 
 
 main()

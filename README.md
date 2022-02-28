@@ -89,7 +89,7 @@ If you see anything wrong with specific lines of code, please go to that line, c
 
 Alternatively, feel free to send us an email.
 
-# Developers Guide
+# Developer's Guide
 
 ## Project layout
 The directory layout is as follows
@@ -99,7 +99,7 @@ The directory layout is as follows
     ├── helper_scripts      # scripts helping with starting sage
     ├── magma_scripts       # magma scripts
     ├── sage_code           # main python/sage source directory
-    │   └── data_files      # json files containing static data and chaches
+    │   └── data_files      # json files containing static data and caches
     └── tests
         ├── fast_tests      # unittests - these test should be fast and match
         │                   #             the sage_code file structure
