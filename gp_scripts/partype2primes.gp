@@ -37,11 +37,11 @@
 */
 
 
-f=x^3 - x^2 - 2*x + 1;  \\ change this to desired polynomial
+f = x^6 - x^5 - 7*x^4 + 2*x^3 + 7*x^2 - 2*x - 1;  \\ change this to desired polynomial
 K = nfinit(f);
 export(K)
 
-typeTwoBound = 4.1e11;
+typeTwoBound = 1.1e13;  \\ change this to the correct Type 2 bound
 
 \\check if condition CC is satisfied
 satisfiesCC(p,q_start) =
@@ -87,7 +87,6 @@ export(initialCheck)
 switch=7^(2*poldegree(f)) + 7^(poldegree(f)) + 1;
 howManyInitial = floor(switch/blockSize);
 
-parapply(initialCheck,[0..howManyInitial+1]);
 
 my_res_classes = [667,67,547,163,403,43];
 export(my_res_classes)
@@ -102,8 +101,9 @@ mainCheck(pBeg) =
 }
 export(mainCheck)
 
-howMany=floor(1e8/blockSize);
+howMany=floor(typeTwoBound/blockSize);
 
-\\ Takes about 27 seconds up to a billion!
+\\ To check Type 2 primes, run the following two commands
 
+\\ parapply(initialCheck,[0..howManyInitial+1]);
 \\ parapply(mainCheck,[howManyInitial..howMany]);

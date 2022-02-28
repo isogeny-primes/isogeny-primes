@@ -49,7 +49,7 @@ from sage_code.type_one_primes import BAD_FORMAL_IMMERSION_DATA_PATH
 # URLs to access LMFDB data
 SGNF_URL_TRUNK = (
     "https://www.lmfdb.org/api/nf_fields/?_format=json&degree={}&"
-    "is_galois=true&_fields=label,disc_abs,disc_sign,coeffs"
+    "is_galois=true&class_number=1&_fields=label,disc_abs,disc_sign,coeffs"
 )
 
 LMFDB_NF_URL_TRUNK = "https://www.lmfdb.org/NumberField/{}"
@@ -141,9 +141,9 @@ class Latexer:
         output_str = r"${d}$ & ${Delta_K}$ & {lmfdb_link_latex} & {possible_isogeny_primes} & ${time_s:.2f}$\\"
         latex_output = []
         for d in range(2, self.range + 1):
-            Delta_K, f_K, K, Klabel = get_smallest_good_number_field(d)
+            Delta_K, _, K, Klabel = get_smallest_good_number_field(d)
             t_start = perf_counter()
-            candidates, _ = get_isogeny_primes(K, ice_filter=True, appendix_bound=500)
+            candidates, _ = get_isogeny_primes(K, ice_filter=True, appendix_bound=200)
             t_end = perf_counter()
             time_taken = t_end - t_start
             candidates = [c for c in candidates if c not in EC_Q_ISOGENY_PRIMES]
@@ -160,10 +160,8 @@ class Latexer:
                 possible_isogeny_primes=possible_isogeny_primes,
                 time_s=time_taken,
             )
+            print(output_here)
             latex_output.append(output_here)
-
-        for one_line in latex_output:
-            print(one_line)
 
     def type_2_bounds(self):
         """generate the type 2 bounds table"""
