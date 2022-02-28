@@ -92,3 +92,13 @@ def type_three_not_momose(K, embeddings, strong_type_3_epsilons):
     type_three_not_momose_bound = ZZ(lcm(list(bound_dict.values())))
 
     return type_three_not_momose_bound.prime_divisors(), type_3_fields
+
+
+def type_three_ramified(list_of_type_3_fields):
+
+    output = []
+
+    for L in list_of_type_3_fields:
+        for p in L.discriminant().prime_divisors():
+            output.append(p)
+    return output

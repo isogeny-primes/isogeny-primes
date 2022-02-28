@@ -39,7 +39,7 @@ from sage_code.common_utils import EC_Q_ISOGENY_PRIMES, R
 from sage_code.generic import generic_primes
 from sage_code.type_one_primes import type_1_primes
 from sage_code.type_two_primes import get_type_2_bound, type_2_primes
-from sage_code.type_three_not_momose import type_three_not_momose
+from sage_code.type_three_not_momose import type_three_not_momose, type_three_ramified
 from sage_code.weeding import apply_weeding
 
 ########################################################################
@@ -127,11 +127,14 @@ def get_isogeny_primes(
 
     # Put them all together
 
+    type_three_ramified_list = type_three_ramified(list_of_type_3_fields)
+
     candidates = set.union(
         set(type_1_primes_list),
         set(generic_primes_list),
         set(type_2_primes_list),
         set(type_3_not_momose_primes_list),
+        set(type_three_ramified_list),
     )
 
     # Try to remove some of these primes via Bruin-Najman and Box tables,
