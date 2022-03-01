@@ -22,6 +22,10 @@ The main file is `isogeny_primes.py`. It takes one positional argument - f - whi
 sage isogeny_primes.py 'x^6 - x^5 + x^4 - x^3 + x^2 - x + 1'
 ```
 
+#### That didn't work for me ...
+
+**Isogeny Primes** has a number of requirements which your system may not have. In this case, you should run `make` in the top level of the directory. This will install the necessary requirements. You could also do `make valid_fast`; this will install everything _and_ run some light testing to make sure everything works fine. If anything goes wrong and you want to start again, run `make clean` before trying again.
+
 #### Optional arguments
 
 To see the various options, run
