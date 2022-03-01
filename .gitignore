@@ -1,10 +1,7 @@
 nether_regions.sage
-v0.1
-v1.0_submission
-video.mkv
-zagreb_explicit_isogenies.pdf
-title_page.png
-
+error.json
+results.json
+gp_scripts/partype2primesunif.gp
 # OS files
 .DS_Store
 

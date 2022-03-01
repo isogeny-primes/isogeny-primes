@@ -1,4 +1,4 @@
-"""type_one_primes.py
+"""type_two_primes.py
 
     Deals with the Type two primes.
 
@@ -6,12 +6,12 @@
 
     This file is part of Isogeny Primes.
 
-    Copyright (C) 2021 Barinder Singh Banwait and Maarten Derickx
+    Copyright (C) 2022 Barinder S. Banwait and Maarten Derickx
 
-    Isogeny Primes is free software: you can redistribute it and/or
-    modify it under the terms of the GNU General Public License as
-    published by the Free Software Foundation, either version 3 of the
-    License, or any later version.
+    Isogeny Primes is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    any later version.
 
     This program is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -20,6 +20,9 @@
 
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+    The authors can be reached at: barinder.s.banwait@gmail.com and
+    maarten@mderickx.nl.
 
     ====================================================================
 
@@ -36,9 +39,14 @@ from sage.all import (
     log,
     pari,
     prime_range,
+    ZZ,
+    gcd,
+    lcm,
 )  # pylint: disable=no-name-in-module
 
-from sage_code.common_utils import x
+from .common_utils import x, get_ordinary_weil_polys_from_values, auxgens
+from .generic import ABC_integers
+from .character_enumeration import character_enumeration_filter
 
 logger = logging.getLogger(__name__)
 
@@ -138,8 +146,74 @@ def satisfies_condition_CC_uniform(possible_odd_f, p):
     return True
 
 
-def get_type_2_primes(K, bound=None):
+def get_the_lcm(C_K, embeddings, d, gen_list):
+
+    type_2_eps = (6,) * d
+    epsilons = {type_2_eps: "type-2"}
+    running_lcm = 1
+    for frak_q in gen_list:
+        nm_q = ZZ(frak_q.absolute_norm())
+        q, a = nm_q.perfect_power()
+
+        q_class_group_order = C_K(frak_q).multiplicative_order()
+        ordinary_frob_polys = get_ordinary_weil_polys_from_values(q, a)
+        ABCo_lcm = ABC_integers(
+            embeddings, frak_q, epsilons, q_class_group_order, ordinary_frob_polys
+        )[type_2_eps]
+        running_lcm = lcm([running_lcm, ABCo_lcm, ZZ(nm_q)])
+    return running_lcm
+
+
+def get_type_2_not_momose(K, embeddings):
+    """Compute a superset of TypeTwoNotMomosePrimes"""
+
+    C_K = K.class_group()
+    h_K = C_K.order()
+    d = K.degree()
+
+    if h_K == 1:
+        return set()
+
+    aux_gen_list = auxgens(K)
+
+    running_gcd = 0
+    for gen_list in aux_gen_list:
+        the_lcm = get_the_lcm(C_K, embeddings, d, gen_list)
+        running_gcd = gcd(the_lcm, running_gcd)
+
+    pre_ice_mult_bound = ZZ(running_gcd)
+
+    type_2_eps = (6,) * d
+    epsilons = {type_2_eps: "type-2"}
+
+    bound_dict = {type_2_eps: pre_ice_mult_bound}
+
+    Kgal = embeddings[0].codomain()
+
+    output = character_enumeration_filter(
+        K,
+        C_K,
+        Kgal,
+        bound_dict,
+        epsilons,
+        1000,
+        embeddings,
+        auto_stop_strategy=True,
+    )
+
+    return output
+
+
+def type_2_primes(K, embeddings, bound=None):
     """Compute a list containing the type 2 primes"""
+
+    logger.debug("Starting Type 2 computation ...")
+
+    # First compute the superset of type 2 primes which are not of Momose Type 2
+
+    output = get_type_2_not_momose(K, embeddings)
+    logger.debug("Type 2 not Momose = {}".format(sorted(output)))
+    # Now deal with Momose Type 2
 
     # First get the bound
     if bound is None:
@@ -148,7 +222,7 @@ def get_type_2_primes(K, bound=None):
 
     # We need to include all primes up to 25
     # see Larson/Vaintrob's proof of Theorem 6.4
-    output = set(prime_range(25))
+    output = output.union(set(prime_range(25)))
 
     for p in pari.primes(25, bound):
         p_int = Integer(p)

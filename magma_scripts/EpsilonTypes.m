@@ -1,7 +1,31 @@
 /*
 The main function in this file is eps_from_isogeny. Which computes epsilon types of isogenies.
-It is inspired by section 1 of:
-    https://www.wstein.org/sage_summer/bsd_comp/Serre-properties_galoisiennes_des_points_dordre_fini_des_courbes_elliptiques.pdf
+It is inspired by section 1 of Serre's `Proprietes Galoisienne' paper.
+
+    ====================================================================
+
+    This file is part of Isogeny Primes.
+
+    Copyright (C) 2022 Barinder S. Banwait and Maarten Derickx
+
+    Isogeny Primes is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+    The authors can be reached at: barinder.s.banwait@gmail.com and
+    maarten@mderickx.nl.
+
+    ====================================================================
+
 */
 
 
@@ -113,7 +137,7 @@ end function;
 function print_eps_type_info(t, p)
   phi,OK := quadratic_isogeny(t,p);
   K := NumberField(OK);
-  print t,K;
+  print t, ClassNumber(K), K;
   E := Domain(phi);
   j := jInvariant(E);
   j2 := jInvariant(Codomain(phi));

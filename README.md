@@ -1,16 +1,14 @@
 # Isogeny Primes
 
-This is the repository for the program **Isogeny Primes**, and generalizes the algorithms over quadratic fields as explained in the paper [Explicit Isogenies of prime degree over Quadratic fields](https://arxiv.org/abs/2101.02673) to higher degree numberfields.
+This is the repository for the program **Isogeny Primes** explained in the paper [Isogenies of prime degree over Number fields](https://arxiv.org/abs/2101.02673).
 
 ### What does it do?
 
-At the moment the generalization to higher degree number fields is pretty much work in progress. However it works for quadratic fields.
+You give it a polynomial.
 
-You give it a quadratic field, not imaginary quadratic of class number one.
+It will give you a set of primes containing the **isogeny primes** for the number field defined by your input polynomial.
 
-It will give you a set of primes containing the **isogeny primes** for your chosen quadratic field.
-
-It will then be up to you to determine which of those are actually isogeny primes. Some techniques for how you might go about doing this are explained in Section 11 of the paper.
+It will then be up to you to determine which of those are actually isogeny primes.
 
 ### How do I use it?
 
@@ -18,10 +16,10 @@ Clone this repo to your computer. It is assumed you have [sage](https://sagemath
 
 #### Typical use
 
-The main file is `isogeny_primes.py`. It takes one positional argument - D - which corresponds to your quadratic field. So if you're interested to see the isogeny primes over Q(root-5), you'd enter the following at the command line:
+The main file is `isogeny_primes.py`. It takes one positional argument - f - which is the polynomial. So if you're interested to see the isogeny primes over Q(zeta7), you'd enter the following at the command line:
 
 ```
-sage isogeny_primes.py 5
+sage isogeny_primes.py 'x^6 - x^5 + x^4 - x^3 + x^2 - x + 1'
 ```
 
 #### Optional arguments
@@ -34,86 +32,64 @@ sage isogeny_primes.py --help
 
 You'll see that you have the following optional arguments:
 
- - `--aux_prime_count`; this tells the program how many auxiliary primes to take. So you could for example do the following to take 6 auxiliary primes:
+ - `--norm_bound`; if specified this will take auxiliary primes up to the specified bound. However, doing this also turns off the auto stop strategy.
 
  ```
-sage isogeny_primes.py 5 --aux_prime_count 6
+sage isogeny_primes.py 'x^3 - 5' --norm_bound 50
 ```
 
- - `--loop_curves`; this will loop over all elliptic curves and compute the characteristic polynomials of Frobenius, not just return all possible Weil polynomials. This returns a possibly smaller set of primes at the expense of possibly longer runtime.
-
- ```
-sage isogeny_primes.py 5 --aux_prime_count 6 --loop_curves
-```
-
- - `--dlmv`; this will return the dlmv bound:
+ - `--dlmv`; returns the DLMV bound for the number field.
 
 ```
-sage isogeny_primes.py 17 --dlmv
+sage isogeny_primes.py 'x^3 - x^2 + 5*x + 14' --dlmv
 ```
 
  - `--bound`; this specifies the bound on Type 2 primes that the sage code will check up to. Sage can go up to about 10 million, but beyond that you'll start seeing pari memory overflows.
 
 ```
-sage isogeny_primes.py 17 --bound 10000000
+sage isogeny_primes.py 'x^5 + 19' --bound 10000000
 ```
 
- - `--rigorous`; this will attempt to check all primes up to the Type 2 bound. This is a legacy feature which will be phased out in the next release; for checking up to the tens of billions, use the PARI/GP script.
+ - `--appendix_bound`; the bound on possible isogeny primes beyond which the method of the appendix will not be performed. Increasing this can massively slow down the code.
 
 ```
-sage isogeny_primes.py 17 --rigorous
+sage isogeny_primes.py 'x^6 + 6*x + 14*x + 89' --appendix_bound 1000
 ```
 
-
-#### Generating the tables in the introduction
-
-Typos away!
-Your fears we shall allay!
-We have code that automatically generates the latex for the tables any day!
-
-The following generates the LaTeX for the DLMV table
+ - `--verbose`; for power users who want to know what the program is doing.
 
 ```
-sage latex_helper.py 10 --table dlmv
+sage isogeny_primes.py 'x^5 + 19' --verbose
 ```
 
-The `10` refers to how many quadratic fields you want in the table. Change that according to how many you want to see.
+ - `--no_ice`; this turns off the isogeny character enumeration (ICE) filter. This will speed up the code but likely give a larger superset. Turning ICE off for large degree number fields might be necessary.
 
-Change `dlmv` to `lpp` to get the **Large Putative isogeny Primes** table.
+```
+sage isogeny_primes.py 'x^17 + 19' --no_ice
+```
 
-### Wasn't there also some Magma and PARI/GP code?
+#### Generating the tables in the paper
 
-You'll find these in their respective folders.
+Code for generating the LaTeX for the tables in the paper is done with `latex_helper.py`. For example,
 
-The [PARI/GP](https://pari.math.u-bordeaux.fr/) code is used to rule out the "type two primes". The file `type2primes.gp` will explain how to do this.
+```
+sage latex_helper.py 10 --table bfi
+```
 
-The [Magma](http://magma.maths.usyd.edu.au/magma/) code is there so that others can verify the stuff being done in Section 11 of the paper. Note that you'll need a Magma licence for this.
+will generate the Bad Formal Immersion Data table. The `10` refers to how many fields you want in the table. Change that according to how many you want to see.
 
-### I tried running it for D = 895643215786, but several days later it's still running!
+See the source code of `latex_helper.py` to see the other options.
 
-The current release has been tested for |D| <= 100, and even there you'll find cases (D = -86) where the program does not finish in reasonable time. The issue comes, as ever, down to factoring very large numbers.
-
-This is not at all to say that it won't run for |D| > 100; indeed, one of the unit tests checks for D = 2885, which finishes in less than 2 seconds.
-
-Speeding this up to run on massive Ds has been declared a stretch goal for the Birch release.
 
 ### I found a bug, what do I do now?
 
-Please report any bugs in the [issues](https://github.com/BarinderBanwait/quadratic_isogeny_primes/issues) section.
+Please report any bugs in the [issues](https://github.com/isogeny_primes/isogeny_primes/issues) section.
 
 If you see anything wrong with specific lines of code, please go to that line, click the three dots that appear, and click "Reference in new issue".
 
-Alternatively, feel free to send me an email.
+Alternatively, feel free to send us an email.
 
-### Why only quadratic fields? I want isogeny primes over number fields of degree a gazillion.
-
-Well I'm afraid you're gonna have to wait dear reader! Even extending the algorithms to cover degree 3 is beyond current technology. One question that needs to be addressed is extending Momose's P_(n) constants; this is related to when the nth Symmetric power of X_0(N) is a formal immersion at infinity. Work that out, and we might be in business!
-
-### Where can I learn more about elliptic curves and other cool stuff?
-
-You can head over to the [L-functions and Modular Forms Database](https://lmfdb.org/), there you'll find loads of resources, data, and proper cool images.
-
-# Developers Guide
+# Developer's Guide
 
 ## Project layout
 The directory layout is as follows
@@ -123,7 +99,7 @@ The directory layout is as follows
     ├── helper_scripts      # scripts helping with starting sage
     ├── magma_scripts       # magma scripts
     ├── sage_code           # main python/sage source directory
-    │   └── data_files      # json files containing static data and chaches
+    │   └── data_files      # json files containing static data and caches
     └── tests
         ├── fast_tests      # unittests - these test should be fast and match
         │                   #             the sage_code file structure
@@ -132,8 +108,7 @@ The directory layout is as follows
 
 ## Developer tools
 
-The most important developer tool is the Makefile. It contains several commands
-that help with development. 
+The most important developer tool is the Makefile. It contains several commands that help with development.
 
 The most important command are:
 
@@ -149,8 +124,7 @@ creating a pull request. Both of these commands do the following things
 - Run (a subset of) tests in the tests folder
 - Print a coverage report of tests that were run
 
-The main difference is that `make valid` runs all tests. While `make valid_fast` 
-runs only unittests.
+The main difference is that `make valid` runs all tests, while `make valid_fast` runs only unittests.
 
 Here are some other useful commands:
 
@@ -171,7 +145,7 @@ For the rest see the source code of the makefile itself.
 
 # Copyright
 
-    ####  Copyright (C) 2021 Barinder Singh Banwait and Maarten Derickx
+    ####  Copyright (C) 2022 Barinder S. Banwait and Maarten Derickx
 
     Isogeny Primes is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -186,3 +160,5 @@ For the rest see the source code of the makefile itself.
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+    The authors can be reached at: barinder.s.banwait@gmail.com and
+    maarten@mderickx.nl.

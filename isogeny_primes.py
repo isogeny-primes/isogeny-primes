@@ -6,7 +6,7 @@
 
     This file is part of Isogeny Primes.
 
-    Copyright (C) 2021 Barinder Singh Banwait and Maarten Derickx
+    Copyright (C) 2022 Barinder S. Banwait and Maarten Derickx
 
     Isogeny Primes is free software: you can redistribute it and/or
     modify it under the terms of the GNU General Public License as
@@ -21,6 +21,9 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+    The authors can be reached at: barinder.s.banwait@gmail.com and
+    maarten@mderickx.nl.
+
     ====================================================================
 
 """
@@ -33,9 +36,10 @@ import logging
 from sage.all import RR, NumberField, exp, log
 
 from sage_code.common_utils import EC_Q_ISOGENY_PRIMES, R
-from sage_code.pre_type_one_two import get_pre_type_one_two_primes
-from sage_code.type_one_primes import get_type_1_primes
-from sage_code.type_two_primes import get_type_2_bound, get_type_2_primes
+from sage_code.generic import generic_primes
+from sage_code.type_one_primes import type_1_primes
+from sage_code.type_two_primes import get_type_2_bound, type_2_primes
+from sage_code.type_three_not_momose import type_three_not_momose
 from sage_code.weeding import apply_weeding
 
 ########################################################################
@@ -77,49 +81,57 @@ def DLMV(K):
 
 def get_isogeny_primes(
     K,
-    norm_bound,
     bound=1000,
-    loop_curves=True,
-    use_PIL=False,
-    heavy_filter=False,
+    ice_filter=False,
     appendix_bound=1000,
+    norm_bound=50,
+    auto_stop_strategy=True,
+    repeat_bound=4,
 ):
 
     # Start with some helpful user info
 
-    logging.info("Finding isogeny primes for {}.".format(K))
-    logging.info("Bound on auxiliary primes is {}.".format(norm_bound))
+    logging.info(f"Finding isogeny primes for {K}.")
+    logging.info(f"Bound on auxiliary primes is {norm_bound}.")
 
-    # Get and show PreTypeOneTwoPrimes
+    # Get and show GenericPrimes
 
-    pre_type_one_two_primes = get_pre_type_one_two_primes(
+    (strong_type_3_epsilons, embeddings, generic_primes_list) = generic_primes(
         K,
         norm_bound=norm_bound,
-        loop_curves=loop_curves,
-        use_PIL=use_PIL,
-        heavy_filter=heavy_filter,
+        ice_filter=ice_filter,
+        auto_stop_strategy=auto_stop_strategy,
+        repeat_bound=repeat_bound,
     )
 
-    logging.info("pre_type_1_2_primes = {}".format(pre_type_one_two_primes))
+    logging.info(f"generic_primes = {generic_primes_list}")
 
     # Get and show TypeOnePrimes
 
     C_K = K.class_group()
 
-    type_1_primes = get_type_1_primes(
-        K, C_K, norm_bound=norm_bound, loop_curves=loop_curves
-    )
-    logging.info("type_1_primes = {}".format(type_1_primes))
+    type_1_primes_list = type_1_primes(K, C_K, norm_bound=norm_bound)
+    logging.info(f"type_1_primes = {type_1_primes_list}")
 
     # Get and show TypeTwoPrimes
 
-    type_2_primes = get_type_2_primes(K, bound=bound)
-    logging.info("type_2_primes = {}".format(type_2_primes))
+    type_2_primes_list = type_2_primes(K, embeddings, bound=bound)
+    logging.info(f"type_2_primes = {type_2_primes_list}")
+
+    # Get and show TypeThreeNotMomosePrimes
+
+    type_3_not_momose_primes_list, list_of_type_3_fields = type_three_not_momose(
+        K, embeddings, strong_type_3_epsilons
+    )
+    logging.info(f"type_3_not_momose_primes = {type_3_not_momose_primes_list}")
 
     # Put them all together
 
     candidates = set.union(
-        set(type_1_primes), set(pre_type_one_two_primes), set(type_2_primes)
+        set(type_1_primes_list),
+        set(generic_primes_list),
+        set(type_2_primes_list),
+        set(type_3_not_momose_primes_list),
     )
 
     # Try to remove some of these primes via Bruin-Najman and Box tables,
@@ -129,11 +141,11 @@ def get_isogeny_primes(
 
     if removed_primes:
         candidates -= removed_primes
-        logging.info("Primes removed via weeding = {}".format(removed_primes))
+        logging.info(f"Primes removed via weeding = {removed_primes}")
     else:
         logging.debug("No primes removed via weeding")
 
-    return candidates
+    return candidates, list_of_type_3_fields
 
 
 ########################################################################
@@ -165,35 +177,43 @@ def cli_handler(args):  # pylint: disable=redefined-outer-name
             )
         )
     else:
-        if args.rigorous:
-            bound = None
-            logging.info("Checking all Type 2 primes up to conjectural bound")
+        logging.warning(
+            "Only checking Type 2 primes up to %s. "
+            "To check all, use the PARI/GP script.",
+            args.bound,
+        )
+
+        if args.norm_bound:
+            norm_bound = args.norm_bound
+            auto_stop_strategy = False
         else:
-            bound = args.bound
-            logging.warning(
-                "Only checking Type 2 primes up to {}. "
-                "To check all, use the PARI/GP script.".format(bound)
-            )
-        superset = get_isogeny_primes(
+            norm_bound = 50  # still needed for Type 1
+            auto_stop_strategy = True
+
+        superset, type_3_fields = get_isogeny_primes(
             K,
-            args.norm_bound,
-            bound,
-            args.loop_curves,
-            args.use_PIL,
-            args.heavy_filter,
+            args.bound,
+            args.ice,
             args.appendix_bound,
+            norm_bound=norm_bound,
+            auto_stop_strategy=auto_stop_strategy,
         )
 
         superset_list = list(superset)
         superset_list.sort()
-        logging.info("superset = {}".format(superset_list))
+        logging.info(f"superset = {superset_list}")
 
         possible_new_isog_primes = superset - EC_Q_ISOGENY_PRIMES
         possible_new_isog_primes_list = list(possible_new_isog_primes)
         possible_new_isog_primes_list.sort()
-        logging.info(
-            "Possible new isogeny primes = {}".format(possible_new_isog_primes_list)
-        )
+        logging.info(f"Possible new isogeny primes = {possible_new_isog_primes_list}")
+        if type_3_fields:
+            how_many_fields = len(type_3_fields)
+            logging.info(
+                f"Outside of the above set, any isogeny primes must be "
+                f"of Momose Type 3 with imaginary quadratic field L, for L one "
+                f"of the following {how_many_fields} field(s):\n {type_3_fields}"
+            )
 
 
 if __name__ == "__main__":
@@ -205,12 +225,6 @@ if __name__ == "__main__":
         "--norm_bound",
         type=int,
         help="bound on norm of aux primes in PreTypeOneTwo case",
-        default=50,
-    )
-    parser.add_argument(
-        "--loop_curves",
-        action="store_true",
-        help="loop over elliptic curves, don't just loop over all weil polys",
     )
     parser.add_argument("--dlmv", action="store_true", help="get only DLMV bound")
     parser.add_argument(
@@ -219,24 +233,16 @@ if __name__ == "__main__":
     parser.add_argument(
         "--appendix_bound",
         type=int,
-        help="bound on the primes to try the metod of the appendix",
+        help="bound on the primes to try the method of the appendix",
         default=1000,
-    )
-    parser.add_argument(
-        "--rigorous",
-        action="store_true",
-        help="search all Type 2 primes up to conjectural bound",
     )
     parser.add_argument("--verbose", action="store_true", help="get more info printed")
     parser.add_argument(
-        "--use_PIL",
-        action="store_true",
-        help="Use the principal ideal lattice to get the best possible result. Might take ages.",
+        "--no_ice",
+        dest="ice",
+        action="store_false",
+        help="Turn off the isogeny character enumeration filter",
     )
-    parser.add_argument(
-        "--heavy_filter",
-        action="store_true",
-        help="Use the heavy Better than PIL method for filtering.",
-    )
+    parser.set_defaults(ice=True)
     args = parser.parse_args()
     cli_handler(args)

@@ -1,16 +1,16 @@
 """test_quadratic_isogeny_primes.py
 
-To run these tests, enter the following, possibly as sudo:
+To run these tests, enter the following:
 
-sage test_quadratic_isogeny_primes.py
+make integrationtests
 
     ====================================================================
 
-    This file is part of Quadratic Isogeny Primes.
+    This file is part of Isogeny Primes.
 
-    Copyright (C) 2021 Barinder Singh Banwait
+    Copyright (C) 2022 Barinder S. Banwait and Maarten Derickx
 
-    Quadratic Isogeny Primes is free software: you can redistribute it and/or modify
+    Isogeny Primes is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
     the Free Software Foundation, either version 3 of the License, or
     any later version.
@@ -23,7 +23,8 @@ sage test_quadratic_isogeny_primes.py
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-    The author can be reached at: barinder.s.banwait@gmail.com
+    The authors can be reached at: barinder.s.banwait@gmail.com and
+    maarten@mderickx.nl.
 
     ====================================================================
 
@@ -38,24 +39,35 @@ from sage.all import Integer, QuadraticField
 from isogeny_primes import get_isogeny_primes
 from sage_code.common_utils import CLASS_NUMBER_ONE_DISCS, EC_Q_ISOGENY_PRIMES
 
-AUX_PRIME_COUNT = 10
+TEST_SETTINGS = {
+    "norm_bound": 50,
+    "bound": 1000,
+    "ice_filter": True,
+}
 
 # total running time of all tests in this file is about 5 minutes
 
 # Check that the code actually runs for several Ds
-R = 10
-square_free_D = [D for D in range(-R, R + 1) if Integer(D).is_squarefree() and D != 1]
+R = 30
+square_free_D = [D for D in range(-R, R) if Integer(D).is_squarefree() and D != 1]
 
 
 @pytest.mark.parametrize("D", square_free_D)
 def test_interval(D):
     K = QuadraticField(D)
     if not K.discriminant() in CLASS_NUMBER_ONE_DISCS:
-        superset = get_isogeny_primes(K, AUX_PRIME_COUNT)
-        assert set(superset).issuperset(EC_Q_ISOGENY_PRIMES)
+        superset, _ = get_isogeny_primes(K, **TEST_SETTINGS)
+        # test that there are not too many primes left over
+        todo = set(superset).difference(EC_Q_ISOGENY_PRIMES)
+        assert len(todo) == 0 or max(todo) <= 109
+        assert len(todo) <= 2 or max(todo) <= 31
 
 
-# The first case comes from Box's determination of quadratic points
+# The first example was found by using:
+# print_eps_type_info(-3, 29)
+# from the EpsilonTypes.m magma script
+
+# The second case comes from Box's determination of quadratic points
 # on X_0(73). From his table, we find that D = -31 should yield a
 # 73 isogeny. The other values in his table have either been checked
 # Gonzaléz, Lario, and Quer or are class number one Ds.
@@ -74,19 +86,20 @@ def test_interval(D):
 @pytest.mark.parametrize(
     "D, extra_isogeny, appendix_bound, potenial_isogenies",
     [
-        (-31, 73, 1000, {31, 41}),
-        (-127, 73, 1000, {31, 41, 61, 79}),
-        (5 * 577, 103, 1000, {577}),
-        (-31159, 137, 1000, {23, 29, 41, 61, 79, 109, 31159}),
-        (61 * 229 * 145757, 191, 0, {31, 173, 229, 241, 145757}),
-        (11 * 17 * 9011 * 23629, 311, 0, {71, 9011, 23629}),
+        (179, 29, 1000, set()),
+        (-31, 73, 1000, set()),
+        (-127, 73, 1000, {31, 61}),
+        (5 * 577, 103, 1000, set()),
+        (-31159, 137, 1000, {23, 29, 61, 157}),
+        (61 * 229 * 145757, 191, 0, {29, 31}),
+        (11 * 17 * 9011 * 23629, 311, 0, {71}),
     ],
 )
 def test_from_literature(D, extra_isogeny, appendix_bound, potenial_isogenies):
     K = QuadraticField(D)
     upperbound = potenial_isogenies.union(EC_Q_ISOGENY_PRIMES).union({extra_isogeny})
-    superset = get_isogeny_primes(K, AUX_PRIME_COUNT, appendix_bound=appendix_bound)
-    assert set(superset).issuperset(EC_Q_ISOGENY_PRIMES)
+    superset, _ = get_isogeny_primes(K, appendix_bound=appendix_bound, **TEST_SETTINGS)
+    assert set(EC_Q_ISOGENY_PRIMES).difference(superset) == set()
     assert extra_isogeny in superset
-    assert upperbound.issuperset(superset)
-    assert set(upperbound.difference(superset)) == set()
+    assert set(superset.difference(upperbound)) == set(), "We got worse at filtering"
+    assert set(upperbound.difference(superset)) == set(), "We got better at filtering"

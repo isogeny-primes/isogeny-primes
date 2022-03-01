@@ -1,25 +1,53 @@
+# Installs and checks requirements needed for Isogeny Primes.
+
+    # ====================================================================
+
+    # This file is part of Isogeny Primes.
+
+    # Copyright (C) 2022 Barinder S. Banwait and Maarten Derickx
+
+    # Isogeny Primes is free software: you can redistribute it and/or modify
+    # it under the terms of the GNU General Public License as published by
+    # the Free Software Foundation, either version 3 of the License, or
+    # any later version.
+
+    # This program is distributed in the hope that it will be useful,
+    # but WITHOUT ANY WARRANTY; without even the implied warranty of
+    # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    # GNU General Public License for more details.
+
+    # You should have received a copy of the GNU General Public License
+    # along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+    # The authors can be reached at: barinder.s.banwait@gmail.com and
+    # maarten@mderickx.nl.
+
+    # ====================================================================
+
 SHELL := helper_scripts/bash_sage_shell
 
 bin = venv/bin
 env = env PATH="${bin}:$$PATH"
 sage_python = python3
-pysrcdirs = sage_code/ tests/ isogeny_primes.py latex_helper.py plot_stats.py
+pysrcdirs = sage_code/ tests/ isogeny_primes.py latex_helper.py
 sage_version = >=9.4
 version_command = "from sagemath.check_version import check_version;\
                    check_version(\"${sage_version}\")"
+log_level = INFO
 
 # this script should automatically get the correct python from sage
 # if not, you can try
 # make venv sage_python=/path/to/sagemath/local/bin/python3
 venv:
 	${env} && ${sage_python} -m venv --system-site-packages venv
-	. venv/bin/activate && ${env} pip install -U pip pip-tools
+	# pip<22 only needed for https://github.com/jazzband/pip-tools/issues/1558
+	. venv/bin/activate && ${env} pip install -U pip-tools 'pip<22'
 
 requirements.txt: venv requirements.in
-	. venv/bin/activate && ${env} python3 -m piptools compile requirements.in
+	. venv/bin/activate && ${env} ${sage_python} -m piptools compile requirements.in
 
 requirements-dev.txt: venv requirements-dev.in
-	. venv/bin/activate && ${env} python3 -m piptools compile requirements-dev.in
+	. venv/bin/activate && ${env} ${sage_python} -m piptools compile requirements-dev.in
 
 .PHONY:	pip-compile
 pip-compile: requirements.txt requirements-dev.txt
@@ -27,28 +55,32 @@ pip-compile: requirements.txt requirements-dev.txt
 .PHONY: pip-install
 pip-install: venv/make_pip_install_complete
 venv/make_pip_install_complete: requirements.txt
-	. venv/bin/activate && ${env} pip install -Ur requirements.txt
+	. venv/bin/activate && ${env} pip install -IUr requirements.txt
 	. venv/bin/activate && ${env} python -c ${version_command}
 	touch venv/make_pip_install_complete
 
 .PHONY: pip-install-dev
 pip-install-dev: venv/make_pip_install_dev_complete
 venv/make_pip_install_dev_complete: venv/make_pip_install_complete requirements-dev.txt
-	. venv/bin/activate && ${env} pip install -Ur requirements-dev.txt
+	. venv/bin/activate && ${env} pip install -IUr requirements-dev.txt
 	touch venv/make_pip_install_dev_complete
 
 
 .PHONY: unittests
 unittests: pip-install-dev ## Run unittests using pytest
-	. venv/bin/activate && ${env} coverage run -m pytest -vv --log-cli-level=DEBUG tests/fast_tests
+	. venv/bin/activate && ${env} coverage run -m pytest -vv --log-cli-level=${log_level} tests/fast_tests
 
 .PHONY: integrationtests
 integrationtests: pip-install-dev ## Run integrationtests using pytest
-	. venv/bin/activate && ${env} coverage run -m pytest -vv --log-cli-level=DEBUG tests/slow_tests
+	. venv/bin/activate && ${env} coverage run -m pytest -vv --log-cli-level=${log_level} tests/slow_tests
+
+.PHONY: performancetests
+performancetests: pip-install-dev ## Run performancetests using pytest
+	. venv/bin/activate && ${env} coverage run -m pytest -vv tests/performance_tests
 
 .PHONY: test
-test: pip-install-dev ## Run all tests using pytest
-	. venv/bin/activate && ${env} coverage run -m pytest -vv -log-cli-level=DEBUG
+test: pip-install-dev
+	. venv/bin/activate && ${env} coverage run -m pytest -vv --log-cli-level=${log_level} tests/fast_tests tests/slow_tests
 
 .PHONY: test-report
 test-report: pip-install-dev
@@ -86,12 +118,29 @@ vulture: pip-install-dev
 lint: pip-install-dev  ## Do basic linting
 	@. venv/bin/activate && ${env} pylint --extension-pkg-allow-list=sage ${pysrcdirs}
 
+PSTATS = $(wildcard profiling_results/**/*.pstats)
+PNG = $(PSTATS:.pstats=.png)
+
+.PHONY: profile
+profile: pip-install-dev $(PNG)
+
+.PHONY: profile_test
+profile_valid: profile
+# means the above command is not executed if PROFILE_SCOPE is not set
+profile_valid${PROFILE_SCOPE}:
+
+
+profiling_results/%.png: profiling_results/%.pstats
+	gprof2dot -f pstats $< | sed '/->/s/label=/xlabel=/g' | dot -Tpng -Gsplines="ortho" -Gnodesep="0.25" -Granksep="0.75" -o $@
+
 # should add lint at some point but still has to many failures at the moment
 .PHONY: valid
 valid: pip-install-dev vulture fix test test-report
+	${MAKE} profile_valid PROFILE_SCOPE=${PROFILE_SCOPE}
 
 .PHONY: valid_fast
 valid_fast: pip-install-dev vulture fix unittests test-report
+	${MAKE} profile_valid PROFILE_SCOPE=${PROFILE_SCOPE}
 
 
 clean: ## Cleanup

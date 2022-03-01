@@ -6,12 +6,12 @@
 
     This file is part of Isogeny Primes.
 
-    Copyright (C) 2021 Barinder Singh Banwait and Maarten Derickx
+    Copyright (C) 2022 Barinder S. Banwait and Maarten Derickx
 
-    Isogeny Primes is free software: you can redistribute it and/or
-    modify it under the terms of the GNU General Public License as
-    published by the Free Software Foundation, either version 3 of the
-    License, or any later version.
+    Isogeny Primes is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    any later version.
 
     This program is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -20,6 +20,9 @@
 
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+    The authors can be reached at: barinder.s.banwait@gmail.com and
+    maarten@mderickx.nl.
 
     ====================================================================
 
@@ -33,17 +36,15 @@ import logging
 from sage.all import (
     J0,
     ModularSymbols,
-    NumberField,
     QuadraticField,
     companion_matrix,
     gcd,
-    hilbert_class_polynomial,
     oo,
     parent,
     prime_range,
 )  # pylint: disable=no-name-in-module
 
-from .common_utils import EC_Q_ISOGENY_PRIMES, SMALL_GONALITIES, R
+from .common_utils import EC_Q_ISOGENY_PRIMES, SMALL_GONALITIES
 from .config import QUADRATIC_POINTS_DATA_PATH
 
 logger = logging.getLogger(__name__)
@@ -57,31 +58,17 @@ logger = logging.getLogger(__name__)
 
 
 def oezman_sieve(p, N):
-    """Returns True iff p is in S_N. Only makes sense if p ramifies in K"""
+    """If p is unramified in Q(sqrt(-N)) this always returns True.
+    Otherwise returns True iff p is in S_N or . Only makes sense if p ramifies in K"""
 
     M = QuadraticField(-N)
-    h_M = M.class_number()
-    H = M.hilbert_class_field("b")
-    primes_above_p = M.primes_above(p)
+    if p.divides(M.discriminant()):
+        return True
 
-    primes_tot_split_in_hcf = []
-
-    for P in primes_above_p:
-        if len(H.primes_above(P)) == h_M:
-            primes_tot_split_in_hcf.append(P)
-
-    if not primes_tot_split_in_hcf:
-        return False
-
-    f = R(hilbert_class_polynomial(M.discriminant()))
-    B = NumberField(f, name="t")
-    assert B.degree() == h_M
-
-    possible_nus = B.primes_above(p)
-
-    for nu in possible_nus:
-        if nu.residue_class_degree() == 1:
-            return True
+    pp = (M * p).factor()[0][0]
+    C_M = M.class_group()
+    if C_M(pp).order() == 1:
+        return True
 
     return False
 
@@ -157,19 +144,23 @@ def works_method_of_appendix(p, K):
     """This implements the method of the appendix, returns True if that
     method is able to remove p as an isogeny prime for K."""
 
-    if QuadraticField(-p).class_number() > K.degree():
-        if p not in SMALL_GONALITIES:
+    if QuadraticField(-p).class_number() <= K.degree():
+        return False
 
-            chi = get_dirichlet_character(K)
+    if p in SMALL_GONALITIES:
+        return False
 
-            logger.debug("Testing whether torsion is same")
-            if is_torsion_same(p, K, chi):
-                logger.debug("Torsion is same test passed")
-                logger.debug("Testing whether rank is same")
-                if is_rank_of_twist_zero(p, chi):
-                    logger.debug(f"Method of appendix works for {p}")
-                    return True
-        logger.debug(f"Method of appendix fails for {p}")
+    chi = get_dirichlet_character(K)
+
+    if K.degree() == 2 and chi(p) == -1:
+        return False
+
+    logger.debug("Testing whether torsion is same")
+    if is_torsion_same(p, K, chi):
+        logger.debug("Torsion is same test passed")
+        logger.debug("Testing whether rank is same")
+        if is_rank_of_twist_zero(p, chi):
+            return True
     return False
 
 
@@ -216,11 +207,23 @@ def apply_weeding(candidates, K, appendix_bound=1000):
         removed_primes = apply_quadratic_weeding(candidates, K)
 
     if K.degree().is_prime() and K.is_abelian():
+
+        if K.conductor() > 1e6:
+
+            logger.warning(
+                "The conductor of your field is too large "
+                "for method of appendix to work in reasonable time, "
+                "so not doing it."
+            )
+            return removed_primes
+
         for p in candidates - EC_Q_ISOGENY_PRIMES - removed_primes:
             if 20 < p < appendix_bound:
                 logger.debug(f"Attempting method of appendix on prime {p}")
                 if works_method_of_appendix(p, K):
                     logger.debug(f"Prime {p} removed via method of appendix")
                     removed_primes.add(p)
+                else:
+                    logger.debug(f"Method of appendix fails for {p}")
 
     return removed_primes
