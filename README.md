@@ -1,6 +1,6 @@
 # Isogeny Primes
 
-This is the repository for the program **Isogeny Primes** explained in the paper [Explicit sogenies of prime degree over number fields](https://arxiv.org/abs/2101.02673).
+This is the repository for the program **Isogeny Primes** explained in the paper [Explicit isogenies of prime degree over number fields](https://arxiv.org/abs/2101.02673).
 
 ### What does it do?
 
