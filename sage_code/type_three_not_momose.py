@@ -33,6 +33,7 @@ from sage.all import ZZ, gcd, lcm, GF  # pylint: disable=no-name-in-module
 
 from .common_utils import auxgens, get_weil_polys
 from .generic import ABC_integers
+from .character_enumeration import character_enumeration_filter
 
 
 def get_eps_lcm_dict(C_K, epsilons, embeddings, gen_list):
@@ -89,6 +90,23 @@ def type_three_not_momose(K, embeddings, strong_type_3_epsilons):
         for eps in actual_type_3_epsilons:
             bound_dict[eps] = gcd(bound_dict[eps], eps_lcm_dict[eps])
 
-    type_three_not_momose_bound = ZZ(lcm(list(bound_dict.values())))
+    for eps in actual_type_3_epsilons:
+        bound_dict[eps] = lcm(
+            bound_dict[eps], strong_type_3_epsilons[eps].discriminant()
+        )
 
-    return type_three_not_momose_bound.prime_divisors(), type_3_fields
+    Kgal = embeddings[0].codomain()
+    epsilons_for_ice = {eps: "quadratic-non-constant" for eps in actual_type_3_epsilons}
+
+    output = character_enumeration_filter(
+        K,
+        C_K,
+        Kgal,
+        bound_dict,
+        epsilons_for_ice,
+        1000,
+        embeddings,
+        auto_stop_strategy=True,
+    )
+
+    return output, type_3_fields
