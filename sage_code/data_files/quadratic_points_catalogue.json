@@ -6,6 +6,46 @@
             -11,
             -15
         ],
+        "unramified_primes": [
+            2,
+            3,
+            13,
+            29,
+            31,
+            41,
+            47,
+            71,
+            73
+        ],
+        "is_complete": false
+    },
+    "26": {
+        "known_D": [
+            -5,
+            -7,
+            -11,
+            -15
+        ],
+        "unramified_primes": [
+            3,
+            5,
+            7,
+            11,
+            17,
+            19,
+            31,
+            37,
+            41,
+            43,
+            47,
+            59,
+            67,
+            71,
+            73,
+            83,
+            89,
+            97
+        ],
         "is_complete": false
     },
     "29": {
@@ -13,17 +53,172 @@
             -1,
             -7
         ],
+        "unramified_primes": [
+            3,
+            5,
+            11,
+            13,
+            17,
+            19,
+            31,
+            37,
+            41,
+            43,
+            47,
+            53,
+            61,
+            73,
+            79,
+            89,
+            97
+        ],
+        "is_complete": false
+    },
+    "30": {
+        "known_D": [
+            -1,
+            -7
+        ],
+        "unramified_primes": [
+            2,
+            3,
+            7,
+            13,
+            17,
+            23,
+            37,
+            43,
+            47,
+            53,
+            67,
+            73,
+            83,
+            97
+        ],
         "is_complete": false
     },
     "31": {
         "known_D": [
             -3
         ],
+        "unramified_primes": [
+            2,
+            5,
+            7,
+            19,
+            41,
+            59,
+            71,
+            97
+        ],
+        "is_complete": false
+    },
+    "35": {
+        "known_D": [
+            -1,
+            -7
+        ],
+        "unramified_primes": [
+            2,
+            3,
+            7,
+            13,
+            17,
+            23,
+            37,
+            43,
+            47,
+            53,
+            67,
+            73,
+            83,
+            97
+        ],
+        "is_complete": false
+    },
+    "39": {
+        "known_D": [
+            -1,
+            -7
+        ],
+        "unramified_primes": [
+            2,
+            5,
+            7,
+            11,
+            13,
+            19,
+            31,
+            37,
+            41,
+            47,
+            59,
+            61,
+            67,
+            71,
+            73,
+            79,
+            83,
+            89,
+            97
+        ],
+        "is_complete": false
+    },
+    "40": {
+        "known_D": [
+            -1,
+            -7
+        ],
+        "unramified_primes": [
+            2,
+            3,
+            5,
+            7,
+            11,
+            13,
+            17,
+            19,
+            23,
+            31,
+            37,
+            41,
+            43,
+            47,
+            53,
+            59,
+            61,
+            67,
+            71,
+            73,
+            79,
+            83,
+            97
+        ],
         "is_complete": false
     },
     "41": {
         "known_D": [
             -1
+        ],
+        "unramified_primes": [
+            3,
+            5,
+            7,
+            11,
+            13,
+            17,
+            19,
+            29,
+            37,
+            47,
+            53,
+            61,
+            67,
+            71,
+            73,
+            79,
+            89,
+            97
         ],
         "is_complete": false
     },
@@ -32,26 +227,104 @@
             -131,
             -71
         ],
+        "unramified_primes": [],
         "is_complete": false
     },
     "47": {
+        "known_D": [],
+        "unramified_primes": [
+            2,
+            3,
+            7,
+            17,
+            37,
+            53,
+            59,
+            61,
+            71,
+            79,
+            89,
+            97
+        ],
+        "is_complete": false
+    },
+    "48": {
         "known_D": [
+            -1,
+            -7
+        ],
+        "unramified_primes": [
+            2,
+            3,
+            5,
+            7,
+            11,
+            17,
+            19,
+            23,
+            29,
+            31,
+            41,
+            43,
+            47,
+            53,
+            59,
+            67,
+            71,
+            79,
+            83,
+            89
+        ],
+        "is_complete": false
+    },
+    "50": {
+        "known_D": [
+            -1,
+            -7
+        ],
+        "unramified_primes": [
+            3,
+            7,
+            11,
+            13,
+            17,
+            19,
+            23,
+            37,
+            41,
+            43,
+            47,
+            53,
+            67,
+            73,
+            83,
+            89,
+            97
         ],
         "is_complete": false
     },
     "53": {
-        "known_D": [
-        ],
+        "known_D": [],
+        "unramified_primes": [],
         "is_complete": false
     },
     "59": {
-        "known_D": [
+        "known_D": [],
+        "unramified_primes": [
+            3,
+            5,
+            7,
+            19,
+            29,
+            41,
+            53,
+            79
         ],
         "is_complete": false
     },
     "61": {
-        "known_D": [
-        ],
+        "known_D": [],
+        "unramified_primes": [],
         "is_complete": false
     },
     "67": {
@@ -62,10 +335,23 @@
             -11,
             -43
         ],
+        "unramified_primes": [],
         "is_complete": true
     },
     "71": {
-        "known_D": [
+        "known_D": [],
+        "unramified_primes": [
+            2,
+            3,
+            5,
+            19,
+            29,
+            37,
+            43,
+            73,
+            79,
+            83,
+            89
         ],
         "is_complete": false
     },
@@ -79,6 +365,32 @@
             -67,
             -127
         ],
+        "unramified_primes": [],
         "is_complete": true
+    },
+    "79": {
+        "known_D": [],
+        "unramified_primes": [],
+        "is_complete": false
+    },
+    "83": {
+        "known_D": [],
+        "unramified_primes": [],
+        "is_complete": false
+    },
+    "89": {
+        "known_D": [],
+        "unramified_primes": [],
+        "is_complete": false
+    },
+    "101": {
+        "known_D": [],
+        "unramified_primes": [],
+        "is_complete": false
+    },
+    "131": {
+        "known_D": [],
+        "unramified_primes": [],
+        "is_complete": false
     }
 }

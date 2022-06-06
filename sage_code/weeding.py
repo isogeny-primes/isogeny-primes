@@ -195,6 +195,13 @@ def apply_quadratic_weeding(candidates, K):
                         break
                 if removed_p:
                     continue
+                unram_primes = data_this_p["unramified_primes"]
+                absurd_intersection = set(unram_primes).intersection(
+                    set(ramified_primes)
+                )
+                if len(absurd_intersection) > 0:
+                    logger.debug("Prime {} removed via Najman-Trbovic filter".format(p))
+                    removed_primes.add(p)
     return removed_primes
 
 

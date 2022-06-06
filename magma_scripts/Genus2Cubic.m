@@ -125,6 +125,7 @@ main:=function(PrimesToCheck : twistD := 0);
       if twistD eq 0 then
         print "genus of C is", Genus(C);
         print p,IsTotallyNegative(f_sq),psi(f);
+        Append(~badCurves, C);
       else
         twistDSQFree,_ := Squarefree(twistD);
         Ctwist := QuadraticTwist(C, twistDSQFree);
@@ -153,12 +154,12 @@ main:=function(PrimesToCheck : twistD := 0);
 end function;
 
 //The following computation shows that none of the cubic points on X_0(p) for
-//p=23, 29, 31 are totally real, proving Part (1) of Theorem 8.1.
+//p=23, 29, 31 are totally real, proving Part (1) of Theorem 9.1.
 
 main([23,29,31]);
 
 //The following computation shows that none of the cubic points on X_0(p) for
 //p=23, 31 are defined over a cubic field of discriminant equal to -59 up to
-// a square. This is required in the proof of Theorem 8.5.
+// a square. This is required in the proof of Theorem 9.5.
 
 badCurves := main([23,31] : twistD:=-59); // empty, so done.

@@ -36,9 +36,8 @@ at the top level of the repository to obtain the following:
 
 D = -47 possible isogenies = [31, 61]
 D = -39 possible isogenies = [97]
-D = -37 possible isogenies = [29, 59, 83, 131]
+D = -37 possible isogenies = [59, 131]
 D = -35 possible isogenies = [23]
-D = -34 possible isogenies = [29]
 D = -31 possible isogenies = [73]
 D = -23 possible isogenies = [23, 29, 31]
 D = -22 possible isogenies = [59]

@@ -37,7 +37,7 @@
 */
 
 
-f = x^6 - x^5 - 7*x^4 + 2*x^3 + 7*x^2 - 2*x - 1;  \\ change this to desired polynomial
+f = x^3 - x^2 - 2*x + 1;  \\ change this to desired polynomial
 K = nfinit(f);
 export(K)
 
