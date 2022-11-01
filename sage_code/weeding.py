@@ -73,6 +73,16 @@ def oezman_sieve(p, N):
     return False
 
 
+def najman_trbovic_filter(unram_primes, ramified_primes):
+    """Return True if a possible isogeny prime can be removed via
+    Theorem 2.13 of the paper of Najman-Trbovic"""
+
+    absurd_intersection = set(unram_primes).intersection(
+        set(ramified_primes)
+    )
+    return (len(absurd_intersection) > 0)
+
+
 def get_dirichlet_character(K):
     """Returns a Dirichlet character whose fixed field is K"""
     characters = [chi for chi in K.dirichlet_group() if chi.order() == K.degree()]
@@ -196,10 +206,7 @@ def apply_quadratic_weeding(candidates, K):
                 if removed_p:
                     continue
                 unram_primes = data_this_p["unramified_primes"]
-                absurd_intersection = set(unram_primes).intersection(
-                    set(ramified_primes)
-                )
-                if len(absurd_intersection) > 0:
+                if najman_trbovic_filter(unram_primes, ramified_primes):
                     logger.debug("Prime {} removed via Najman-Trbovic filter".format(p))
                     removed_primes.add(p)
     return removed_primes
