@@ -39,6 +39,7 @@ from sage.all import (
     QuadraticField,
     companion_matrix,
     gcd,
+    legendre_symbol,
     oo,
     parent,
     prime_range,
@@ -59,16 +60,21 @@ logger = logging.getLogger(__name__)
 
 def oezman_sieve(p, N):
     """If p is unramified in Q(sqrt(-N)) this always returns True.
-    Otherwise returns True iff p is in S_N or . Only makes sense if p ramifies in K"""
+    Otherwise returns True iff p is in S_N. Only makes sense if p ramifies in K.
+    Also assumes that N is prime (for the time being).
+    """
+    assert N.is_prime() and N > 2
 
     M = QuadraticField(-N)
     if p.divides(M.discriminant()):
         return True
 
     pp = (M * p).factor()[0][0]
-    C_M = M.class_group()
-    if C_M(pp).order() == 1:
-        return True
+    if pp.is_principal():
+        if N % 4 == 3:
+            return True
+        if legendre_symbol(p, N) == 1:
+            return True
 
     return False
 
@@ -77,10 +83,8 @@ def najman_trbovic_filter(unram_primes, ramified_primes):
     """Return True if a possible isogeny prime can be removed via
     Theorem 2.13 of the paper of Najman-Trbovic"""
 
-    absurd_intersection = set(unram_primes).intersection(
-        set(ramified_primes)
-    )
-    return (len(absurd_intersection) > 0)
+    absurd_intersection = set(unram_primes).intersection(set(ramified_primes))
+    return len(absurd_intersection) > 0
 
 
 def get_dirichlet_character(K):
@@ -119,7 +123,7 @@ def is_torsion_same(p, K, chi, B=30, uniform=False):
     for q, i in frob_poly_data:
         frob_pol_q = J0_min.frobenius_polynomial(q)
         frob_mat = companion_matrix(frob_pol_q)
-        point_counts.append((frob_mat ** i).charpoly()(1))
+        point_counts.append((frob_mat**i).charpoly()(1))
 
     # Recall that the rational torsion on J0(p) is entirely contained in
     # the minus part (theorem of Mazur), so checking no-growth of torsion
