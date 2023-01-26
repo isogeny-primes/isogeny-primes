@@ -50,7 +50,7 @@ from .character_enumeration import character_enumeration_filter
 
 logger = logging.getLogger(__name__)
 
-GENERIC_UPPER_BOUND = 10 ** 30
+GENERIC_UPPER_BOUND = 10**30
 
 
 def LLS(p):
@@ -68,7 +68,7 @@ def get_type_2_uniform_bound(ecdb_type):
     else:
         raise ValueError("argument must be LSS or BS")
 
-    f = BOUND_TERM ** 6 + BOUND_TERM ** 3 + 1 - x
+    f = BOUND_TERM**6 + BOUND_TERM**3 + 1 - x
 
     try:
         bound = find_root(f, 1000, GENERIC_UPPER_BOUND)
@@ -123,8 +123,8 @@ def satisfies_condition_CC(K, p):
     for q in prime_range(p / 4):
         for frak_q in K.primes_above(q):
             f = frak_q.residue_class_degree()
-            if f % 2 == 1 and q ** f < p / 4:
-                if (q ** (2 * f) + q ** f + 1) % p != 0:
+            if f % 2 == 1 and q**f < p / 4:
+                if (q ** (2 * f) + q**f + 1) % p != 0:
                     if legendre_symbol(q, p) == 1:  # i.e. not inert
                         return False
     return True
@@ -141,7 +141,7 @@ def satisfies_condition_CC_uniform(possible_odd_f, p):
         return False
     for q in prime_range((p / 4) ^ (1 / max(possible_odd_f)) + 1):
         if legendre_symbol(q, p) == 1:
-            if all((q ** (2 * f) + q ** f + 1) % p != 0 for f in possible_odd_f):
+            if all((q ** (2 * f) + q**f + 1) % p != 0 for f in possible_odd_f):
                 return False
     return True
 

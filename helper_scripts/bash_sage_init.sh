@@ -7,5 +7,8 @@ if [ ! -f ${SAGE_BIN_DIR}/sage-env-config ]; then
     SAGE_BIN_DIR=$(sage -sh -c 'echo $SAGE_VENV')/bin
 fi
 source ${SAGE_BIN_DIR}/sage-env-config
+if [ ! -f ${SAGE_BIN_DIR}/sage-env ]; then
+    SAGE_BIN_DIR=$(sage -sh -c 'echo $SAGE_VENV')/bin
+fi
 source ${SAGE_BIN_DIR}/sage-env
 export PATH=$(dirname -- ${HELPER_DIR})/venv/bin:$SAGE_BIN_DIR:${PATH}

@@ -39,7 +39,7 @@ from sage_code.frobenius_polynomials import (
 
 K = QuadraticField(-127, "D")
 D = K.gen(0)
-j = 20 * (3 * (-26670989 - 15471309 * D) / 2 ** 26) ** 3
+j = 20 * (3 * (-26670989 - 15471309 * D) / 2**26) ** 3
 # this is one of the curves from the Gonzaléz, Lario, and Quer article
 E = EllipticCurve_from_j(j)
 
@@ -59,8 +59,8 @@ def test_semi_stable_frobenius_polynomial_t():
     x = polygen(QQ)
     K = QQ.extension(x - 1, "one")
     E = EllipticCurve(K, [49, 343])
-    assert E.discriminant() == -(2 ** 4) * 31 * 7 ** 6
-    assert E.j_invariant() == K(2 ** 8 * 3 ** 3) / 31
+    assert E.discriminant() == -(2**4) * 31 * 7**6
+    assert E.j_invariant() == K(2**8 * 3**3) / 31
     f1 = semi_stable_frobenius_polynomial(E, K * 7, 1)
     f2 = semi_stable_frobenius_polynomial(E, K * 7, -1)(x=-x)
     assert f1 == f2
@@ -72,7 +72,7 @@ def test_semi_stable_frobenius_polynomial_t():
         (2, {1, 8}),
         (3, {1}),
         (7, {72}),
-        (11, {13 ** 12 % 73, 57 ** 12 % 73}),
+        (11, {13**12 % 73, 57**12 % 73}),
     ],
 )
 def test_isogeny_character_values_12(p, values):
