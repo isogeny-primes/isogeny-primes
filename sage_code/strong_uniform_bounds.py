@@ -31,8 +31,8 @@
 from sage.all import Partitions, divisors, matrix, GF, lcm
 from itertools import product
 
-from common_utils import get_weil_polys
-from pil_integers import collapse_tuple
+from .common_utils import get_weil_polys
+from .pil_integers import collapse_tuple
 
 def is_non_increasing(t):
 
@@ -100,7 +100,7 @@ def bound_from_split_type(split_type, eps, q):
     q_to_tr_eps = q**tr_eps
     running_lcm = 1
     for a_beta_mat in collapsed_beta_mats:
-        matrix_parent = frob_poly_mats[0].parent()
+        matrix_parent = a_beta_mat.parent()
         alpha_to_eps_mat = matrix_parent(q_to_tr_eps)
         pil_mat = alpha_to_eps_mat.tensor_product(a_beta_mat.parent()(1)) - (
                   alpha_to_eps_mat.parent()(1)).tensor_product(a_beta_mat)
