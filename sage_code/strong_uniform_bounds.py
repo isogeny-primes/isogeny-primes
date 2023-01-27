@@ -99,21 +99,30 @@ def bound_from_split_type(split_type, eps, q):
     tr_eps = sum(eps)
     q_to_tr_eps = q**tr_eps
     running_lcm = 1
+    zero_detection_flag = False
     for a_beta_mat in collapsed_beta_mats:
         matrix_parent = a_beta_mat.parent()
         alpha_to_eps_mat = matrix_parent(q_to_tr_eps)
         pil_mat = alpha_to_eps_mat.tensor_product(a_beta_mat.parent()(1)) - (
                   alpha_to_eps_mat.parent()(1)).tensor_product(a_beta_mat)
         pil_int = pil_mat.det()
-        running_lcm = lcm(pil_int, running_lcm)
-    return running_lcm
+        if pil_int == 0:
+            zero_detection_flag = True
+        else:
+            running_lcm = lcm(pil_int, running_lcm)
+    if zero_detection_flag:
+        return running_lcm, 0
+    else:
+        return running_lcm, running_lcm
 
 
 def B_eps_q(d,eps,q):
 
     split_types = splitting_types(d)
+    B_star = 1
     B = 1
     for split_type in split_types:
-        pil_int = bound_from_split_type(split_type, eps, q)
+        pil_int_star, pil_int = bound_from_split_type(split_type, eps, q)
+        B_star = lcm(B_star,pil_int_star)
         B = lcm(B,pil_int)
-    return B
+    return B_star, B
