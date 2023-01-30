@@ -31,7 +31,7 @@
 from sage.all import Partitions, divisors, matrix, GF, lcm, gcd, prime_range, prod, Integer
 from itertools import product
 import logging
-from .common_utils import get_weil_polys, R, x
+from .common_utils import get_weil_polys, x
 from .pil_integers import collapse_tuple
 from .type_one_primes import cached_bad_formal_immersion_data
 
@@ -142,14 +142,8 @@ def B_eps_q(d,eps,q, known_mult_bound=0):
         B = gcd(known_mult_bound, lcm(B,pil_int))
     return B_star, B
 
+def core_loop(d, eps, aux_primes):
 
-def tr_not_6_unif_bd(d, eps, q_bd=2):
-
-    assert q_bd > 1
-    aux_primes = prime_range(q_bd+1)
-
-    logger.debug(f"Aux primes for (a) are {aux_primes}")
-    
     mult_upper_bd = 0
 
     for q in aux_primes:
@@ -158,6 +152,20 @@ def tr_not_6_unif_bd(d, eps, q_bd=2):
         mult_upper_bd = gcd(mult_upper_bd, B_star)
 
     return mult_upper_bd
+
+
+def unif_bd(d, eps):
+
+    tr_eps = sum(eps)
+
+    if tr_eps % 6 != 0:
+        aux_primes = prime_range(6)
+    elif tr_eps % 12 == 6:
+        aux_primes = prime_range(5, 15)
+    else:
+        raise ValueError("can't deal with this case")
+
+    return core_loop(d, eps, aux_primes)
 
 
 def type_one_unif_primes(d, q_bd=4):
@@ -182,3 +190,4 @@ def type_one_unif_primes(d, q_bd=4):
     output = set(Integer(mult_upper_bd).prime_divisors())
     output = output.union(set(bad_formal_immersion_list))
     return output
+    

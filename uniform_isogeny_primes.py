@@ -35,11 +35,24 @@ import logging
 
 from sage.all import Integer, prime_divisors
 
-from sage_code.strong_uniform_bounds import tr_not_6_unif_bd, type_one_unif_primes
+from sage_code.strong_uniform_bounds import unif_bd, type_one_unif_primes
+
+
+def do_uniform_quadratic():
+
+    EPSILONS = [(0,4), (0,6), (0,8), (4,4), (4,6), (4,12)]
+
+    for eps in EPSILONS:
+        bd = Integer(unif_bd(2,eps))
+        logging.info(f"Isogeny primes for {eps} are {bd.prime_divisors()}")
+
+    type_one_bound = type_one_unif_primes(int(2))
+
+    logging.info(f"Type 1 uniform bound is {type_one_bound}")
 
 
 def do_uniform(d, eps):
-    tr_not_6_bd = Integer(tr_not_6_unif_bd(d, eps))
+    tr_not_6_bd = Integer(unif_bd(d, eps))
     logging.info(f"Trace not 6 mod 12 bound is {tr_not_6_bd}")
     # logging.info(f"Trace not 6 mod 12 primes are {tr_not_6_bd.prime_divisors()}")
 
@@ -62,7 +75,12 @@ def cli_handler(args):  # pylint: disable=redefined-outer-name
     logging.debug("Debugging level for log messages set.")
 
     eps = get_eps_from_input(args.eps)
-    do_uniform(args.d, eps)
+
+    if args.d == int(2):
+        do_uniform_quadratic()
+    else:
+        do_uniform(args.d, eps)
+
 
 
 if __name__ == "__main__":
