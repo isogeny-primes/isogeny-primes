@@ -28,32 +28,46 @@
 
 """
 
-from sage.all import Partitions, divisors, matrix, GF, lcm
+from sage.all import Partitions, divisors, matrix, GF, lcm, gcd, prime_range, prod, Integer
 from itertools import product
-
-from .common_utils import get_weil_polys
+import logging
+from .common_utils import get_weil_polys, R, x
 from .pil_integers import collapse_tuple
+from .type_one_primes import cached_bad_formal_immersion_data
 
-def is_non_increasing(t):
+logger = logging.getLogger(__name__)
+
+def is_non_increasing(t, part):
 
     for j in range(len(t)-1):
-        if t[j] < t[j+1]:
-            return False
+        if part[j] == part[j+1]:
+            if t[j] < t[j+1]:
+                return False
     return True
 
 
 def get_beta_mats_with_pow(F, pow=1):
 
     frob_polys = get_weil_polys(F)
-    return [matrix.companion(f) ** pow for f in frob_polys]
+    output = [matrix.companion(f) ** pow for f in frob_polys]
 
+    # We also need to add \pm 1, \pm q
 
-def remove_duplicates(list_of_e_tuples):
+    f1 = (x - 1) * (x + 1)
+    output.append(matrix.companion(f1))
+
+    q = F.cardinality()
+    fq = (x - q) * (x + q)
+    output.append(matrix.companion(fq))
+
+    return output
+
+def remove_duplicates(list_of_e_tuples, part):
 
     output = []
 
     for t in list_of_e_tuples:
-        if is_non_increasing(t):
+        if is_non_increasing(t, part):
             output.append(t)
     return output
 
@@ -68,12 +82,12 @@ def splitting_types(d):
 
     for r in range(1,d+1):
         parts = list(Partitions(d, length=r))        
-        for a_part in parts:
-            divisors_of_partition = [divisors(t) for t in a_part]
+        for part in parts:
+            divisors_of_partition = [divisors(t) for t in part]
             possible_es = list(product(*divisors_of_partition))
-            possible_es = remove_duplicates(possible_es)
+            possible_es = remove_duplicates(possible_es, part)
             for possible_e_vec in possible_es:
-                f_vec = [a_part[j]/possible_e_vec[j] for j in range(r)]
+                f_vec = [part[j]/possible_e_vec[j] for j in range(r)]
                 type_dict = {}
                 type_dict['r'] = r
                 type_dict['es'] = possible_e_vec
@@ -82,7 +96,7 @@ def splitting_types(d):
     return types
 
 
-def bound_from_split_type(split_type, eps, q):
+def bound_from_split_type(split_type, eps, q, known_mult_bound=0):
     """This implements Algorithm 5.1 from the paper, and returns the integers
        B_{eps,q} and B^*_{eps,q}.
 
@@ -109,20 +123,62 @@ def bound_from_split_type(split_type, eps, q):
         if pil_int == 0:
             zero_detection_flag = True
         else:
-            running_lcm = lcm(pil_int, running_lcm)
+            pil_int = gcd(known_mult_bound, pil_int)
+            running_lcm = gcd(known_mult_bound, lcm(pil_int, running_lcm))
     if zero_detection_flag:
         return running_lcm, 0
     else:
         return running_lcm, running_lcm
 
 
-def B_eps_q(d,eps,q):
+def B_eps_q(d,eps,q, known_mult_bound=0):
 
     split_types = splitting_types(d)
     B_star = 1
     B = 1
     for split_type in split_types:
-        pil_int_star, pil_int = bound_from_split_type(split_type, eps, q)
-        B_star = lcm(B_star,pil_int_star)
-        B = lcm(B,pil_int)
+        pil_int_star, pil_int = bound_from_split_type(split_type, eps, q, known_mult_bound)
+        B_star = gcd(known_mult_bound, lcm(B_star,pil_int_star))
+        B = gcd(known_mult_bound, lcm(B,pil_int))
     return B_star, B
+
+
+def tr_not_6_unif_bd(d, eps, q_bd=2):
+
+    assert q_bd > 1
+    aux_primes = prime_range(q_bd+1)
+
+    logger.debug(f"Aux primes for (a) are {aux_primes}")
+    
+    mult_upper_bd = 0
+
+    for q in aux_primes:
+        B_star, B = B_eps_q(d,eps,q,mult_upper_bd)
+        assert B_star == B
+        mult_upper_bd = gcd(mult_upper_bd, B_star)
+
+    return mult_upper_bd
+
+
+def type_one_unif_primes(d, q_bd=4):
+
+    assert q_bd > 3
+
+    aux_primes = prime_range(3, q_bd+1)
+
+    mult_upper_bd = 0
+    type_one_eps =  (0,) * d
+    bad_formal_immersion_list, bad_aux_prime_dict = cached_bad_formal_immersion_data(d)
+
+    for q in aux_primes:
+        B_star, B = B_eps_q(d,type_one_eps,q,mult_upper_bd)
+
+        agfi_q = bad_aux_prime_dict.get(str(q),1)
+
+        q_prod = prod([(q ** f - 1) for f in range(1,d+1)])
+        contribution = lcm([B_star, q_prod, agfi_q])
+        mult_upper_bd = gcd(mult_upper_bd, contribution)
+
+    output = set(Integer(mult_upper_bd).prime_divisors())
+    output = output.union(set(bad_formal_immersion_list))
+    return output
