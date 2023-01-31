@@ -54,11 +54,11 @@ def get_beta_mats_with_pow(F, pow=1):
     # We also need to add \pm 1, \pm q
 
     f1 = (x - 1) * (x + 1)
-    output.append(matrix.companion(f1))
+    output.append(matrix.companion(f1) ** pow)
 
     q = F.cardinality()
     fq = (x - q) * (x + q)
-    output.append(matrix.companion(fq))
+    output.append(matrix.companion(fq) ** pow)
 
     return output
 
@@ -105,7 +105,7 @@ def bound_from_split_type(split_type, eps, q, known_mult_bound=0):
         eps (tuple): isogeny signature
         q (int): auxiliary rational prime
     """
-    frob_poly_mats = [get_beta_mats_with_pow(GF(q**f), pow=my_e) for my_e,f in zip(split_type['es'],split_type['fs'])]
+    frob_poly_mats = [get_beta_mats_with_pow(GF(q**f), pow=12*my_e) for my_e,f in zip(split_type['es'],split_type['fs'])]
     beta_mat_tuples = list(product(*frob_poly_mats))
     collapsed_beta_mats = [
         collapse_tuple(a_beta_tuple) for a_beta_tuple in beta_mat_tuples
@@ -124,7 +124,7 @@ def bound_from_split_type(split_type, eps, q, known_mult_bound=0):
             zero_detection_flag = True
         else:
             pil_int = gcd(known_mult_bound, pil_int)
-            running_lcm = gcd(known_mult_bound, lcm(pil_int, running_lcm))
+            running_lcm = lcm(pil_int, running_lcm)
     if zero_detection_flag:
         return running_lcm, 0
     else:
@@ -183,7 +183,7 @@ def type_one_unif_primes(d, q_bd=4):
 
         agfi_q = bad_aux_prime_dict.get(str(q),1)
 
-        q_prod = prod([(q ** f - 1) for f in range(1,d+1)])
+        q_prod = lcm([(q ** f - 1) for f in range(1,d+1)])
         contribution = lcm([B_star, q_prod, agfi_q])
         mult_upper_bd = gcd(mult_upper_bd, contribution)
 
