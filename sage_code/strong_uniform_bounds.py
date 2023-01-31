@@ -145,10 +145,12 @@ def B_eps_q(d,eps,q, known_mult_bound=0):
 def core_loop(d, eps, aux_primes):
 
     mult_upper_bd = 0
+    trace_eps = sum(eps)
 
     for q in aux_primes:
         B_star, B = B_eps_q(d,eps,q,mult_upper_bd)
-        assert B_star == B
+        if trace_eps % 6 != 0:
+            assert B_star == B
         mult_upper_bd = gcd(mult_upper_bd, B_star)
 
     return mult_upper_bd

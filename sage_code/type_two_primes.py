@@ -57,7 +57,19 @@ def LLS(p):
     return (log(p) + 9 + 2.5 * (log(log(p))) ** 2) ** 2
 
 
-def get_type_2_uniform_bound(ecdb_type):
+def compute_S_d(d):
+    return 1
+
+
+def momose_type_2_uniform_bound(d):
+
+    s = compute_S_d(d)
+    F = [f for f in range(1,d+1) if f%2 == 1]
+    v = (4 * log(s) + 10) ** 2
+    T = {p for q in prime_range(ceil(v)+1) for expr in [(q**(2*f) + q**f + 1) for f in F] for p in prime_divisors(expr)}
+    T_CC = [p for p in T if satisfies_condition_CC_uniform(F,p)]
+    P = max(T_CC)
+    return max(P, 4 * (v ** d))
 
     if ecdb_type == "LSS":
         BOUND_TERM = (log(x) + 9 + 2.5 * (log(log(x))) ** 2) ** 2
