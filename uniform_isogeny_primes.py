@@ -60,6 +60,7 @@ def do_uniform(d, eps):
 
     logging.info(f"Type 1 uniform bound is {type_one_bound}")
 
+
 def get_eps_from_input(tuple_as_str):
     return tuple([Integer(t) for t in tuple_as_str.split(",")])
 

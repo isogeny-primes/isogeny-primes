@@ -42,9 +42,15 @@ from sage.all import (
     ZZ,
     gcd,
     lcm,
+    RR,
+    exp,
+    lambert_w,
+    CRT,
+    GF,
+    NumberField
 )  # pylint: disable=no-name-in-module
 
-from .common_utils import x, get_ordinary_weil_polys_from_values, auxgens
+from .common_utils import R, x, get_ordinary_weil_polys_from_values, auxgens
 from .generic import ABC_integers
 from .character_enumeration import character_enumeration_filter
 
@@ -53,12 +59,47 @@ logger = logging.getLogger(__name__)
 GENERIC_UPPER_BOUND = 10**30
 
 
-def LLS(p):
-    return (log(p) + 9 + 2.5 * (log(log(p))) ** 2) ** 2
+def bound_on_largest_root(d, b):
+    """From Maarten's email"""
+    return RR(exp(-d*lambert_w(-1,-1/(d*b))))
 
 
 def compute_S_d(d):
-    return 1
+
+    g = 4 * log(x) + 10
+
+    f_BS = x - (g ** (4*d) + g ** (2*d) + 1)
+
+    largest_root_bound = max(bound_on_largest_root(4*d, 4),bound_on_largest_root(4*d, 5))
+
+    bound_BS = find_root(f_BS, 10, largest_root_bound)
+    
+    lls = (log(x) + 9 + 2.5 * (log(log(x))) ** 2) ** 2
+    try:
+        bound_const = find_root(10**9 - lls, 10**6, largest_root_bound)
+    except RuntimeError:
+        bound_const = largest_root_bound
+
+    f_lls = x - (lls ** (4*d) + lls ** (2*d) + 1)
+    try:
+        bound_LLS = find_root(f_lls, bound_const, largest_root_bound)
+    except RuntimeError:
+        bound_LLS = largest_root_bound
+
+    return ceil(min(bound_BS, max(bound_const, bound_LLS))) 
+
+
+def improved_BS(d, A=4, B=2.5, C=5):
+    """Tool for helping do the calculation in Example 6.6"""
+    g = A * log(x) + 2*B + C
+
+    f_BS = x - (g ** (4*d) + g ** (2*d) + 1)
+
+    largest_root_bound = max(bound_on_largest_root(4*d, 4),bound_on_largest_root(4*d, 5))
+
+    bound_BS = find_root(f_BS, 10, largest_root_bound)
+
+    return bound_BS, 4*g(x=bound_BS)**(2*d)
 
 
 def momose_type_2_uniform_bound(d):
@@ -70,28 +111,6 @@ def momose_type_2_uniform_bound(d):
     T_CC = [p for p in T if satisfies_condition_CC_uniform(F,p)]
     P = max(T_CC)
     return max(P, 4 * (v ** d))
-
-    if ecdb_type == "LSS":
-        BOUND_TERM = (log(x) + 9 + 2.5 * (log(log(x))) ** 2) ** 2
-    elif ecdb_type == "BS":
-        # BOUND_TERM = (4*log(x) + 10)**2
-        # BOUND_TERM = (3.29*log(x) + 2.96 + 4.9)**2
-        BOUND_TERM = (1.881 * log(x) + 2 * 0.34 + 5.5) ** 2
-    else:
-        raise ValueError("argument must be LSS or BS")
-
-    f = BOUND_TERM**6 + BOUND_TERM**3 + 1 - x
-
-    try:
-        bound = find_root(f, 1000, GENERIC_UPPER_BOUND)
-        return ceil(bound)
-    except RuntimeError:
-        warning_msg = (
-            "Warning: Type 2 bound for quadratic field with "
-            "discriminant {} failed. Returning generic upper bound"
-        ).format(5)
-        print(warning_msg)
-        return GENERIC_UPPER_BOUND
 
 
 def get_type_2_bound(K):
@@ -245,3 +264,17 @@ def type_2_primes(K, embeddings, bound=None):
     output = list(output)
     output.sort()
     return output
+
+
+def condition_CC_field(d, p):
+    """Construct a number field as in Remark ???. To get the field
+       mentioned there, run this function for d=3 and p=253507
+    """
+    fs = []
+    for q in prime_range(p/4 +1):
+        fs.append(GF(q^d).polynomial())
+    coeff_lists = [[f[i].lift() for f in fs] for i in range(d+1)]
+    coeffs = [CRT(coeff_list,prime_range(p/4 +1)) for coeff_list in coeff_lists]
+    poly = R(coeffs)
+    K = NumberField(poly, 'a')
+    return K
