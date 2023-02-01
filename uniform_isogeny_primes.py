@@ -40,7 +40,7 @@ from sage_code.strong_uniform_bounds import unif_bd, type_one_unif_primes
 
 def do_uniform_quadratic():
 
-    EPSILONS = [(0,4), (0,6), (0,8), (4,4), (4,6), (4,12)]
+    EPSILONS = [(0,4), (0,8), (4,4), (4,6), (4,12)]
 
     for eps in EPSILONS:
         bd = Integer(unif_bd(2,eps))
