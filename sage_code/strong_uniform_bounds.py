@@ -37,6 +37,7 @@ from .type_one_primes import cached_bad_formal_immersion_data
 
 logger = logging.getLogger(__name__)
 
+
 def is_non_increasing(t, part):
 
     for j in range(len(t)-1):
@@ -62,6 +63,7 @@ def get_beta_mats_with_pow(F, pow=1):
 
     return output
 
+
 def remove_duplicates(list_of_e_tuples, part):
 
     output = []
@@ -70,6 +72,7 @@ def remove_duplicates(list_of_e_tuples, part):
         if is_non_increasing(t, part):
             output.append(t)
     return output
+
 
 def splitting_types(d):
     """Implements step 1 of Algorithm 5.1, the possible splitting types
