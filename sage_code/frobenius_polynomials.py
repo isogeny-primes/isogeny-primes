@@ -81,9 +81,7 @@ def semistable_ramification(local_data, p=None):
         return 2
 
 
-def semi_stable_frobenius_polynomial(
-    E: EllipticCurve_number_field, q: NumberFieldFractionalIdeal, t=1
-):
+def semi_stable_frobenius_polynomial(E: EllipticCurve_number_field, q: NumberFieldFractionalIdeal, t=1):
     """
     Input:
         E - an elliptic curve over a number field K
@@ -114,7 +112,7 @@ def semi_stable_frobenius_polynomial(
         x = polygen(K)
         u = uniformizer(q)
         e = semistable_ramification(local_data)
-        L = K.extension(x**e - t * u, "a")
+        L = K.extension(x ** e - t * u, "a")
         EL = E.change_ring(L)
         qL = L.primes_above(q)[0]
         Ebar = reduction(EL, qL)
@@ -129,21 +127,15 @@ def semi_stable_frobenius_polynomial(
     return Ebar.frobenius_polynomial()
 
 
-def isogeny_character_values(
-    E: EllipticCurve_number_field, p: Integer, q: NumberFieldFractionalIdeal
-):
+def isogeny_character_values(E: EllipticCurve_number_field, p: Integer, q: NumberFieldFractionalIdeal):
     f = semi_stable_frobenius_polynomial(E, q)
     roots = f.roots(GF(p), multiplicities=False)
     if not roots:
-        raise ValueError(
-            f"The (semi stable model of) the curve does not admit an {p}-isogeny over F_q"
-        )
+        raise ValueError(f"The (semi stable model of) the curve does not admit an {p}-isogeny over F_q")
     else:
         return roots
 
 
-def isogeny_character_values_12(
-    E: EllipticCurve_number_field, p: Integer, q: NumberFieldFractionalIdeal
-):
+def isogeny_character_values_12(E: EllipticCurve_number_field, p: Integer, q: NumberFieldFractionalIdeal):
     values = isogeny_character_values(E, p, q)
-    return [a**12 for a in values]
+    return [a ** 12 for a in values]

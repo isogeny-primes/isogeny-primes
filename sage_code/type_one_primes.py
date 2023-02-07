@@ -78,13 +78,7 @@ def R_du(d, u, M, columns=None, a_inv=False):
     return Matrix(
         ZZ,
         [
-            [
-                (
-                    (0 if 2 * ((r * a[0]) % M) < M else 1)
-                    - (0 if 2 * ((r * u * a[1]) % M) < M else 1)
-                )
-                for a in columns
-            ]
+            [((0 if 2 * ((r * a[0]) % M) < M else 1) - (0 if 2 * ((r * u * a[1]) % M) < M else 1)) for a in columns]
             for r in range(1, d + 1)
         ],
     )
@@ -140,9 +134,7 @@ def R_dp(d, p):
     I2 = M.hecke_operator(2) - 3
 
     def get_row(i):
-        return S_int.coordinate_vector(
-            S_int(M.coordinate_vector(I2(M.hecke_operator(i)(e))))
-        )
+        return S_int.coordinate_vector(S_int(M.coordinate_vector(I2(M.hecke_operator(i)(e)))))
 
     return Matrix([get_row(i) for i in range(1, d + 1)]).change_ring(ZZ)
 
@@ -186,10 +178,7 @@ def is_formal_immersion(d, p):
     S = M.cuspidal_subspace()
     I2 = M.hecke_operator(2) - 3
     if I2.matrix().rank() != S.dimension():
-        raise RuntimeError(
-            f"Formall immersion for d={d} p={p} failed"
-            "because I2 is not of the expected rank."
-        )
+        raise RuntimeError(f"Formall immersion for d={d} p={p} failed" "because I2 is not of the expected rank.")
     Te = R_dp(G.sturm_bound(), p).row_module()
     R = (R_dp(d, p).restrict_codomain(Te)).change_ring(ZZ)
     if R.rank() < d:
@@ -238,9 +227,7 @@ def bad_formal_immersion_data(d):
     return p_bad, q_to_bad_p
 
 
-def apply_formal_immersion_at_2(
-    output_thus_far: Set[int], running_prime_dict_2: int, Kdeg: int
-):
+def apply_formal_immersion_at_2(output_thus_far: Set[int], running_prime_dict_2: int, Kdeg: int):
 
     with open(FORMAL_IMMERSION_DATA_AT_2_PATH, "r") as fi2_dat_file:
         fi2_dat = json.load(fi2_dat_file)
@@ -275,11 +262,7 @@ def apply_formal_immersion_at_2(
         else:
             failed_candidates.add(p)
 
-    logger.debug(
-        "Type one primes removed via formal immersion at 2 filtering: {}".format(
-            failed_candidates
-        )
-    )
+    logger.debug("Type one primes removed via formal immersion at 2 filtering: {}".format(failed_candidates))
 
     return output
 
@@ -287,21 +270,16 @@ def apply_formal_immersion_at_2(
 def get_N(frob_poly, nm_q, exponent):
     """Helper method for computing Type 1 primes"""
     beta = Matrix.companion(frob_poly) ** exponent
-    N = ZZ(1 - beta.trace() + nm_q**exponent)
+    N = ZZ(1 - beta.trace() + nm_q ** exponent)
     return N
 
 
 def get_C_integer_type1(K, q, bad_aux_prime_dict, C_K, bound_so_far):
     running_primes = gcd(q, bound_so_far)
     if str(q) in bad_aux_prime_dict:
-        running_primes = lcm(
-            running_primes, gcd(bad_aux_prime_dict[str(q)], bound_so_far)
-        )
+        running_primes = lcm(running_primes, gcd(bad_aux_prime_dict[str(q)], bound_so_far))
 
-    norms_clexp = {
-        (frak_q.absolute_norm(), C_K(frak_q).multiplicative_order())
-        for frak_q in K.primes_above(q)
-    }
+    norms_clexp = {(frak_q.absolute_norm(), C_K(frak_q).multiplicative_order()) for frak_q in K.primes_above(q)}
     for nm_q, frak_q_class_group_order in norms_clexp:
 
         exponent = 12 * frak_q_class_group_order
@@ -337,9 +315,7 @@ def cached_bad_formal_immersion_data(d):
             json.dump(data_for_json_export, fp, default=sage_converter, indent=4)
         logger.debug("Data added")
     else:
-        logger.debug(
-            "Bad formal immersion data found. Reading to see if it has our data ..."
-        )
+        logger.debug("Bad formal immersion data found. Reading to see if it has our data ...")
         with open(BAD_FORMAL_IMMERSION_DATA_PATH, "r") as bfi_dat_file:
             bfi_dat = json.load(bfi_dat_file)
 
@@ -367,9 +343,7 @@ def type_1_primes(K, C_K, norm_bound=50):
 
     # Get bad formal immersion data
 
-    bad_formal_immersion_list, bad_aux_prime_dict = cached_bad_formal_immersion_data(
-        K.degree()
-    )
+    bad_formal_immersion_list, bad_aux_prime_dict = cached_bad_formal_immersion_data(K.degree())
 
     aux_primes = prime_range(3, norm_bound + 1)
 

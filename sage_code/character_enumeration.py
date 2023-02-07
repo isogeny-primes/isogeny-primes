@@ -45,20 +45,18 @@ logger = logging.getLogger(__name__)
 def filter_possible_values(possible_values_list, q, residue_class_degree, prime_field):
 
     output = []
-    fq = q**residue_class_degree
+    fq = q ** residue_class_degree
     for c in possible_values_list:
-        if c**2 == prime_field(1):
+        if c ** 2 == prime_field(1):
             output.append(c)
-        elif c**2 == prime_field(fq**2):
+        elif c ** 2 == prime_field(fq ** 2):
             output.append(c)
         else:
             possible_mid_coeffs = lifts_in_hasse_range(fq, c + prime_field(fq) / c)
-            possible_weil_polys = [x**2 + a * x + fq for a in possible_mid_coeffs]
+            possible_weil_polys = [x ** 2 + a * x + fq for a in possible_mid_coeffs]
 
             elliptic_weil_polys = [
-                f
-                for f in possible_weil_polys
-                if weil_polynomial_is_elliptic(f, q, residue_class_degree)
+                f for f in possible_weil_polys if weil_polynomial_is_elliptic(f, q, residue_class_degree)
             ]
             if elliptic_weil_polys:
                 output.append(c)
@@ -87,13 +85,13 @@ def get_possible_vals_at_gens(gens_info, eps, embeddings, residue_field, prime_f
         q = class_gp_gen.smallest_integer()
         e = class_gp_gen.residue_class_degree()
         filtered_values = filter_possible_values(possible_values, q, e, prime_field)
-        output[class_gp_gen] = list({x**12 for x in filtered_values})
+        output[class_gp_gen] = list({x ** 12 for x in filtered_values})
 
     return output
 
 
 def tuple_exp(tup, exp_tup):
-    return tuple((t**e for t, e in zip(tup, exp_tup)))
+    return tuple((t ** e for t, e in zip(tup, exp_tup)))
 
 
 def lifts_in_hasse_range(fq, res_class):
@@ -114,13 +112,13 @@ def lifts_in_hasse_range(fq, res_class):
 
     low_run = centered_lift
 
-    while low_run**2 <= fq4:
+    while low_run ** 2 <= fq4:
         output.append(low_run)
         low_run = low_run - p
 
     high_run = centered_lift + p
 
-    while high_run**2 <= fq4:
+    while high_run ** 2 <= fq4:
         output.append(high_run)
         high_run = high_run + p
 
@@ -180,9 +178,7 @@ def final_filter(
         return False
 
     # Step 1
-    possible_vals_at_gens = get_possible_vals_at_gens(
-        gens_info, eps, embeddings, residue_field, prime_field
-    )
+    possible_vals_at_gens = get_possible_vals_at_gens(gens_info, eps, embeddings, residue_field, prime_field)
 
     if not all(possible_vals_at_gens.values()):
         logger.debug(f"Prime {p} for eps {eps} filtered in Step 1 of Heavy filter")
@@ -192,17 +188,13 @@ def final_filter(
     # Step 2
 
     # a list of tuples
-    possible_vals_cart_prod = list(
-        product(*[possible_vals_at_gens[q] for q in my_gens_ideals])
-    )
+    possible_vals_cart_prod = list(product(*[possible_vals_at_gens[q] for q in my_gens_ideals]))
 
     if eps_type == "type-2":
 
         vals_at_chi_6 = tuple([q.absolute_norm() ** 6 for q in my_gens_ideals])
 
-        possible_vals_cart_prod = [
-            x for x in possible_vals_cart_prod if x is not vals_at_chi_6
-        ]
+        possible_vals_cart_prod = [x for x in possible_vals_cart_prod if x is not vals_at_chi_6]
 
     # Step 3
 
@@ -223,14 +215,10 @@ def final_filter(
 
             # Check that these exponents correspond to the ideals in
             # my_gens_ideals in the correct order
-            sanity_check = prod(
-                [Q**a for Q, a in zip(my_gens_ideals, exponents_in_class_group)]
-            )
+            sanity_check = prod([Q ** a for Q, a in zip(my_gens_ideals, exponents_in_class_group)])
             assert C_K(sanity_check) == C_K(q)
 
-            the_principal_ideal = q * prod(
-                [Q ** (-a) for Q, a in zip(my_gens_ideals, exponents_in_class_group)]
-            )
+            the_principal_ideal = q * prod([Q ** (-a) for Q, a in zip(my_gens_ideals, exponents_in_class_group)])
             alphas = the_principal_ideal.gens_reduced()
             assert len(alphas) == 1, "the principal ideal isn't principal!!!"
             alpha = alphas[0]
@@ -246,16 +234,12 @@ def final_filter(
             return False
         new_still_in_the_game = []
         for possible_val in still_in_the_game:
-            possible_val_with_raised_exp = tuple_exp(
-                possible_val, exponents_in_class_group
-            )
+            possible_val_with_raised_exp = tuple_exp(possible_val, exponents_in_class_group)
             my_possible_val = thingy * prod(possible_val_with_raised_exp)
             my_possible_val_roots = my_possible_val.nth_root(12, all=True)
             char = q.smallest_integer()
             e = q.residue_class_degree()
-            filtered_values = filter_possible_values(
-                my_possible_val_roots, char, e, prime_field
-            )
+            filtered_values = filter_possible_values(my_possible_val_roots, char, e, prime_field)
             if filtered_values:
                 new_still_in_the_game.append(possible_val)
         still_in_the_game = new_still_in_the_game
@@ -285,22 +269,16 @@ def character_enumeration_filter(
     gens_info = {}
     for q in my_gens_ideals:
         q_order = C_K(q).multiplicative_order()
-        alphas = (q**q_order).gens_reduced()
+        alphas = (q ** q_order).gens_reduced()
         assert len(alphas) == 1
         alpha = alphas[0]
         gens_info[q] = (q_order, alpha)
     logger.debug(f"Kgal: {Kgal}, C_K: {C_K}")
     logger.debug("gen_ideals: %s, gen_info: %s", my_gens_ideals, gens_info)
-    eps_prime_dict = {
-        eps: tracking_dict_inv_collapsed[eps].prime_divisors() for eps in epsilons
-    }
+    eps_prime_dict = {eps: tracking_dict_inv_collapsed[eps].prime_divisors() for eps in epsilons}
     possible_isogeny_primes = {p for k in eps_prime_dict for p in eps_prime_dict[k]}
-    logger.debug(
-        f"Possible isogeny primes before ICE filter: {sorted(possible_isogeny_primes)}"
-    )
-    prime_support_my_gens_ideals = list(
-        {a for P in my_gens_ideals for a in ZZ(P.norm()).prime_divisors()}
-    )
+    logger.debug(f"Possible isogeny primes before ICE filter: {sorted(possible_isogeny_primes)}")
+    prime_support_my_gens_ideals = list({a for P in my_gens_ideals for a in ZZ(P.norm()).prime_divisors()})
     eps_prime_filt_dict = {}
 
     alpha_cache = {}
@@ -314,7 +292,7 @@ def character_enumeration_filter(
                 # stop condition:
                 # 4sqrt(Nm(q)) > 2p
                 # Nm(q) > (p/2)**2
-                stop = (p**2 // 4) + 1
+                stop = (p ** 2 // 4) + 1
                 if enumeration_bound:
                     stop = min(stop, enumeration_bound)
                 aux_primes = primes_iter(K, stop)

@@ -47,7 +47,7 @@ from sage.all import (
     lambert_w,
     CRT,
     GF,
-    NumberField
+    NumberField,
 )  # pylint: disable=no-name-in-module
 
 from .common_utils import R, x, get_ordinary_weil_polys_from_values, auxgens
@@ -56,56 +56,61 @@ from .character_enumeration import character_enumeration_filter
 
 logger = logging.getLogger(__name__)
 
-GENERIC_UPPER_BOUND = 10**30
+GENERIC_UPPER_BOUND = 10 ** 30
 
 
 def bound_on_largest_root(d, b):
     """Largest root of  x-(b log(x))^d"""
-    return RR(exp(-d*lambert_w(-1,-1/(d*b))))
+    return RR(exp(-d * lambert_w(-1, -1 / (d * b))))
 
 
 def improved_BS(d, A=4, B=2.5, C=5):
     """Tool for helping do the calculation in Example 6.6"""
-    g = A * log(x) + 2*B + C
+    g = A * log(x) + 2 * B + C
 
-    f_BS = x - (g ** (4*d) + g ** (2*d) + 1)
+    f_BS = x - (g ** (4 * d) + g ** (2 * d) + 1)
 
-    largest_root_bound = bound_on_largest_root(4*d, A+1)
+    largest_root_bound = bound_on_largest_root(4 * d, A + 1)
 
     bound_BS = find_root(f_BS, 10, largest_root_bound)
 
-    assert bound_BS >= RR(exp(2*B+C+1))
+    assert bound_BS >= RR(exp(2 * B + C + 1))
 
-    return bound_BS, 4*g(x=bound_BS)**(2*d)
+    return bound_BS, 4 * g(x=bound_BS) ** (2 * d)
 
 
 def compute_S_d(d):
 
-    largest_root_bound = bound_on_largest_root(4*d, 5)
+    largest_root_bound = bound_on_largest_root(4 * d, 5)
 
     bound_BS, _ = improved_BS(d)
 
-    lls = (log(x) + 9 + 2.5 * (log(log(x))) ** 2)
+    lls = log(x) + 9 + 2.5 * (log(log(x))) ** 2
 
     # x > bound_const ensures lls**2 > 10^9
-    bound_const = 10**14000
+    bound_const = 10 ** 14000
 
-    f_lls = x - (lls ** (4*d) + lls ** (2*d) + 1)
+    f_lls = x - (lls ** (4 * d) + lls ** (2 * d) + 1)
     try:
         bound_LLS = find_root(f_lls, bound_const, largest_root_bound)
     except RuntimeError:
         bound_LLS = largest_root_bound
 
-    return ceil(min(bound_BS, max(bound_const, bound_LLS))) 
+    return ceil(min(bound_BS, max(bound_const, bound_LLS)))
 
 
 def momose_type_2_uniform_bound(d):
 
     s = compute_S_d(d)
-    F = [f for f in range(1,d+1) if f%2 == 1]
+    F = [f for f in range(1, d + 1) if f % 2 == 1]
     v = (4 * log(s) + 10) ** 2
-    T = {p for q in prime_range(ceil(v)+1) for expr in [(q**(2*f) + q**f + 1) for f in F] for p in prime_divisors(expr)}
-    T_CC = [p for p in T if satisfies_condition_CC_uniform(F,p)]
+    T = {
+        p
+        for q in prime_range(ceil(v) + 1)
+        for expr in [(q ** (2 * f) + q ** f + 1) for f in F]
+        for p in prime_divisors(expr)
+    }
+    T_CC = [p for p in T if satisfies_condition_CC_uniform(F, p)]
     P = max(T_CC)
     return max(P, 4 * (v ** d))
 
@@ -132,8 +137,7 @@ def get_type_2_bound(K):
         return ceil(bound)
     except RuntimeError:
         warning_msg = (
-            "Type 2 bound for quadratic field with "
-            "discriminant {} failed. Returning generic upper bound"
+            "Type 2 bound for quadratic field with " "discriminant {} failed. Returning generic upper bound"
         ).format(delta_K)
         logger.warning(warning_msg)
         return GENERIC_UPPER_BOUND
@@ -151,8 +155,8 @@ def satisfies_condition_CC(K, p):
     for q in prime_range(p / 4):
         for frak_q in K.primes_above(q):
             f = frak_q.residue_class_degree()
-            if f % 2 == 1 and q**f < p / 4:
-                if (q ** (2 * f) + q**f + 1) % p != 0:
+            if f % 2 == 1 and q ** f < p / 4:
+                if (q ** (2 * f) + q ** f + 1) % p != 0:
                     if legendre_symbol(q, p) == 1:  # i.e. not inert
                         return False
     return True
@@ -169,7 +173,7 @@ def satisfies_condition_CC_uniform(possible_odd_f, p):
         return False
     for q in prime_range((p / 4) ^ (1 / max(possible_odd_f)) + 1):
         if legendre_symbol(q, p) == 1:
-            if all((q ** (2 * f) + q**f + 1) % p != 0 for f in possible_odd_f):
+            if all((q ** (2 * f) + q ** f + 1) % p != 0 for f in possible_odd_f):
                 return False
     return True
 
@@ -185,9 +189,7 @@ def get_the_lcm(C_K, embeddings, d, gen_list):
 
         q_class_group_order = C_K(frak_q).multiplicative_order()
         ordinary_frob_polys = get_ordinary_weil_polys_from_values(q, a)
-        ABCo_lcm = ABC_integers(
-            embeddings, frak_q, epsilons, q_class_group_order, ordinary_frob_polys
-        )[type_2_eps]
+        ABCo_lcm = ABC_integers(embeddings, frak_q, epsilons, q_class_group_order, ordinary_frob_polys)[type_2_eps]
         running_lcm = lcm([running_lcm, ABCo_lcm, ZZ(nm_q)])
     return running_lcm
 
@@ -265,13 +267,13 @@ def type_2_primes(K, embeddings, bound=None):
 
 def condition_CC_field(d, p):
     """Construct a number field as in Remark ???. To get the field
-       mentioned there, run this function for d=3 and p=253507
+    mentioned there, run this function for d=3 and p=253507
     """
     fs = []
-    for q in prime_range(p/4 +1):
-        fs.append(GF(q^d).polynomial())
-    coeff_lists = [[f[i].lift() for f in fs] for i in range(d+1)]
-    coeffs = [CRT(coeff_list,prime_range(p/4 +1)) for coeff_list in coeff_lists]
+    for q in prime_range(p / 4 + 1):
+        fs.append(GF(q ^ d).polynomial())
+    coeff_lists = [[f[i].lift() for f in fs] for i in range(d + 1)]
+    coeffs = [CRT(coeff_list, prime_range(p / 4 + 1)) for coeff_list in coeff_lists]
     poly = R(coeffs)
-    K = NumberField(poly, 'a')
+    K = NumberField(poly, "a")
     return K

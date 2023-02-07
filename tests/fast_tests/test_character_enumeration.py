@@ -62,10 +62,10 @@ def test_filter_possible_values(possible_values_list, q, e, prime, result):
     [
         (11, GF(3)(0), [0, -3, -6, 3, 6]),
         # make sure we include +/-2sqrt(fq) but not +/-(2sqrt(fq)+1),
-        (145757**2, GF(357686312646216567629137)(2 * 145757), [2 * 145757]),
-        (145757**2, GF(357686312646216567629137)(-2 * 145757), [-2 * 145757]),
-        (145757**2, GF(357686312646216567629137)(2 * 145757 + 1), []),
-        (145757**2, GF(357686312646216567629137)(-2 * 145757 - 1), []),
+        (145757 ** 2, GF(357686312646216567629137)(2 * 145757), [2 * 145757]),
+        (145757 ** 2, GF(357686312646216567629137)(-2 * 145757), [-2 * 145757]),
+        (145757 ** 2, GF(357686312646216567629137)(2 * 145757 + 1), []),
+        (145757 ** 2, GF(357686312646216567629137)(-2 * 145757 - 1), []),
     ],
 )
 def test_lifts_in_hasse_range(fq, res_class, expected_range):
@@ -79,12 +79,12 @@ x = polygen(QQ)
 @pytest.mark.parametrize(
     "f, q",
     [
-        (x**2 - x + 1007, 13),
-        (x**2 - x + 1007, 17),
-        (x**2 - x + 1007, 19),
-        (x**2 - 11 * 17 * 9011 * 23629, 17),
-        (x**2 - 11 * 17 * 9011 * 23629, 47),
-        (x**2 - 11 * 17 * 9011 * 23629, 89),
+        (x ** 2 - x + 1007, 13),
+        (x ** 2 - x + 1007, 17),
+        (x ** 2 - x + 1007, 19),
+        (x ** 2 - 11 * 17 * 9011 * 23629, 17),
+        (x ** 2 - 11 * 17 * 9011 * 23629, 47),
+        (x ** 2 - 11 * 17 * 9011 * 23629, 89),
     ],
 )
 @pytest.mark.skip(reason="Only for profiling putative faster solution")
@@ -105,9 +105,9 @@ def test_ideal_log_relation_prime_gens(f, q):
     exponents = C_K(qq).exponents()
 
     t = qq.ideal_log_relation()
-    alpha_new = t * prod([(relation**e) for relation, e in zip(relations, exponents)])
+    alpha_new = t * prod([(relation ** e) for relation, e in zip(relations, exponents)])
 
-    sanity_check = prod([Q**a for Q, a in zip(prime_gens, exponents)])
+    sanity_check = prod([Q ** a for Q, a in zip(prime_gens, exponents)])
     assert C_K(sanity_check) == C_K(qq)
 
     the_principal_ideal = qq * prod([Q ** (-a) for Q, a in zip(prime_gens, exponents)])

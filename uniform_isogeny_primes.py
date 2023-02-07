@@ -33,36 +33,48 @@
 import argparse
 import logging
 
-from sage.all import Integer, prime_divisors
+from sage.all import Integer, prime_divisors, is_prime
 
-from sage_code.strong_uniform_bounds import unif_bd, type_one_unif_primes
-
-
-def do_uniform_quadratic():
-
-    EPSILONS = [(0,4), (0,8), (4,4), (4,6), (4,12)]
-
-    for eps in EPSILONS:
-        bd = Integer(unif_bd(2,eps))
-        logging.info(f"Isogeny primes for {eps} are {bd.prime_divisors()}")
-
-    type_one_bound = type_one_unif_primes(int(2))
-
-    logging.info(f"Type 1 uniform bound is {type_one_bound}")
+from sage_code.common_utils import is_b_smooth
+from sage_code.strong_uniform_bounds import unif_bd, type_one_unif_bound
 
 
-def do_uniform(d, eps):
-    tr_not_6_bd = Integer(unif_bd(d, eps))
-    logging.info(f"Trace not 6 mod 12 bound is {tr_not_6_bd}")
-    # logging.info(f"Trace not 6 mod 12 primes are {tr_not_6_bd.prime_divisors()}")
+def do_uniform(d, trial_division_bound, aux_bound):
 
-    type_one_bound = type_one_unif_primes(d)
+    epsilons = [
+        tuple([trace] + [0] * (d - 1)) for trace in range(0, 6 * d, 2) if trace != 2 and (trace == 0 or trace % 6 != 0)
+    ]
 
-    logging.info(f"Type 1 uniform bound is {type_one_bound}")
+    for eps in epsilons:
+        do_uniform_eps(d, eps, trial_division_bound, aux_bound, print_trace=True)
 
 
-def get_eps_from_input(tuple_as_str):
-    return tuple([Integer(t) for t in tuple_as_str.split(",")])
+def do_uniform_type_1(d, trial_division_bound, aux_bound):
+    mult_bound = Integer(type_one_unif_bound(d, aux_bound))
+    is_smooth, factors = is_b_smooth(mult_bound, trial_division_bound)
+    factors_str = "{" + ", ".join(str(i) for i in factors) + "}"
+    logging.info(f"A superset of the type 1 isogeny primes (trace eps = 0 and {12*d}) is: {factors_str}")
+    if not is_smooth and not is_prime(factors[-1]):
+        logging.warning(f"unable to factor by trial division, the last factor is not prime!")
+
+
+def do_uniform_eps(d, eps, trial_division_bound, aux_bound, print_trace=False):
+
+    if eps == tuple(d * [0]):
+        do_uniform_type_1(d, trial_division_bound, aux_bound)
+        return
+
+    mult_bound = Integer(unif_bd(d, eps, aux_bound))
+    is_smooth, factors = is_b_smooth(mult_bound, trial_division_bound)
+    factors_str = "{" + ", ".join(str(i) for i in factors) + "}"
+    trace = sum(eps)
+    if print_trace:
+        info = f"A superset of the isogeny primes for trace eps = {trace} and {12*d - trace} is: {factors_str}"
+    else:
+        info = f"A superset of the isogeny primes for trace eps = trace {eps} = {trace} is: {factors_str}"
+    logging.info(info)
+    if not is_smooth and not is_prime(factors[-1]):
+        logging.warning(f"unable to factor by trial division, the last factor is not prime!")
 
 
 def cli_handler(args):  # pylint: disable=redefined-outer-name
@@ -75,13 +87,14 @@ def cli_handler(args):  # pylint: disable=redefined-outer-name
     )
     logging.debug("Debugging level for log messages set.")
 
-    eps = get_eps_from_input(args.eps)
+    if args.eps:
+        if args.d < len(args.eps):
+            raise ValueError(f"eps should have length at most d={args.d}, but has length {len(args.eps)} instead")
+        eps = tuple(args.eps + [0] * (args.d - len(args.eps)))
+        do_uniform_eps(args.d, eps, args.trial_division_bound, args.aux_bound)
+        return
 
-    if args.d == int(2):
-        do_uniform_quadratic()
-    else:
-        do_uniform(args.d, eps)
-
+    do_uniform(args.d, args.trial_division_bound, args.aux_bound)
 
 
 if __name__ == "__main__":
@@ -90,13 +103,28 @@ if __name__ == "__main__":
         "d",
         metavar="d",
         type=int,
-        help="bound on the primes to try the method of the appendix",
+        help="the degree of the number field for which the bound is computed",
     )
     parser.add_argument(
         "--eps",
-        required=True,
-        type=str,
-        help="bound on the primes to try the method of the appendix",
+        required=False,
+        type=int,
+        nargs="+",
+        choices=[0, 4, 6, 8, 12],
+        help="the signature for which to compute the upperbound as a space separated list",
+    )
+    parser.add_argument(
+        "--trial_division_bound",
+        metavar="bound",
+        type=int,
+        help="bound up to which to apply trial division for factoring the final result",
+        default=10 ** 9,
+    )
+    parser.add_argument(
+        "--aux_bound",
+        type=int,
+        help="bound on the size of auxiliary primes used",
+        default=6,
     )
     parser.add_argument("--verbose", action="store_true", help="get more info printed")
     args = parser.parse_args()

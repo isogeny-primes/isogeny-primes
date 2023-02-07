@@ -93,9 +93,7 @@ def get_dirichlet_character(K):
 
     if characters:
         return characters[0]
-    raise ValueError(
-        f"Galois group of {K} must be cyclic for it to come from a dirichlet character"
-    )
+    raise ValueError(f"Galois group of {K} must be cyclic for it to come from a dirichlet character")
 
 
 def is_torsion_same(p, K, chi, B=30, uniform=False):
@@ -112,18 +110,14 @@ def is_torsion_same(p, K, chi, B=30, uniform=False):
     if uniform:
         frob_poly_data = [(q, d) for q in prime_range(d + 2, B) if q != p]
     else:
-        frob_poly_data = [
-            (q, 1) if chi(q) == 1 else (q, d)
-            for q in prime_range(d + 2, B)
-            if gcd(q, p) == 1
-        ]
+        frob_poly_data = [(q, 1) if chi(q) == 1 else (q, d) for q in prime_range(d + 2, B) if gcd(q, p) == 1]
 
     point_counts = []
 
     for q, i in frob_poly_data:
         frob_pol_q = J0_min.frobenius_polynomial(q)
         frob_mat = companion_matrix(frob_pol_q)
-        point_counts.append((frob_mat**i).charpoly()(1))
+        point_counts.append((frob_mat ** i).charpoly()(1))
 
     # Recall that the rational torsion on J0(p) is entirely contained in
     # the minus part (theorem of Mazur), so checking no-growth of torsion

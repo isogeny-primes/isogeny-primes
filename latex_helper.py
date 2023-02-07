@@ -78,9 +78,7 @@ def contains_imaginary_quadratic_field(K):
 
     quadratic_subfields = K.subfields(2)
 
-    imag_quad_subfields = [
-        L for L, _, _ in quadratic_subfields if L.is_totally_imaginary()
-    ]
+    imag_quad_subfields = [L for L, _, _ in quadratic_subfields if L.is_totally_imaginary()]
 
     contains_hilbert_class_field_of_imag_quad = False
 
@@ -150,9 +148,7 @@ class Latexer:
             candidates.sort()
             possible_isogeny_primes = ", ".join(map(str, candidates))
             lmfdb_link = LMFDB_NF_URL_TRUNK.format(Klabel)
-            lmfdb_link_latex = r"\href{{{the_link}}}{{{my_text}}}".format(
-                the_link=lmfdb_link, my_text=Klabel
-            )
+            lmfdb_link_latex = r"\href{{{the_link}}}{{{my_text}}}".format(the_link=lmfdb_link, my_text=Klabel)
             output_here = output_str.format(
                 d=d,
                 Delta_K=Delta_K,
@@ -166,9 +162,7 @@ class Latexer:
     def type_2_bounds(self):
         """generate the type 2 bounds table"""
 
-        output_str = (
-            r"${d}$ & ${Delta_K}$ & ${label}$ & ${rem} \times 10^{{{exp_at_10}}}$\\"
-        )
+        output_str = r"${d}$ & ${Delta_K}$ & ${label}$ & ${rem} \times 10^{{{exp_at_10}}}$\\"
         latex_output = []
         for d in range(2, self.range + 1):
             Delta_K, f_K, K, label = get_smallest_good_number_field(d)
@@ -176,12 +170,10 @@ class Latexer:
             log_type_2_bound = type_2_bound.log10()
             exp_at_10 = int(log_type_2_bound)
             rem = log_type_2_bound - exp_at_10
-            rem = 10**rem
+            rem = 10 ** rem
             rem = rem.numerical_approx(digits=3)
             lmfdb_link = LMFDB_NF_URL_TRUNK.format(label)
-            lmfdb_link_latex = r"\href{{{the_link}}}{{{my_text}}}".format(
-                the_link=lmfdb_link, my_text=label
-            )
+            lmfdb_link_latex = r"\href{{{the_link}}}{{{my_text}}}".format(the_link=lmfdb_link, my_text=label)
             output_here = output_str.format(
                 d=d,
                 Delta_K=Delta_K,
@@ -211,14 +203,10 @@ class Latexer:
         for d in degrees:
             bad_formal_immersion_list = bfi_dat[d]["bad_formal_immersion_list"]
 
-            smallest_good, sporadic_bad_list = get_smallest_missing_prime(
-                bad_formal_immersion_list
-            )
+            smallest_good, sporadic_bad_list = get_smallest_missing_prime(bad_formal_immersion_list)
             sporadic_bad = ", ".join(map(str, sporadic_bad_list))
 
-            output_here = output_str.format(
-                d=d, smallest_good=smallest_good, sporadic_bad=sporadic_bad
-            )
+            output_here = output_str.format(d=d, smallest_good=smallest_good, sporadic_bad=sporadic_bad)
             latex_output.append(output_here)
 
         for one_line in latex_output:
@@ -242,19 +230,11 @@ def bad_formal_immersion_table_old():
         bad_formal_immersion_list = bfi_dat[d]["bad_formal_immersion_list"]
         bad_aux_prime_dict = bfi_dat[d]["bad_aux_prime_dict"]
 
-        smallest_good, sporadic_bad_list = get_smallest_missing_prime(
-            bad_formal_immersion_list
-        )
+        smallest_good, sporadic_bad_list = get_smallest_missing_prime(bad_formal_immersion_list)
         sporadic_bad = ", ".join(map(str, sporadic_bad_list))
         bad_aux_prime_dict_rev = {bad_aux_prime_dict[k]: k for k in bad_aux_prime_dict}
 
-        almost_good_primes = list(
-            {
-                p
-                for N in list(bad_aux_prime_dict_rev.keys())
-                for p in ZZ(N).prime_divisors()
-            }
-        )
+        almost_good_primes = list({p for N in list(bad_aux_prime_dict_rev.keys()) for p in ZZ(N).prime_divisors()})
         almost_good_primes.sort()
 
         almost_good = {}
@@ -269,9 +249,7 @@ def bad_formal_immersion_table_old():
             bad_aux_primes_str = ", ".join(map(str, bad_aux_primes))
             almost_good[p] = bad_aux_primes_str
 
-        almost_good = ", ".join(
-            ["{} ({})".format(p, q) for p, q in almost_good.items()]
-        )
+        almost_good = ", ".join(["{} ({})".format(p, q) for p, q in almost_good.items()])
 
         output_here = output_str.format(
             d=d,

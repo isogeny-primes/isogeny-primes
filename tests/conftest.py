@@ -44,9 +44,7 @@ def profile_module(request):
     module = request.module.__name__
     scope = os.environ.get("PROFILE_SCOPE", "").lower()
     allowed_scopes = ["module", "function", ""]
-    assert (
-        scope in allowed_scopes
-    ), f"PROFILE_SCOPE should be module or function not {scope}"
+    assert scope in allowed_scopes, f"PROFILE_SCOPE should be module or function not {scope}"
 
     if not scope == "module":
         yield module

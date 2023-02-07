@@ -13,13 +13,9 @@ class RedisSettings(BaseSettings):
     db: int = Field(0, env="REDIS_DB")
     password: Optional[str] = Field(None, env="REDIS_PASSWORD")
     socket_timeout: Optional[int] = Field(None, env="REDIS_SOCKET_TIMEOUT")
-    socket_connect_timeout: Optional[int] = Field(
-        None, env="REDIS_SOCKET_CONNECT_TIMEOUT"
-    )
+    socket_connect_timeout: Optional[int] = Field(None, env="REDIS_SOCKET_CONNECT_TIMEOUT")
     socket_keepalive: Optional[int] = Field(None, env="REDIS_SOCKET_KEEPALIVE")
-    socket_keepalive_options: Optional[str] = Field(
-        None, env="REDIS_SOCKET_KEEPALIVE_OPTIONS"
-    )
+    socket_keepalive_options: Optional[str] = Field(None, env="REDIS_SOCKET_KEEPALIVE_OPTIONS")
     connection_pool: Optional[str] = Field(None, env="REDIS_CONNECTION_POOL")
     unix_socket_path: Optional[str] = Field(None, env="REDIS_UNIX_SOCKET_PATH")
     encoding: str = Field("utf-8", env="REDIS_ENCODING")
@@ -84,9 +80,7 @@ class BaseFifoQueue:
 
     def dump_str(self, name, block_size: int = 1000):
         result = self.dump_json(name, block_size)
-        result_str = ",\n".join(
-            json.dumps(r, separators=(",", ":"), sort_keys=True) for r in result
-        )
+        result_str = ",\n".join(json.dumps(r, separators=(",", ":"), sort_keys=True) for r in result)
         return f"[\n{result_str}\n]"
 
     def dump(self, name, file_name, block_size: int = 1000):
@@ -96,9 +90,7 @@ class BaseFifoQueue:
 
 
 class RedisFifoQueue(BaseFifoQueue):
-    def __init__(
-        self, redis_settings: Optional[Union[RedisSettings, str, Path]] = None
-    ):
+    def __init__(self, redis_settings: Optional[Union[RedisSettings, str, Path]] = None):
         if not redis_settings:
             redis_settings = RedisSettings()
 
