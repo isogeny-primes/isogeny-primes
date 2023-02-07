@@ -97,7 +97,11 @@ def cli_handler(args):  # pylint: disable=redefined-outer-name
         return
 
     if args.trace is not None:
-        eps = tuple([args.trace] + [0] * (args.d - 1))
+        if args.trace > 12 * args.d or args.trace < 0:
+            raise ValueError(f"--trace {args.trace} should at most 12*d = {12*args.d} and non-negative.")
+        trace = args.trace if args.trace <= 6 * args.d else 12 * args.d - args.trace
+
+        eps = tuple([trace] + [0] * (args.d - 1))
         do_uniform_eps(args.d, eps, args.trial_division_bound, args.aux_bound, print_trace=True)
         return
 
