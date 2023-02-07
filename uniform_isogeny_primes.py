@@ -87,11 +87,18 @@ def cli_handler(args):  # pylint: disable=redefined-outer-name
     )
     logging.debug("Debugging level for log messages set.")
 
-    if args.eps:
+    if args.eps is not None:
+        if args.trace is not None:
+            raise ValueError("--eps and --trace cannot be used at the same time")
         if args.d < len(args.eps):
             raise ValueError(f"eps should have length at most d={args.d}, but has length {len(args.eps)} instead")
         eps = tuple(args.eps + [0] * (args.d - len(args.eps)))
         do_uniform_eps(args.d, eps, args.trial_division_bound, args.aux_bound)
+        return
+
+    if args.trace is not None:
+        eps = tuple([args.trace] + [0] * (args.d - 1))
+        do_uniform_eps(args.d, eps, args.trial_division_bound, args.aux_bound, print_trace=True)
         return
 
     do_uniform(args.d, args.trial_division_bound, args.aux_bound)
@@ -111,7 +118,13 @@ if __name__ == "__main__":
         type=int,
         nargs="+",
         choices=[0, 4, 6, 8, 12],
-        help="the signature for which to compute the upperbound as a space separated list",
+        help="The signature for which to compute the upperbound as a space separated list. Cannot be used together with --trace",
+    )
+    parser.add_argument(
+        "--trace",
+        required=False,
+        type=int,
+        help="The trace of the signature for which to compute the upperbound. Cannot be used together with --eps",
     )
     parser.add_argument(
         "--trial_division_bound",
