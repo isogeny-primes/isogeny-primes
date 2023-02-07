@@ -41,7 +41,7 @@ from sage.all import (
 )
 from itertools import product
 import logging
-from .common_utils import get_weil_polys, x
+from .common_utils import get_weil_polys, x, is_b_smooth
 from .pil_integers import collapse_tuple
 from .type_one_primes import cached_bad_formal_immersion_data
 
@@ -203,6 +203,17 @@ def type_one_unif_bound(d, q_bd=5):
         contribution = lcm([B_star, q_prod, agfi_q])
         mult_upper_bd = gcd(mult_upper_bd, contribution)
         logger.debug(f"Upperbound after q={q}: {mult_upper_bd}")
+
+    if logger.isEnabledFor(logging.DEBUG):
+        q = 2
+        B_star, B = B_eps_q(d, type_one_eps, q, mult_upper_bd)
+        q_prod = lcm([(q ** f - 1) for f in range(1, d + 1)])
+        contribution = lcm([B_star, q_prod])
+        mult_upper_bd_2 = gcd(mult_upper_bd, contribution)
+
+        is_smooth, factors = is_b_smooth(mult_upper_bd_2, 10 ** 9)
+        factors_str = "{" + ", ".join(str(i) for i in factors) + "}"
+        logger.debug(f"Type 1 upperbound if formal immersion works at 2: {factors_str}")
 
     bad_mult_upper_bd = prod(bad_formal_immersion_list)
     return lcm(mult_upper_bd, bad_mult_upper_bd)
