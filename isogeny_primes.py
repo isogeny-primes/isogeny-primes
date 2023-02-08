@@ -61,7 +61,7 @@ def DLMV(K):
     delta_K = log(2) / (r_K + 1)
     C_1_K = r_K ** (r_K + 1) * delta_K ** (-(r_K - 1)) / 2
     C_2_K = exp(24 * C_1_K * R_K)
-    CHEB_DEN_BOUND = (4 * log(Delta_K ** h_K) + 5 * h_K + 5) ** 2
+    CHEB_DEN_BOUND = (4 * log(Delta_K**h_K) + 5 * h_K + 5) ** 2
     C_0 = ((CHEB_DEN_BOUND ** (12 * h_K)) * C_2_K + CHEB_DEN_BOUND ** (6 * h_K)) ** 4
 
     # Now the Type 1 and 2 bounds

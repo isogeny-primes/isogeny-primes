@@ -36,8 +36,8 @@ from sage_code.common_utils import galois_action_on_embeddings, is_b_smooth
 
 x = polygen(QQ)
 test_cases = [
-    (x ** 5 - x ** 4 + 2 * x ** 3 - 4 * x ** 2 + x - 1, 20),
-    (x ** 6 - 2 * x ** 5 + 6 * x ** 4 + 22 * x ** 3 + 41 * x ** 2 + 48 * x + 36, 6),
+    (x**5 - x**4 + 2 * x**3 - 4 * x**2 + x - 1, 20),
+    (x**6 - 2 * x**5 + 6 * x**4 + 22 * x**3 + 41 * x**2 + 48 * x + 36, 6),
 ]
 
 
