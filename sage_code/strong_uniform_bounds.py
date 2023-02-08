@@ -27,7 +27,6 @@
     ====================================================================
 
 """
-
 from sage.all import (
     Partitions,
     divisors,
@@ -37,7 +36,7 @@ from sage.all import (
     gcd,
     prime_range,
     prod,
-    Integer,
+    ZZ,
 )
 from itertools import product
 import logging
@@ -57,19 +56,27 @@ def is_non_increasing(t, part):
     return True
 
 
-def get_beta_mats_with_pow(F, pow=1):
+def normalize_matrix(m):
+    if m.is_scalar():
+        m2 = m.submatrix(0, 0, 1, 1)
+        m2.set_immutable()
+        return m2
+
+    m2 = matrix.companion(m.charpoly()).change_ring(ZZ)
+    m2.set_immutable()
+    return m2
+
+
+def get_beta_mats_with_pow(F, pow=1, minimize=True):
 
     frob_polys = get_weil_polys(F)
-    output = [matrix.companion(f) ** pow for f in frob_polys]
-
     # We also need to add \pm 1, \pm q
-
-    f1 = (x - 1) * (x + 1)
-    output.append(matrix.companion(f1) ** pow)
-
     q = F.cardinality()
-    fq = (x - q) * (x + q)
-    output.append(matrix.companion(fq) ** pow)
+    frob_polys += [(x - 1), (x + 1), (x - q), (x + q)]
+    output = [matrix.companion(f).change_ring(ZZ) ** pow for f in frob_polys]
+
+    if minimize:
+        return {normalize_matrix(m) for m in output}
 
     return output
 
@@ -118,27 +125,26 @@ def bound_from_split_type(split_type, eps, q, known_mult_bound=0):
         eps (tuple): isogeny signature
         q (int): auxiliary rational prime
     """
+    logger.debug(f"Running q={q}, split type={(split_type['es'],split_type['fs'])} for eps={eps}")
     frob_poly_mats = [
-        get_beta_mats_with_pow(GF(q ** f), pow=12 * my_e) for my_e, f in zip(split_type["es"], split_type["fs"])
+        get_beta_mats_with_pow(GF(q**f), pow=12 * my_e) for my_e, f in zip(split_type["es"], split_type["fs"])
     ]
     beta_mat_tuples = list(product(*frob_poly_mats))
     collapsed_beta_mats = [collapse_tuple(a_beta_tuple) for a_beta_tuple in beta_mat_tuples]
+    logger.debug(f"len(collapsed_beta_mats)={len(collapsed_beta_mats)}")
     tr_eps = sum(eps)
-    q_to_tr_eps = q ** tr_eps
+    q_to_tr_eps = q**tr_eps
     running_lcm = 1
     zero_detection_flag = False
     for a_beta_mat in collapsed_beta_mats:
         matrix_parent = a_beta_mat.parent()
-        alpha_to_eps_mat = matrix_parent(q_to_tr_eps)
-        pil_mat = alpha_to_eps_mat.tensor_product(a_beta_mat.parent()(1)) - (
-            alpha_to_eps_mat.parent()(1)
-        ).tensor_product(a_beta_mat)
-        pil_int = pil_mat.det()
-        if pil_int == 0:
+        B_mat = a_beta_mat.parent()(q_to_tr_eps) - a_beta_mat
+        B_int = B_mat.det()
+        if B_int == 0:
             zero_detection_flag = True
         else:
-            pil_int = gcd(known_mult_bound, pil_int)
-            running_lcm = lcm(pil_int, running_lcm)
+            B_int = gcd(known_mult_bound, B_int)
+            running_lcm = lcm(B_int, running_lcm)
     if zero_detection_flag:
         return running_lcm, 0
     else:
@@ -199,7 +205,7 @@ def type_one_unif_bound(d, q_bd=5):
 
         agfi_q = bad_aux_prime_dict.get(str(q), 1)
 
-        q_prod = lcm([(q ** f - 1) for f in range(1, d + 1)])
+        q_prod = lcm([(q**f - 1) for f in range(1, d + 1)])
         contribution = lcm([B_star, q_prod, agfi_q])
         mult_upper_bd = gcd(mult_upper_bd, contribution)
         logger.debug(f"Upperbound after q={q}: {mult_upper_bd}")
@@ -207,11 +213,11 @@ def type_one_unif_bound(d, q_bd=5):
     if logger.isEnabledFor(logging.DEBUG):
         q = 2
         B_star, B = B_eps_q(d, type_one_eps, q, mult_upper_bd)
-        q_prod = lcm([(q ** f - 1) for f in range(1, d + 1)])
+        q_prod = lcm([(q**f - 1) for f in range(1, d + 1)])
         contribution = lcm([B_star, q_prod])
         mult_upper_bd_2 = gcd(mult_upper_bd, contribution)
 
-        is_smooth, factors = is_b_smooth(mult_upper_bd_2, 10 ** 9)
+        is_smooth, factors = is_b_smooth(mult_upper_bd_2, 10**9)
         factors_str = "{" + ", ".join(str(i) for i in factors) + "}"
         logger.debug(f"Type 1 upperbound if formal immersion works at 2: {factors_str}")
 
