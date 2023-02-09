@@ -352,7 +352,7 @@ def filter_ABC_primes(K, prime_list, eps_type):
         return output_list
 
     if eps_type == "mixed":
-        # prime must split or ramify in K, and be congruent to 1 mod 12
+        # prime must split or ramify in K, and be congruent to 11 mod 12
         output_list = []
 
         for p in prime_list:
