@@ -107,12 +107,14 @@ def momose_type_2_uniform_bound(d):
     T = {
         p
         for q in prime_range(ceil(v) + 1)
+
         for expr in [(q ** (2 * f) + q ** f + 1) for f in F]
+
         for p in prime_divisors(expr)
     }
     T_CC = [p for p in T if satisfies_condition_CC_uniform(F, p)]
     P = max(T_CC)
-    return max(P, 4 * (v ** d))
+    return max(P, 4 * (v**d))
 
 
 def get_type_2_bound(K):

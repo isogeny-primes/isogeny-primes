@@ -22,7 +22,7 @@ def collapse_tuple(a_beta_tuple):
     beta_list = a_beta_tuple_copy
     output = beta_list.pop(0)
     while beta_list:
-        output = output.tensor_product(beta_list.pop(0))
+        output = beta_list.pop(0).tensor_product(output, subdivide=False)
     return output
 
 

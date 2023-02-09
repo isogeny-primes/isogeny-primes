@@ -215,7 +215,9 @@ def final_filter(
 
             # Check that these exponents correspond to the ideals in
             # my_gens_ideals in the correct order
+
             sanity_check = prod([Q ** a for Q, a in zip(my_gens_ideals, exponents_in_class_group)])
+
             assert C_K(sanity_check) == C_K(q)
 
             the_principal_ideal = q * prod([Q ** (-a) for Q, a in zip(my_gens_ideals, exponents_in_class_group)])

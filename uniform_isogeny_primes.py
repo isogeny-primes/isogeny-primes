@@ -31,11 +31,17 @@
 # Imports
 
 import argparse
+import cProfile
 import logging
+import os
+import time
 
-from sage.all import Integer, prime_divisors, is_prime
+
+from sage.all import Integer, is_prime
 
 from sage_code.common_utils import is_b_smooth
+from sage_code.config import PROFILING_DIR
+
 from sage_code.strong_uniform_bounds import unif_bd, type_one_unif_bound
 
 
@@ -135,7 +141,9 @@ if __name__ == "__main__":
         metavar="bound",
         type=int,
         help="bound up to which to apply trial division for factoring the final result",
+
         default=10 ** 9,
+
     )
     parser.add_argument(
         "--aux_bound",
@@ -144,5 +152,34 @@ if __name__ == "__main__":
         default=6,
     )
     parser.add_argument("--verbose", action="store_true", help="get more info printed")
+    parser.add_argument(
+        "--profile",
+        metavar="filename",
+        required=False,
+        type=str,
+        help="profile the computation and write the profiling results to filename.pstats",
+    )
     args = parser.parse_args()
-    cli_handler(args)
+
+
+    if not args.profile:
+        t = time.monotonic()
+        cli_handler(args)
+        t = time.monotonic() - t
+    else:
+
+        with cProfile.Profile() as pr:
+            t = time.monotonic()
+            cli_handler(args)
+            t = time.monotonic() - t
+
+        manual_profile_dir = PROFILING_DIR.joinpath("uniform_command_line")
+        try:
+            os.mkdir(manual_profile_dir)
+        except FileExistsError:
+            pass
+
+        pr.dump_stats(manual_profile_dir.joinpath(f"{args.profile}.pstats"))
+
+    logging.info(f"Total time elapsed: {t} seconds.")
+
