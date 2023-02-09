@@ -34,6 +34,7 @@ from sage.combinat.permutation import Permutation
 from sage.groups.additive_abelian.additive_abelian_group import AdditiveAbelianGroup
 from sage.groups.perm_gps.permgroup import PermutationGroup
 from sage.groups.perm_gps.permgroup_named import TransitiveGroup, SymmetricGroup
+from sage.rings.factorint import factor_trial_division
 
 R = PolynomialRing(Rationals(), "x")
 x = R.gen()
@@ -76,12 +77,12 @@ def get_weil_polys(F):
     """
     q = F.characteristic()
     a = F.degree()
-    weil_polys = R.weil_polynomials(2, q**a)
+    weil_polys = R.weil_polynomials(2, q ** a)
     return [f for f in weil_polys if weil_polynomial_is_elliptic(f, q, a)]
 
 
 def get_ordinary_weil_polys_from_values(q, a):
-    weil_polys = R.weil_polynomials(2, q**a)
+    weil_polys = R.weil_polynomials(2, q ** a)
     return [f for f in weil_polys if f[1] % q != 0]
 
 
@@ -110,9 +111,7 @@ def galois_action_on_embeddings(G_K):
     permutations = []
     for g in G_K.gens():
         phi = g.as_hom()
-        g_perm = Permutation(
-            [embeddings.index(phi * emb) + 1 for emb in embeddings]
-        ).inverse()
+        g_perm = Permutation([embeddings.index(phi * emb) + 1 for emb in embeddings]).inverse()
         permutations.append(g_perm)
     G_K_emb = PermutationGroup(permutations, canonicalize=False)
     to_emb = G_K.hom(G_K_emb.gens())
@@ -129,7 +128,7 @@ def class_group_as_additive_abelian_group(C_K):
 
     def from_A(a):
         assert a in A
-        return C_K.prod(gi**ei for gi, ei in zip(C_K.gens(), a))
+        return C_K.prod(gi ** ei for gi, ei in zip(C_K.gens(), a))
 
     return A, to_A, from_A
 
@@ -261,9 +260,7 @@ def auxgens(K, auxgen_count=5):
 
     it = primes_iter(K)
 
-    aux_gen_list = [
-        one_aux_gen_list(C_K, class_group_gens, it) for _ in range(auxgen_count)
-    ]
+    aux_gen_list = [one_aux_gen_list(C_K, class_group_gens, it) for _ in range(auxgen_count)]
 
     return aux_gen_list
 
@@ -362,3 +359,25 @@ def filter_ABC_primes(K, prime_list, eps_type):
         return output_list
 
     raise ValueError("given type {} not a vaid epsilon type".format(eps_type))
+
+
+def is_b_smooth(n, b):
+    """On input of integers n and b return whether n is b smooth, and if n is b smooth also the list of
+    prime divisors of n.
+
+    Args:
+        n: the integer to factor
+        b: the integer for which to check the b-smoothness of n, b should fit in a C signed long.
+
+    Output:
+        a tuple (is_smooth, prime_divisors) where:
+        is_smooth: boolean that is True when n is b-smooth and false otherwise
+        prime_divisors: the list of prime divisors of n smaller than b, and the part of n that cannot be factored
+                        by trial divison up to b
+    """
+    if n == 1:
+        return True, []
+    primes = [p for p, e in factor_trial_division(n, b)]
+    if primes[-1] > b:
+        return False, primes
+    return True, primes

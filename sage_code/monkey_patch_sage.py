@@ -54,9 +54,7 @@ def __contains__(self, x):
     elif x in self.ambient_group():
         amb_inv = self.ambient_group().gens_orders()
         inv_basis = diagonal_matrix(ZZ, amb_inv)
-        gens_basis = matrix(
-            ZZ, len(self._gens), len(amb_inv), [g.list() for g in self._gens]
-        )
+        gens_basis = matrix(ZZ, len(self._gens), len(amb_inv), [g.list() for g in self._gens])
         return vector(ZZ, x.list()) in inv_basis.stack(gens_basis).row_module()
     return False
 
@@ -239,10 +237,6 @@ def monkey_patch():
     number_field._splitting_classes_gens_ = _splitting_classes_gens_
 
     number_field_ideal = sage.rings.number_field.number_field_ideal
-    number_field_ideal.NumberFieldFractionalIdeal._cache_bnfisprincipal = (
-        _cache_bnfisprincipal
-    )
-    number_field_ideal.NumberFieldFractionalIdeal.ideal_log_relation = (
-        ideal_log_relation
-    )
+    number_field_ideal.NumberFieldFractionalIdeal._cache_bnfisprincipal = _cache_bnfisprincipal
+    number_field_ideal.NumberFieldFractionalIdeal.ideal_log_relation = ideal_log_relation
     number_field_ideal.NumberFieldIdeal.is_zero = is_zero

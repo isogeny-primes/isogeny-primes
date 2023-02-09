@@ -2,6 +2,7 @@ nether_regions.sage
 error.json
 results.json
 gp_scripts/partype2primesunif.gp
+scratch
 # OS files
 .DS_Store
 

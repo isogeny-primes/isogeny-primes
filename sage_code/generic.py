@@ -87,9 +87,7 @@ def remove_redundant_epsilons(epsilons, galois_group=None):
 
     while epsilons:
         an_eps = epsilons.pop()
-        eps_orbit = get_redundant_epsilons(
-            an_eps, galois_group=galois_group
-        )  # dual (and possibly Galois) orbit
+        eps_orbit = get_redundant_epsilons(an_eps, galois_group=galois_group)  # dual (and possibly Galois) orbit
         epsilons_output.add(an_eps)
         epsilons.difference_update(eps_orbit)
 
@@ -121,9 +119,7 @@ def generic_signatures(d, strong_type_3_epsilons=None, galgp=None, ice_filter=Fa
 
     if strong_type_3_epsilons is not None:
         actual_type_3_epsilons = set(strong_type_3_epsilons.keys())
-        epsilons_keys = epsilons_keys.difference(
-            actual_type_3_epsilons
-        )  # remove strong type 3 epsilons
+        epsilons_keys = epsilons_keys.difference(actual_type_3_epsilons)  # remove strong type 3 epsilons
 
     epsilons_dict = {eps: get_eps_type(eps) for eps in epsilons_keys}
 
@@ -144,9 +140,7 @@ def contains_imaginary_quadratic_field(K):
 
     quadratic_subfields = K.subfields(2)
 
-    imag_quad_subfields = [
-        L for L, _, _ in quadratic_subfields if L.is_totally_imaginary()
-    ]
+    imag_quad_subfields = [L for L, _, _ in quadratic_subfields if L.is_totally_imaginary()]
 
     return bool(imag_quad_subfields)
 
@@ -210,7 +204,7 @@ def get_aux_primes(K, norm_bound, C_K, h_K, contains_imaginary_quadratic):
 
 
 def alpha_eps_beta_bound(alpha_eps, beta, nm_q_pow_12hq):
-    C_mat = alpha_eps**2 - alpha_eps * beta.trace() + nm_q_pow_12hq
+    C_mat = alpha_eps ** 2 - alpha_eps * beta.trace() + nm_q_pow_12hq
     N = ZZ(C_mat.det())
     return N
 
@@ -248,15 +242,12 @@ def ABC_integers(
         multiplicative_bounds = {}
 
     nm_q = ZZ(frak_q.absolute_norm())
-    alphas = (frak_q**q_class_group_order).gens_reduced()
+    alphas = (frak_q ** q_class_group_order).gens_reduced()
     assert len(alphas) == 1, "q^q_class_group_order not principal, which is very bad"
     alpha = alphas[0]
     output_dict = {}
     nm_q_pow_12hq = nm_q ** (12 * q_class_group_order)
-    betas = [
-        matrix.companion(frob_poly) ** (12 * q_class_group_order)
-        for frob_poly in frob_polys
-    ]
+    betas = [matrix.companion(frob_poly) ** (12 * q_class_group_order) for frob_poly in frob_polys]
 
     # The main loop
 
@@ -303,12 +294,7 @@ def get_U_integers(K, epsilons, embeddings):
     """Get divisibilities from the units"""
 
     unit_gens = K.unit_group().gens_values()
-    return {
-        eps: gcd(
-            [ZZ((eps_exp(u, eps, embeddings) - 1).absolute_norm()) for u in unit_gens]
-        )
-        for eps in epsilons
-    }
+    return {eps: gcd([ZZ((eps_exp(u, eps, embeddings) - 1).absolute_norm()) for u in unit_gens]) for eps in epsilons}
 
 
 def pre_type_3_class_group_maps(K, embeddings):
@@ -336,9 +322,7 @@ def get_strong_type_3_epsilons(K, embeddings):
         if all(norm_map(cl) == 0 for cl in list_of_gens):
             # means K contains HCF of L
             split1, _ = split_embeddings(phi, embeddings)
-            epsilon1 = tuple(
-                0 if embedding in split1 else 12 for embedding in embeddings
-            )
+            epsilon1 = tuple(0 if embedding in split1 else 12 for embedding in embeddings)
             epsilon2 = tuple(12 - a for a in epsilon1)
             strong_type_3_epsilons[epsilon1] = L
             strong_type_3_epsilons[epsilon2] = L
@@ -401,9 +385,7 @@ def generic_primes(
         class_group_maps = pre_type_3_class_group_maps(K, embeddings)
         epsilon_repeats = {eps: repeat_bound for eps in epsilons}
     else:
-        aux_primes = get_aux_primes(
-            K, norm_bound, C_K, h_K, contains_imaginary_quadratic
-        )
+        aux_primes = get_aux_primes(K, norm_bound, C_K, h_K, contains_imaginary_quadratic)
         aux_primes_iter = aux_primes
 
     for q in aux_primes_iter:
@@ -461,9 +443,7 @@ def generic_primes(
         if auto_stop_strategy:
             aux_primes = character_enumeration_bound
         else:
-            aux_primes = get_aux_primes(
-                K, norm_bound, C_K, h_K, contains_imaginary_quadratic
-            )
+            aux_primes = get_aux_primes(K, norm_bound, C_K, h_K, contains_imaginary_quadratic)
         logger.debug("Using ICE filter")
         output = character_enumeration_filter(
             K,
@@ -479,11 +459,7 @@ def generic_primes(
     else:
         final_split_dict = {}
         for eps_type in set(epsilons.values()):
-            eps_type_tracking_dict_inv = {
-                eps: ZZ(bound_dict[eps])
-                for eps in epsilons
-                if epsilons[eps] == eps_type
-            }
+            eps_type_tracking_dict_inv = {eps: ZZ(bound_dict[eps]) for eps in epsilons if epsilons[eps] == eps_type}
             eps_type_output = lcm(list(eps_type_tracking_dict_inv.values()))
             if eps_type_output.is_perfect_power():
                 eps_type_output = eps_type_output.perfect_power()[0]

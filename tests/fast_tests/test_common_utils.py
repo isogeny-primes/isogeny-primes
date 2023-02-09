@@ -32,12 +32,12 @@ import pytest
 from sage.all import QQ
 from sage.rings.number_field.number_field import NumberField
 from sage.rings.polynomial.polynomial_ring import polygen
-from sage_code.common_utils import galois_action_on_embeddings
+from sage_code.common_utils import galois_action_on_embeddings, is_b_smooth
 
 x = polygen(QQ)
 test_cases = [
-    (x**5 - x**4 + 2 * x**3 - 4 * x**2 + x - 1, 20),
-    (x**6 - 2 * x**5 + 6 * x**4 + 22 * x**3 + 41 * x**2 + 48 * x + 36, 6),
+    (x ** 5 - x ** 4 + 2 * x ** 3 - 4 * x ** 2 + x - 1, 20),
+    (x ** 6 - 2 * x ** 5 + 6 * x ** 4 + 22 * x ** 3 + 41 * x ** 2 + 48 * x + 36, 6),
 ]
 
 
@@ -56,3 +56,17 @@ def test_galois_action_on_embeddings(f, gal_deg):
     assert embeddings[0] == G_K.gen(0).as_hom() * embeddings[G_K_emb.gen(0)(1) - 1]
     assert Kgal.degree() == G_K_emb.cardinality() == gal_deg
     assert G_K_emb.degree() == len(embeddings) == K.degree()
+
+
+@pytest.mark.parametrize(
+    "n, b, expected",
+    [
+        [1, 3, (True, [])],
+        [2 * 3 * 37 * 41, 17, (False, [2, 3, 37 * 41])],
+        [2 * 3 * 37 * 41, 40, (False, [2, 3, 37, 41])],
+        [2 * 3 * 37 * 41, 42, (True, [2, 3, 37, 41])],
+    ],
+)
+def test_is_b_smooth(n, b, expected):
+    result = is_b_smooth(n, b)
+    assert result == expected

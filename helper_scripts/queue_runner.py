@@ -43,9 +43,7 @@ if __name__ == "__main__":
     elif command == "len":
         print(runner.len_queue(sys.argv[2]))
     elif command == "run":
-        runner.run_function(
-            sys.argv[2], "sage_code.lmfdb_isogeny_primes", "isogeny_primes"
-        )
+        runner.run_function(sys.argv[2], "sage_code.lmfdb_isogeny_primes", "isogeny_primes")
     elif command == "dump":
         runner.dump(*sys.argv[2:4])
     elif command == "queue_errors":

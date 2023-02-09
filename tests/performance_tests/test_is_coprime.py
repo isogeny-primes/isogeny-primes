@@ -34,7 +34,7 @@ from sage.rings.number_field.number_field import NumberField
 from sage.rings.polynomial.polynomial_ring import polygen
 
 x = polygen(QQ)
-K = NumberField(x**2 - 11 * 17 * 9011 * 23629, "b")
+K = NumberField(x ** 2 - 11 * 17 * 9011 * 23629, "b")
 test_cases_true = [(K, int(q), q, False) for q in prime_range(1000)]
 test_cases_false = [(K, int(q), next_prime(q), True) for q in prime_range(1000)]
 

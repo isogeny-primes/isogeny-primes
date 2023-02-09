@@ -61,7 +61,7 @@ def DLMV(K):
     delta_K = log(2) / (r_K + 1)
     C_1_K = r_K ** (r_K + 1) * delta_K ** (-(r_K - 1)) / 2
     C_2_K = exp(24 * C_1_K * R_K)
-    CHEB_DEN_BOUND = (4 * log(Delta_K**h_K) + 5 * h_K + 5) ** 2
+    CHEB_DEN_BOUND = (4 * log(Delta_K ** h_K) + 5 * h_K + 5) ** 2
     C_0 = ((CHEB_DEN_BOUND ** (12 * h_K)) * C_2_K + CHEB_DEN_BOUND ** (6 * h_K)) ** 4
 
     # Now the Type 1 and 2 bounds
@@ -120,9 +120,7 @@ def get_isogeny_primes(
 
     # Get and show TypeThreeNotMomosePrimes
 
-    type_3_not_momose_primes_list, list_of_type_3_fields = type_three_not_momose(
-        K, embeddings, strong_type_3_epsilons
-    )
+    type_3_not_momose_primes_list, list_of_type_3_fields = type_three_not_momose(K, embeddings, strong_type_3_epsilons)
     logging.info(f"type_3_not_momose_primes = {type_3_not_momose_primes_list}")
 
     # Put them all together
@@ -171,15 +169,10 @@ def cli_handler(args):  # pylint: disable=redefined-outer-name
 
     if args.dlmv:
         dlmv_bound = DLMV(K)
-        logging.info(
-            "DLMV bound for {} is:\n\n{}\n\nwhich is approximately {}".format(
-                K, dlmv_bound, RR(dlmv_bound)
-            )
-        )
+        logging.info("DLMV bound for {} is:\n\n{}\n\nwhich is approximately {}".format(K, dlmv_bound, RR(dlmv_bound)))
     else:
         logging.warning(
-            "Only checking Type 2 primes up to %s. "
-            "To check all, use the PARI/GP script.",
+            "Only checking Type 2 primes up to %s. " "To check all, use the PARI/GP script.",
             args.bound,
         )
 
@@ -218,18 +211,14 @@ def cli_handler(args):  # pylint: disable=redefined-outer-name
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "f", metavar="f", type=str, help="defining polynomial for the Number field"
-    )
+    parser.add_argument("f", metavar="f", type=str, help="defining polynomial for the Number field")
     parser.add_argument(
         "--norm_bound",
         type=int,
         help="bound on norm of aux primes in PreTypeOneTwo case",
     )
     parser.add_argument("--dlmv", action="store_true", help="get only DLMV bound")
-    parser.add_argument(
-        "--bound", type=int, help="bound on Type 2 prime search", default=1000
-    )
+    parser.add_argument("--bound", type=int, help="bound on Type 2 prime search", default=1000)
     parser.add_argument(
         "--appendix_bound",
         type=int,

@@ -28,10 +28,20 @@
 
 """
 
-from sage.all import Partitions, divisors, matrix, GF, lcm, gcd, prime_range, prod, Integer
+from sage.all import (
+    Partitions,
+    divisors,
+    matrix,
+    GF,
+    lcm,
+    gcd,
+    prime_range,
+    prod,
+    Integer,
+)
 from itertools import product
 import logging
-from .common_utils import get_weil_polys, x
+from .common_utils import get_weil_polys, x, is_b_smooth
 from .pil_integers import collapse_tuple
 from .type_one_primes import cached_bad_formal_immersion_data
 
@@ -40,9 +50,9 @@ logger = logging.getLogger(__name__)
 
 def is_non_increasing(t, part):
 
-    for j in range(len(t)-1):
-        if part[j] == part[j+1]:
-            if t[j] < t[j+1]:
+    for j in range(len(t) - 1):
+        if part[j] == part[j + 1]:
+            if t[j] < t[j + 1]:
                 return False
     return True
 
@@ -83,18 +93,18 @@ def splitting_types(d):
 
     types = []
 
-    for r in range(1,d+1):
-        parts = list(Partitions(d, length=r))        
+    for r in range(1, d + 1):
+        parts = list(Partitions(d, length=r))
         for part in parts:
             divisors_of_partition = [divisors(t) for t in part]
             possible_es = list(product(*divisors_of_partition))
             possible_es = remove_duplicates(possible_es, part)
             for possible_e_vec in possible_es:
-                f_vec = [part[j]/possible_e_vec[j] for j in range(r)]
+                f_vec = [part[j] / possible_e_vec[j] for j in range(r)]
                 type_dict = {}
-                type_dict['r'] = r
-                type_dict['es'] = possible_e_vec
-                type_dict['fs'] = tuple(f_vec)
+                type_dict["r"] = r
+                type_dict["es"] = possible_e_vec
+                type_dict["fs"] = tuple(f_vec)
                 types.append(type_dict)
     return types
 
@@ -108,20 +118,21 @@ def bound_from_split_type(split_type, eps, q, known_mult_bound=0):
         eps (tuple): isogeny signature
         q (int): auxiliary rational prime
     """
-    frob_poly_mats = [get_beta_mats_with_pow(GF(q**f), pow=12*my_e) for my_e,f in zip(split_type['es'],split_type['fs'])]
-    beta_mat_tuples = list(product(*frob_poly_mats))
-    collapsed_beta_mats = [
-        collapse_tuple(a_beta_tuple) for a_beta_tuple in beta_mat_tuples
+    frob_poly_mats = [
+        get_beta_mats_with_pow(GF(q ** f), pow=12 * my_e) for my_e, f in zip(split_type["es"], split_type["fs"])
     ]
+    beta_mat_tuples = list(product(*frob_poly_mats))
+    collapsed_beta_mats = [collapse_tuple(a_beta_tuple) for a_beta_tuple in beta_mat_tuples]
     tr_eps = sum(eps)
-    q_to_tr_eps = q**tr_eps
+    q_to_tr_eps = q ** tr_eps
     running_lcm = 1
     zero_detection_flag = False
     for a_beta_mat in collapsed_beta_mats:
         matrix_parent = a_beta_mat.parent()
         alpha_to_eps_mat = matrix_parent(q_to_tr_eps)
         pil_mat = alpha_to_eps_mat.tensor_product(a_beta_mat.parent()(1)) - (
-                  alpha_to_eps_mat.parent()(1)).tensor_product(a_beta_mat)
+            alpha_to_eps_mat.parent()(1)
+        ).tensor_product(a_beta_mat)
         pil_int = pil_mat.det()
         if pil_int == 0:
             zero_detection_flag = True
@@ -134,16 +145,17 @@ def bound_from_split_type(split_type, eps, q, known_mult_bound=0):
         return running_lcm, running_lcm
 
 
-def B_eps_q(d,eps,q, known_mult_bound=0):
+def B_eps_q(d, eps, q, known_mult_bound=0):
 
     split_types = splitting_types(d)
     B_star = 1
     B = 1
     for split_type in split_types:
         pil_int_star, pil_int = bound_from_split_type(split_type, eps, q, known_mult_bound)
-        B_star = gcd(known_mult_bound, lcm(B_star,pil_int_star))
-        B = gcd(known_mult_bound, lcm(B,pil_int))
+        B_star = gcd(known_mult_bound, lcm(B_star, pil_int_star))
+        B = gcd(known_mult_bound, lcm(B, pil_int))
     return B_star, B
+
 
 def core_loop(d, eps, aux_primes):
 
@@ -151,48 +163,57 @@ def core_loop(d, eps, aux_primes):
     trace_eps = sum(eps)
 
     for q in aux_primes:
-        B_star, B = B_eps_q(d,eps,q,mult_upper_bd)
+        B_star, B = B_eps_q(d, eps, q, mult_upper_bd)
         if trace_eps % 6 != 0:
             assert B_star == B
         mult_upper_bd = gcd(mult_upper_bd, B_star)
+        logger.debug(f"Upperbound after q={q}: {mult_upper_bd}")
 
     return mult_upper_bd
 
 
-def unif_bd(d, eps):
+def unif_bd(d, eps, aux_bound=6):
 
     tr_eps = sum(eps)
 
-    if tr_eps % 6 != 0:
-        aux_primes = prime_range(6)
-    elif tr_eps % 12 == 6:
-        aux_primes = prime_range(5, 15)
-    else:
-        raise ValueError("can't deal with this case")
+    if tr_eps % 6 == 0:
+        raise ValueError(f"can't handle this case since tr eps = {tr_eps} = 0 mod 6")
+
+    aux_primes = prime_range(aux_bound)
 
     return core_loop(d, eps, aux_primes)
 
 
-def type_one_unif_primes(d, q_bd=4):
+def type_one_unif_bound(d, q_bd=5):
 
     assert q_bd > 3
 
-    aux_primes = prime_range(3, q_bd+1)
+    aux_primes = prime_range(3, q_bd + 1)
 
     mult_upper_bd = 0
-    type_one_eps =  (0,) * d
+    type_one_eps = (0,) * d
     bad_formal_immersion_list, bad_aux_prime_dict = cached_bad_formal_immersion_data(d)
 
     for q in aux_primes:
-        B_star, B = B_eps_q(d,type_one_eps,q,mult_upper_bd)
+        B_star, B = B_eps_q(d, type_one_eps, q, mult_upper_bd)
 
-        agfi_q = bad_aux_prime_dict.get(str(q),1)
+        agfi_q = bad_aux_prime_dict.get(str(q), 1)
 
-        q_prod = lcm([(q ** f - 1) for f in range(1,d+1)])
+        q_prod = lcm([(q ** f - 1) for f in range(1, d + 1)])
         contribution = lcm([B_star, q_prod, agfi_q])
         mult_upper_bd = gcd(mult_upper_bd, contribution)
+        logger.debug(f"Upperbound after q={q}: {mult_upper_bd}")
 
-    output = set(Integer(mult_upper_bd).prime_divisors())
-    output = output.union(set(bad_formal_immersion_list))
-    return output
-    
+    if logger.isEnabledFor(logging.DEBUG):
+        q = 2
+        B_star, B = B_eps_q(d, type_one_eps, q, mult_upper_bd)
+        q_prod = lcm([(q ** f - 1) for f in range(1, d + 1)])
+        contribution = lcm([B_star, q_prod])
+        mult_upper_bd_2 = gcd(mult_upper_bd, contribution)
+
+        is_smooth, factors = is_b_smooth(mult_upper_bd_2, 10 ** 9)
+        factors_str = "{" + ", ".join(str(i) for i in factors) + "}"
+        logger.debug(f"Type 1 upperbound if formal immersion works at 2: {factors_str}")
+
+    bad_mult_upper_bd = prod(bad_formal_immersion_list)
+    return lcm(mult_upper_bd, bad_mult_upper_bd)

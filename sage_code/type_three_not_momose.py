@@ -84,16 +84,12 @@ def type_three_not_momose(K, embeddings, strong_type_3_epsilons):
     bound_dict = {eps: 0 for eps in actual_type_3_epsilons}
 
     for gen_list in aux_gen_list:
-        eps_lcm_dict = get_eps_lcm_dict(
-            C_K, actual_type_3_epsilons, embeddings, gen_list
-        )
+        eps_lcm_dict = get_eps_lcm_dict(C_K, actual_type_3_epsilons, embeddings, gen_list)
         for eps in actual_type_3_epsilons:
             bound_dict[eps] = gcd(bound_dict[eps], eps_lcm_dict[eps])
 
     for eps in actual_type_3_epsilons:
-        bound_dict[eps] = lcm(
-            bound_dict[eps], strong_type_3_epsilons[eps].discriminant()
-        )
+        bound_dict[eps] = lcm(bound_dict[eps], strong_type_3_epsilons[eps].discriminant())
 
     Kgal = embeddings[0].codomain()
     epsilons_for_ice = {eps: "quadratic-non-constant" for eps in actual_type_3_epsilons}
