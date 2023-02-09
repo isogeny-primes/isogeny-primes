@@ -1,25 +1,35 @@
 # Isogeny Primes
 
-This is the repository for the program **Isogeny Primes** explained in the paper [Explicit isogenies of prime degree over number fields](https://arxiv.org/abs/2203.06009).
+This is the repository for the program **Isogeny Primes** explained in the papers [Explicit isogenies of prime degree over number fields](https://arxiv.org/abs/2203.06009) and `Towards strong uniformity for isogenies of prime degree'.
 
 ### What does it do?
 
-You give it a polynomial.
+There are two ways of using the program. 
 
-It will give you a set of primes containing the **isogeny primes** for the number field defined by your input polynomial.
+1. In `Uniform' mode. This takes an input polynomial, and will give you a set of primes containing the **isogeny primes** for the number field defined by your input polynomial.
 
-It will then be up to you to determine which of those are actually isogeny primes.
+2. In `Strong Uniform' mode. This takes an input integer, and will give you a set of primes containing the **isogeny primes** for *any number field of degree d* broken down by the trace of the signature of the isogeny. Not all trace values can be dealt with currently; see the `Towards strong uniformity' paper for more on what can currently be handled.
+
+It will then be up to you to determine which of those output lists are actually isogeny primes.
 
 ### How do I use it?
 
 Clone this repo to your computer. It is assumed you have [sage](https://sagemath.org/) installed.
 
-#### Typical use
+#### Typical use - Uniformity
 
 The main file is `isogeny_primes.py`. It takes one positional argument - f - which is the polynomial. So if you're interested to see the isogeny primes over Q(zeta7), you'd enter the following at the command line:
 
 ```
 sage isogeny_primes.py 'x^6 - x^5 + x^4 - x^3 + x^2 - x + 1'
+```
+
+#### Typical use - Strong Uniformity
+
+The main file is `uniform_isogeny_primes.py`. It takes one positional argument - d - which is the degree. So if you're interested to see the isogeny primes over cubic fields, you'd enter the following at the command line:
+
+```
+sage uniform_isogeny_primes.py 3
 ```
 
 #### That didn't work for me ...
@@ -34,7 +44,11 @@ To see the various options, run
 sage isogeny_primes.py --help
 ```
 
-You'll see that you have the following optional arguments:
+or ```
+sage uniform_isogeny_primes.py --help
+```
+
+For the first command you'll see that you have the following optional arguments:
 
  - `--norm_bound`; if specified this will take auxiliary primes up to the specified bound. However, doing this also turns off the auto stop strategy.
 
