@@ -45,15 +45,15 @@ logger = logging.getLogger(__name__)
 def filter_possible_values(possible_values_list, q, residue_class_degree, prime_field):
 
     output = []
-    fq = q**residue_class_degree
+    fq = q ** residue_class_degree
     for c in possible_values_list:
-        if c**2 == prime_field(1):
+        if c ** 2 == prime_field(1):
             output.append(c)
-        elif c**2 == prime_field(fq**2):
+        elif c ** 2 == prime_field(fq ** 2):
             output.append(c)
         else:
             possible_mid_coeffs = lifts_in_hasse_range(fq, c + prime_field(fq) / c)
-            possible_weil_polys = [x**2 + a * x + fq for a in possible_mid_coeffs]
+            possible_weil_polys = [x ** 2 + a * x + fq for a in possible_mid_coeffs]
 
             elliptic_weil_polys = [
                 f for f in possible_weil_polys if weil_polynomial_is_elliptic(f, q, residue_class_degree)
@@ -85,13 +85,13 @@ def get_possible_vals_at_gens(gens_info, eps, embeddings, residue_field, prime_f
         q = class_gp_gen.smallest_integer()
         e = class_gp_gen.residue_class_degree()
         filtered_values = filter_possible_values(possible_values, q, e, prime_field)
-        output[class_gp_gen] = list({x**12 for x in filtered_values})
+        output[class_gp_gen] = list({x ** 12 for x in filtered_values})
 
     return output
 
 
 def tuple_exp(tup, exp_tup):
-    return tuple((t**e for t, e in zip(tup, exp_tup)))
+    return tuple((t ** e for t, e in zip(tup, exp_tup)))
 
 
 def lifts_in_hasse_range(fq, res_class):
@@ -112,13 +112,13 @@ def lifts_in_hasse_range(fq, res_class):
 
     low_run = centered_lift
 
-    while low_run**2 <= fq4:
+    while low_run ** 2 <= fq4:
         output.append(low_run)
         low_run = low_run - p
 
     high_run = centered_lift + p
 
-    while high_run**2 <= fq4:
+    while high_run ** 2 <= fq4:
         output.append(high_run)
         high_run = high_run + p
 
@@ -215,7 +215,9 @@ def final_filter(
 
             # Check that these exponents correspond to the ideals in
             # my_gens_ideals in the correct order
-            sanity_check = prod([Q**a for Q, a in zip(my_gens_ideals, exponents_in_class_group)])
+
+            sanity_check = prod([Q ** a for Q, a in zip(my_gens_ideals, exponents_in_class_group)])
+
             assert C_K(sanity_check) == C_K(q)
 
             the_principal_ideal = q * prod([Q ** (-a) for Q, a in zip(my_gens_ideals, exponents_in_class_group)])
@@ -269,7 +271,7 @@ def character_enumeration_filter(
     gens_info = {}
     for q in my_gens_ideals:
         q_order = C_K(q).multiplicative_order()
-        alphas = (q**q_order).gens_reduced()
+        alphas = (q ** q_order).gens_reduced()
         assert len(alphas) == 1
         alpha = alphas[0]
         gens_info[q] = (q_order, alpha)
@@ -292,7 +294,7 @@ def character_enumeration_filter(
                 # stop condition:
                 # 4sqrt(Nm(q)) > 2p
                 # Nm(q) > (p/2)**2
-                stop = (p**2 // 4) + 1
+                stop = (p ** 2 // 4) + 1
                 if enumeration_bound:
                     stop = min(stop, enumeration_bound)
                 aux_primes = primes_iter(K, stop)

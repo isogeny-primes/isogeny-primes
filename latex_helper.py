@@ -170,7 +170,7 @@ class Latexer:
             log_type_2_bound = type_2_bound.log10()
             exp_at_10 = int(log_type_2_bound)
             rem = log_type_2_bound - exp_at_10
-            rem = 10**rem
+            rem = 10 ** rem
             rem = rem.numerical_approx(digits=3)
             lmfdb_link = LMFDB_NF_URL_TRUNK.format(label)
             lmfdb_link_latex = r"\href{{{the_link}}}{{{my_text}}}".format(the_link=lmfdb_link, my_text=label)

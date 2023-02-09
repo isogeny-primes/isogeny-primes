@@ -270,7 +270,7 @@ def apply_formal_immersion_at_2(output_thus_far: Set[int], running_prime_dict_2:
 def get_N(frob_poly, nm_q, exponent):
     """Helper method for computing Type 1 primes"""
     beta = Matrix.companion(frob_poly) ** exponent
-    N = ZZ(1 - beta.trace() + nm_q**exponent)
+    N = ZZ(1 - beta.trace() + nm_q ** exponent)
     return N
 
 
