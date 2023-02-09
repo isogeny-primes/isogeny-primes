@@ -356,7 +356,7 @@ def filter_ABC_primes(K, prime_list, eps_type):
         output_list = []
 
         for p in prime_list:
-            if p % 12 == 1:
+            if p % 12 == 11:
                 if not K.ideal(p).is_prime():
                     output_list.append(p)
         return output_list
