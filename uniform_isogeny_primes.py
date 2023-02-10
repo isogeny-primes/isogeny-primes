@@ -141,9 +141,7 @@ if __name__ == "__main__":
         metavar="bound",
         type=int,
         help="bound up to which to apply trial division for factoring the final result",
-
-        default=10 ** 9,
-
+        default=10**9,
     )
     parser.add_argument(
         "--aux_bound",
@@ -160,7 +158,6 @@ if __name__ == "__main__":
         help="profile the computation and write the profiling results to filename.pstats",
     )
     args = parser.parse_args()
-
 
     if not args.profile:
         t = time.monotonic()
@@ -182,4 +179,3 @@ if __name__ == "__main__":
         pr.dump_stats(manual_profile_dir.joinpath(f"{args.profile}.pstats"))
 
     logging.info(f"Total time elapsed: {t} seconds.")
-

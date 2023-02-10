@@ -38,7 +38,6 @@ from sage.all import (
     prime_range,
     prod,
     ZZ,
-
 )
 from itertools import product
 import logging
@@ -137,7 +136,7 @@ def bound_from_split_type(split_type, eps, q, known_mult_bound=0):
     logger.debug(f"len(collapsed_beta_mats)={len(collapsed_beta_mats)}")
 
     tr_eps = sum(eps)
-    q_to_tr_eps = q ** tr_eps
+    q_to_tr_eps = q**tr_eps
     running_lcm = 1
     zero_detection_flag = False
     for a_beta_mat in collapsed_beta_mats:
@@ -211,8 +210,7 @@ def type_one_unif_bound(d, q_bd=5):
 
         agfi_q = bad_aux_prime_dict.get(str(q), 1)
 
-
-        q_prod = lcm([(q ** f - 1) for f in range(1, d + 1)])
+        q_prod = lcm([(q**f - 1) for f in range(1, d + 1)])
 
         contribution = lcm([B_star, q_prod, agfi_q])
         mult_upper_bd = gcd(mult_upper_bd, contribution)
@@ -222,11 +220,11 @@ def type_one_unif_bound(d, q_bd=5):
         q = 2
         B_star, B = B_eps_q(d, type_one_eps, q, mult_upper_bd)
 
-        q_prod = lcm([(q ** f - 1) for f in range(1, d + 1)])
+        q_prod = lcm([(q**f - 1) for f in range(1, d + 1)])
         contribution = lcm([B_star, q_prod])
         mult_upper_bd_2 = gcd(mult_upper_bd, contribution)
 
-        is_smooth, factors = is_b_smooth(mult_upper_bd_2, 10 ** 9)
+        is_smooth, factors = is_b_smooth(mult_upper_bd_2, 10**9)
 
         factors_str = "{" + ", ".join(str(i) for i in factors) + "}"
         logger.debug(f"Type 1 upperbound if formal immersion works at 2: {factors_str}")

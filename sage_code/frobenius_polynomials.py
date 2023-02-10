@@ -112,7 +112,7 @@ def semi_stable_frobenius_polynomial(E: EllipticCurve_number_field, q: NumberFie
         x = polygen(K)
         u = uniformizer(q)
         e = semistable_ramification(local_data)
-        L = K.extension(x ** e - t * u, "a")
+        L = K.extension(x**e - t * u, "a")
         EL = E.change_ring(L)
         qL = L.primes_above(q)[0]
         Ebar = reduction(EL, qL)
@@ -138,4 +138,4 @@ def isogeny_character_values(E: EllipticCurve_number_field, p: Integer, q: Numbe
 
 def isogeny_character_values_12(E: EllipticCurve_number_field, p: Integer, q: NumberFieldFractionalIdeal):
     values = isogeny_character_values(E, p, q)
-    return [a ** 12 for a in values]
+    return [a**12 for a in values]
