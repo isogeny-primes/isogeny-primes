@@ -140,7 +140,6 @@ def bound_from_split_type(split_type, eps, q, known_mult_bound=0):
     running_lcm = 1
     zero_detection_flag = False
     for a_beta_mat in collapsed_beta_mats:
-        matrix_parent = a_beta_mat.parent()
 
         B_mat = a_beta_mat.parent()(q_to_tr_eps) - a_beta_mat
         B_int = B_mat.det()
