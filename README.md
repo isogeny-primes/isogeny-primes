@@ -6,9 +6,10 @@ This is the repository for the program **Isogeny Primes** explained in the paper
 
 There are two ways of using the program. 
 
-1. In `Uniform' mode. This takes an input polynomial, and will give you a set of primes containing the **isogeny primes** for the number field defined by your input polynomial.
+1. In **Uniform** mode. This takes an input polynomial, and will give you a set of primes containing the **isogeny primes** for the number field defined by your input polynomial.
 
-2. In `Strong Uniform' mode. This takes an input integer, and will give you a set of primes containing the **isogeny primes** for *any number field of degree d* broken down by the trace of the signature of the isogeny. Not all trace values can be dealt with currently; see the `Towards strong uniformity' paper for more on what can currently be handled.
+2. In **Strong Uniform** mode. This takes an input integer, and will give you a set of primes containing the **isogeny primes** for *any number field of degree d* broken down by the trace of the signature of the isogeny. Not all trace values can be dealt with currently; see the `Towards strong uniformity' paper for more on what can currently be handled.
+
 
 It will then be up to you to determine which of those output lists are actually isogeny primes.
 
