@@ -204,7 +204,7 @@ def get_aux_primes(K, norm_bound, C_K, h_K, contains_imaginary_quadratic):
 
 
 def alpha_eps_beta_bound(alpha_eps, beta, nm_q_pow_12hq):
-    C_mat = alpha_eps ** 2 - alpha_eps * beta.trace() + nm_q_pow_12hq
+    C_mat = alpha_eps**2 - alpha_eps * beta.trace() + nm_q_pow_12hq
     N = ZZ(C_mat.det())
     return N
 
@@ -242,7 +242,7 @@ def ABC_integers(
         multiplicative_bounds = {}
 
     nm_q = ZZ(frak_q.absolute_norm())
-    alphas = (frak_q ** q_class_group_order).gens_reduced()
+    alphas = (frak_q**q_class_group_order).gens_reduced()
     assert len(alphas) == 1, "q^q_class_group_order not principal, which is very bad"
     alpha = alphas[0]
     output_dict = {}

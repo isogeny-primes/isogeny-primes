@@ -77,12 +77,12 @@ def get_weil_polys(F):
     """
     q = F.characteristic()
     a = F.degree()
-    weil_polys = R.weil_polynomials(2, q ** a)
+    weil_polys = R.weil_polynomials(2, q**a)
     return [f for f in weil_polys if weil_polynomial_is_elliptic(f, q, a)]
 
 
 def get_ordinary_weil_polys_from_values(q, a):
-    weil_polys = R.weil_polynomials(2, q ** a)
+    weil_polys = R.weil_polynomials(2, q**a)
     return [f for f in weil_polys if f[1] % q != 0]
 
 
@@ -128,7 +128,7 @@ def class_group_as_additive_abelian_group(C_K):
 
     def from_A(a):
         assert a in A
-        return C_K.prod(gi ** ei for gi, ei in zip(C_K.gens(), a))
+        return C_K.prod(gi**ei for gi, ei in zip(C_K.gens(), a))
 
     return A, to_A, from_A
 

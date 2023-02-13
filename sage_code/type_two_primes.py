@@ -56,7 +56,7 @@ from .character_enumeration import character_enumeration_filter
 
 logger = logging.getLogger(__name__)
 
-GENERIC_UPPER_BOUND = 10 ** 30
+GENERIC_UPPER_BOUND = 10**30
 
 
 def bound_on_largest_root(d, b):
@@ -88,7 +88,7 @@ def compute_S_d(d):
     lls = log(x) + 9 + 2.5 * (log(log(x))) ** 2
 
     # x > bound_const ensures lls**2 > 10^9
-    bound_const = 10 ** 14000
+    bound_const = 10**14000
 
     f_lls = x - (lls ** (4 * d) + lls ** (2 * d) + 1)
     try:
@@ -107,9 +107,7 @@ def momose_type_2_uniform_bound(d):
     T = {
         p
         for q in prime_range(ceil(v) + 1)
-
-        for expr in [(q ** (2 * f) + q ** f + 1) for f in F]
-
+        for expr in [(q ** (2 * f) + q**f + 1) for f in F]
         for p in prime_divisors(expr)
     }
     T_CC = [p for p in T if satisfies_condition_CC_uniform(F, p)]
@@ -157,8 +155,8 @@ def satisfies_condition_CC(K, p):
     for q in prime_range(p / 4):
         for frak_q in K.primes_above(q):
             f = frak_q.residue_class_degree()
-            if f % 2 == 1 and q ** f < p / 4:
-                if (q ** (2 * f) + q ** f + 1) % p != 0:
+            if f % 2 == 1 and q**f < p / 4:
+                if (q ** (2 * f) + q**f + 1) % p != 0:
                     if legendre_symbol(q, p) == 1:  # i.e. not inert
                         return False
     return True
@@ -175,7 +173,7 @@ def satisfies_condition_CC_uniform(possible_odd_f, p):
         return False
     for q in prime_range((p / 4) ^ (1 / max(possible_odd_f)) + 1):
         if legendre_symbol(q, p) == 1:
-            if all((q ** (2 * f) + q ** f + 1) % p != 0 for f in possible_odd_f):
+            if all((q ** (2 * f) + q**f + 1) % p != 0 for f in possible_odd_f):
                 return False
     return True
 
