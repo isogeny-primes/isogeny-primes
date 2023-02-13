@@ -45,7 +45,9 @@ To see the various options, run
 sage isogeny_primes.py --help
 ```
 
-or ```
+or
+
+```
 sage uniform_isogeny_primes.py --help
 ```
 
