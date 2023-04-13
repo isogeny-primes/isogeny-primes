@@ -129,7 +129,7 @@ function quadratic_isogeny(t,p)
   P_C :=  C(K) ! [t,y];
   P := (phi^(-1))(P_C);
   phi := Isogeny(P,p);
-
+  return phi,O_K;
 end function;
 
 function quadratic_isogeny_37(a, b)
