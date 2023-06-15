@@ -111,16 +111,16 @@ function quadratic_isogeny(t,p)
   This function generates quadratic points on the modular curve X_0(p), when p is such that this curve is (hyper) elliptic.
   It needs a rational number t as input. The quadratic point will have t as image under the (hyper) elliptic map.
 
-  As output it just gives the j-invariant of this quadratic point.
+  The output is a tuple consisting of the isogeny and the maximal order in the quadratic field.
   */
   R<Y> := PolynomialRing(RationalField());
-  x0 := SmallModularCurve(p);
-  assert (Genus(x0) eq 1) or IsHyperelliptic(x0);
-  j := jInvariant(x0,p);
-  if Genus(x0) eq 1 then
-    C,phi := WeierstrassModel(x0);
+  X0 := SmallModularCurve(p);
+  assert (Genus(X0) eq 1) or IsHyperelliptic(X0);
+  j := jInvariant(X0,p);
+  if Genus(X0) eq 1 then
+    C,phi := WeierstrassModel(X0);
   else
-    C,phi := SimplifiedModel(x0);
+    C,phi := SimplifiedModel(X0);
   end if;
   f := HyperellipticPolynomials(C);
   y2 := Evaluate(f,t);
@@ -132,18 +132,55 @@ function quadratic_isogeny(t,p)
   return phi,O_K;
 end function;
 
+function quadratic_isogeny_37(a, b)
+  /*
+  This function generates quadratic points on the modular curve X_0(37). The mordell weil group of J_0(37) is generated
+  by two elements x and y. So any point of Pic^{2} X_0(37) is of the form  K + a*x + b*y, where a and b are integers and
+  K is a canonical divisor. Outside the hyperelliptic locus the map X_0(37)^{(2)}(Q) -> Pic^{2} X_0(37)(Q) is a
+  bijection.  The tuple (a,b) should not be (0,0). The isogeny returned is the one corresponding to unique point of
+  X_0(37)^{(2)}(Q) mapping to K + a*x + b*y in Pic^{2} X_0(37)(Q).
+
+  The output is a tuple consisting of the isogeny and the maximal order in the quadratic field.
+  */
+  assert [a mod 3, b] ne [0 mod 3, 0];
+  X0 := SmallModularCurve(37);
+  J0 := Jacobian(X0);
+  //we should probably cache the output of the following command;
+  MW,f,b1,b2 := MordellWeilGroup(J0);
+  assert b1;
+  assert b2;
+  P := Eltseq(f(a*MW.1+b*MW.2));
+  assert Degree(P[1]) eq 2;
+  assert IsIrreducible(P[1]);
+  K := NumberField(P[1]);
+  x0 := K.1;
+  y0 := Evaluate(P[2], x0);
+  P0 := X0(K) ! [x0, y0];
+  phi := Isogeny(P0, 37);
+  O_K := MaximalOrder(K);
+  return phi,O_K;
+end function;
 
 
-function print_eps_type_info(t, p)
-  phi,OK := quadratic_isogeny(t,p);
+function print_eps_type_info(t, p: special_mode:="None")
+  if special_mode eq "None" then
+    phi,OK := quadratic_isogeny(t,p);
+  elif special_mode eq "37" then
+    phi,OK := quadratic_isogeny_37(t,p);
+  else
+    print("special_mode should be 'None' or '37'");
+    assert false;
+  end if;
+
   K := NumberField(OK);
   print t, ClassNumber(K), K;
   E := Domain(phi);
+  E2 := Codomain(phi);
   j := jInvariant(E);
-  j2 := jInvariant(Codomain(phi));
+  j2 := jInvariant(E2);
   D_E := Discriminant(E);
-  print "found isogeny between j1 =", j;
-  print "and j2 =", j2;
+  print "found isogeny between j1 =", j, "E1 =", E;
+  print "and j2 =", j2, "E2 =", E2;
   for pp_e in Factorization(p*OK) do;
     pp := pp_e[1];
     loc,Ep := LocalInformation(E,pp);
