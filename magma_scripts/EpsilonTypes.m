@@ -2,6 +2,13 @@
 The main function in this file is eps_from_isogeny. Which computes epsilon types of isogenies.
 It is inspired by section 1 of Serre's `Proprietes Galoisienne' paper.
 
+To generate the curves in Proposition 7.3 of the paper, run the following:
+
+load "EpsilonTypes.m";
+print_eps_type_info(0,17);
+print_eps_type_info(0,19);
+print_eps_type_info(2,1: special_mode:="37");
+
     ====================================================================
 
     This file is part of Isogeny Primes.
