@@ -192,7 +192,7 @@ function print_eps_type_info(t, p: special_mode:="None")
     pp := pp_e[1];
     loc,Ep := LocalInformation(E,pp);
     Dp := Discriminant(Ep);
-    print t,t mod p,pp_e[2],Valuation(j,pp),Valuation(j-1728,pp),Valuation(Dp,pp),loc[5];
+    print t,pp_e[2],Valuation(j,pp),Valuation(j-1728,pp),Valuation(Dp,pp),loc[5];
 
 
   end for;
