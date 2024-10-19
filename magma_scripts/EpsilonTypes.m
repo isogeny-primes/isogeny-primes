@@ -50,24 +50,34 @@ function eps_from_isogeny_local(phi, pp);
   E := Domain(phi);
   E2 := Codomain(phi);
   j := jInvariant(E);
+  vp_j := Valuation(j,pp);
   OK := Order(pp);
   K := NumberField(OK);
   R<U> := PolynomialRing(K);
 
+  //i haven't though about the case where this doesn't hold
+  assert RamificationIndex(pp) eq 1;
+
+
   exp := 2;
-  if Valuation(j,pp) gt 0 then
+  if vp_j gt 0 then
     exp := 6;
   end if;
   if Valuation(j-1728,pp) gt 0 then
     exp := 4;
   end if;
-  if Valuation(j,pp) lt 0 then
-    error Error("Potential multiplicative reduction not implemented yet!");
+  if vp_j lt 0 then
+    j2 := jInvariant(E2);
+    vp_j2 := Valuation(j2,pp);
+    // this case corresponds to K^*/q^pZ -> K^*/(zeta_p^i*q)^Z
+    if  vp_j/vp_j2 eq p then return 0; end if;
+    // this case corresponds to K^*/q^Z -> K^*/<zeta_p,q^Z> ~= K^*/q^(pZ)
+    if  vp_j/vp_j2 eq 1/p then return 12; end if;
+    print vp_j, vp_j2, j, j2;
+    error Error("Potential multiplicative reduction went wrong valuation ratio should be p or 1/p!");
   end if;
 
-  //so we can just take roots out of p
-  //in order to get semistable reduction
-  assert RamificationIndex(pp) eq 1;
+
 
   L<u> := NumberField(U^exp-p);
   OL := MaximalOrder(L);
@@ -192,7 +202,7 @@ function print_eps_type_info(t, p: special_mode:="None")
     pp := pp_e[1];
     loc,Ep := LocalInformation(E,pp);
     Dp := Discriminant(Ep);
-    print t,t mod p,pp_e[2],Valuation(j,pp),Valuation(j-1728,pp),Valuation(Dp,pp),loc[5];
+    print t,pp_e[2],Valuation(j,pp),Valuation(j-1728,pp),Valuation(Dp,pp),loc[5];
 
 
   end for;
