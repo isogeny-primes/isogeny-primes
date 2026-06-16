@@ -41,9 +41,12 @@ from sage.all import (
 )
 from itertools import product
 import logging
-from .common_utils import get_weil_polys, x, is_b_smooth
+from .common_utils import get_weil_polys, x
 from .pil_integers import collapse_tuple
-from .type_one_primes import cached_bad_formal_immersion_data
+from .type_one_primes import (
+    cached_bad_formal_immersion_data,
+    apply_formal_immersion_at_2_to_bound,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -215,18 +218,23 @@ def type_one_unif_bound(d, q_bd=5):
         mult_upper_bd = gcd(mult_upper_bd, contribution)
         logger.debug(f"Upperbound after q={q}: {mult_upper_bd}")
 
-    if logger.isEnabledFor(logging.DEBUG):
-        q = 2
-        B_star, B = B_eps_q(d, type_one_eps, q, mult_upper_bd)
+    # Improve the bound using the auxiliary prime q = 2. This is only valid for
+    # the primes p at which f^(d)_p is a formal immersion at infinity over F_2,
+    # so we hand the q = 2 contribution to apply_formal_immersion_at_2_to_bound,
+    # which removes exactly the primes that this argument is allowed to remove
+    # (using the data in formal_immersion_at_2.json).
+    B_star_2, _ = B_eps_q(d, type_one_eps, 2, mult_upper_bd)
+    q_prod_2 = lcm([(2**f - 1) for f in range(1, d + 1)])
+    contribution_2 = lcm(B_star_2, q_prod_2)
 
-        q_prod = lcm([(q**f - 1) for f in range(1, d + 1)])
-        contribution = lcm([B_star, q_prod])
-        mult_upper_bd_2 = gcd(mult_upper_bd, contribution)
-
-        is_smooth, factors = is_b_smooth(mult_upper_bd_2, 10**9)
-
-        factors_str = "{" + ", ".join(str(i) for i in factors) + "}"
-        logger.debug(f"Type 1 upperbound if formal immersion works at 2: {factors_str}")
+    mult_upper_bd, used_fi2 = apply_formal_immersion_at_2_to_bound(mult_upper_bd, contribution_2, d)
+    if used_fi2:
+        logger.info(
+            "This type 1 bound relies on the formal immersion at 2 results "
+            "(formal_immersion_at_2.json): good formal immersion primes at 2 "
+            "not dividing the q=2 bound have been removed, so the resulting "
+            "superset is valid only modulo those results."
+        )
 
     bad_mult_upper_bd = prod(bad_formal_immersion_list)
     return lcm(mult_upper_bd, bad_mult_upper_bd)

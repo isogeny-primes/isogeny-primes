@@ -9,6 +9,10 @@ print_eps_type_info(0,17);
 print_eps_type_info(0,19);
 print_eps_type_info(2,1: special_mode:="37");
 
+To verify the computational claims in the proof of the proposition stating
+that no elliptic curve over a quadratic field admits a 41-isogeny of
+signature (0,0), run the code block at the bottom of this file.
+
     ====================================================================
 
     This file is part of Isogeny Primes.
@@ -220,5 +224,33 @@ end for;
 p := 23;
 for t in [3,7,10,17,20] do
   tmp := print_eps_type_info(t, p);
+end for;
+*/
+
+/*
+The following code verifies the two computational claims in the proof of the
+proposition stating that no elliptic curve over a quadratic field admits a
+41-isogeny of signature (0,0). Run it after `load "EpsilonTypes.m";`.
+
+// (1) The hyperelliptic involution of X_0(41) is the Atkin-Lehner
+// involution w_41: the output below is [ $.1, -$.2, $.3 ], i.e. w_41 acts
+// as (x : y : z) -> (x : -y : z) on the simplified model y^2 = f(x).
+
+X0 := SmallModularCurve(41);
+w41 := AtkinLehnerInvolution(X0, 41, 41);
+C, toC := SimplifiedModel(X0);
+print DefiningEquations(Inverse(toC) * w41 * toC);
+
+// (2) The epsilon types of the two exceptional quadratic points on X_0(41)
+// from Bruin-Najman (both defined over Q(i), and lying on the small modular
+// curve model itself) are (0,4) and (12,8); their Galois conjugates
+// therefore have epsilon types (4,0) and (8,12).
+
+K<w> := QuadraticField(-1);
+x0 := (-w - 1)/2;
+for y0 in [(-3*w - 4)/4, (w + 1)/4] do
+  P := X0(K) ! [x0, y0];
+  phi := Isogeny(P, 41);
+  print eps_from_isogeny(phi);
 end for;
 */

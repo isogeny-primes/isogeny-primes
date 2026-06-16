@@ -16,3 +16,6 @@ venv
 # editors/IDE's
 .idea
 .vscode/
+
+# Referee reply
+referee_reply/

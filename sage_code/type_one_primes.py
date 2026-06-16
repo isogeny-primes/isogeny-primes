@@ -267,6 +267,55 @@ def apply_formal_immersion_at_2(output_thus_far: Set[int], running_prime_dict_2:
     return output
 
 
+def apply_formal_immersion_at_2_to_bound(mult_upper_bd, q2_contribution, d):
+    """Uniform analogue of ``apply_formal_immersion_at_2`` that operates on a
+    multiplicative bound rather than an explicit set of primes.
+
+    ``mult_upper_bd`` is the type 1 bound coming from the auxiliary primes
+    ``q >= 3`` and ``q2_contribution`` is the contribution of the auxiliary
+    prime ``q = 2``. Using ``q = 2`` is only valid for the primes ``p`` for
+    which ``f^(d)_p`` is a formal immersion at infinity over ``F_2``; the formal
+    immersion at 2 data records exactly which primes those are. We therefore
+    only discard a prime ``p`` from the bound when ``p`` is a good formal
+    immersion prime at 2 (at least the smallest good formal immersion prime, not
+    sporadically bad, and at most the largest prime up to which the data was
+    computed) and ``p`` does not divide the ``q = 2`` contribution. Every other
+    prime is kept untouched, so in particular the (possibly unfactored) part of
+    the bound supported on primes larger than ``largest_prime`` is preserved.
+
+    Returns a pair ``(new_bound, used_fi2)`` where ``used_fi2`` records whether
+    formal immersion at 2 data was available for this degree ``d``.
+    """
+    with open(FORMAL_IMMERSION_DATA_AT_2_PATH, "r") as fi2_dat_file:
+        fi2_dat = json.load(fi2_dat_file)
+
+    largest_prime = fi2_dat.pop("largest_prime")
+
+    if not str(d) in fi2_dat.keys():
+        logger.debug("No formal immersion data at 2 for d=%s with which to filter", d)
+        return mult_upper_bd, False
+
+    fi2_this_d = fi2_dat[str(d)]
+    smallest_good = fi2_this_d["smallest_good_formal_immersion_prime"]
+    sporadic = set(fi2_this_d["sporadic_bad_formal_immersion_primes"])
+
+    output = ZZ(mult_upper_bd)
+    q2_contribution = ZZ(q2_contribution)
+    removed = []
+    for p in prime_range(smallest_good, largest_prime + 1):
+        if p in sporadic:
+            continue
+        # p is a good formal immersion prime at 2; if it does not divide the
+        # q = 2 bound then it is not a type 1 isogeny prime, so remove it.
+        if output % p == 0 and q2_contribution % p != 0:
+            output = output.prime_to_m_part(p)
+            removed.append(p)
+
+    logger.debug("Type one primes removed via formal immersion at 2 filtering: {}".format(removed))
+
+    return output, True
+
+
 def get_N(frob_poly, nm_q, exponent):
     """Helper method for computing Type 1 primes"""
     beta = Matrix.companion(frob_poly) ** exponent
